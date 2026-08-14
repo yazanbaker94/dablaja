@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.commandcode/
+*.zip
+*.pem
+.DS_Store
+Thumbs.db
+coverage/
+*.log
+.env
+.env.*
+secrets.*

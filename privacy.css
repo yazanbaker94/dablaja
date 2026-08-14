@@ -1,0 +1,18 @@
+:root { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: #17221f; background: #f4f8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at 90% 0, #dff4eb, transparent 27%), #f4f8f6; }
+main { width: min(780px, calc(100% - 32px)); margin: 34px auto; padding: clamp(22px, 5vw, 48px); border: 1px solid #dce7e2; border-radius: 22px; background: #fff; box-shadow: 0 16px 50px #21433612; }
+header { display: flex; align-items: center; gap: 13px; margin-bottom: 5px; }
+.mark { width: 48px; height: 48px; flex: none; object-fit: contain; }
+header p { margin: 0; color: #087f5b; font-size: 11px; direction: ltr; text-align: right; }
+h1 { margin: 2px 0 0; font-size: clamp(24px, 5vw, 34px); }
+h2 { margin: 30px 0 8px; font-size: 17px; }
+p, li { font-size: 14px; line-height: 1.85; }
+li { margin-bottom: 5px; }
+.meta { margin: 0 61px 25px 0; color: #68766f; font-size: 11px; }
+.summary { padding: 15px 17px; border: 1px solid #cde6dc; border-radius: 14px; background: #edf9f4; }
+.summary strong { color: #066146; }
+.summary p { margin: 4px 0 0; }
+a { color: #076a4d; }
+code { padding: 2px 5px; border-radius: 5px; background: #edf2f0; direction: ltr; }
+@media (max-width: 520px) { main { width: 100%; margin: 0; border: 0; border-radius: 0; } .meta { margin-right: 0; } }

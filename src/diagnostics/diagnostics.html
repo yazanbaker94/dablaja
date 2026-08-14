@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>فحص الدبلجة العربية</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32.png">
+    <link rel="stylesheet" href="diagnostics.css">
+  </head>
+  <body>
+    <main>
+      <header><img class="mark" src="../../icons/icon-48.png" width="48" height="48" alt=""><div><p>Arabic Live Dubbing</p><h1>الفحص الآمن <small>Safe diagnostics</small></h1></div></header>
+      <section class="notice">لا تعرض هذه الصفحة مفتاح API أو رابط الصفحة أو الصوت أو النصوص. <span lang="en" dir="ltr">This page shows only non-sensitive connection codes—never the key, URL, audio, or captions.</span></section>
+      <section class="card" aria-live="polite">
+        <div class="status-row"><span id="statusDot"></span><strong id="status">جارٍ التحميل…</strong></div>
+        <p id="message"></p>
+        <dl>
+          <div><dt>رمز الفحص · Diagnostic code</dt><dd id="diagnostic">—</dd></div>
+          <div><dt>محاولة الاتصال · Attempt</dt><dd id="attempt">0</dd></div>
+          <div><dt>التأخير المرصود · Observed latency</dt><dd id="latency">—</dd></div>
+          <div><dt>مخزن الصوت · Audio buffer</dt><dd id="buffer">0 ms</dd></div>
+          <div><dt>الهدف التكيفي · Adaptive target</dt><dd id="targetBuffer">120 ms</dd></div>
+          <div><dt>نقص المخزن · Underruns</dt><dd id="underruns">0</dd></div>
+          <div><dt>إعادات الاتصال · Reconnects</dt><dd id="reconnects">0</dd></div>
+          <div><dt>الصوت المرسل · Audio sent</dt><dd id="audioSent">0 s</dd></div>
+          <div><dt>تقدير الذاكرة · Heap estimate</dt><dd id="heap">—</dd></div>
+        </dl>
+      </section>
+      <div class="actions">
+        <button id="retry" class="primary" type="button">إعادة الاختبار · Retry previous tab</button>
+        <button id="stop" class="secondary" type="button">إيقاف وتنظيف · Stop and clean up</button>
+      </div>
+      <p id="actionError" class="error" role="alert"></p>
+      <footer>الحالة مؤقتة في <code>chrome.storage.session</code> ولا تتضمن محتوى الصفحة.</footer>
+    </main>
+    <script type="module" src="diagnostics.js"></script>
+  </body>
+</html>

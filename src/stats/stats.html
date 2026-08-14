@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>إحصائياتك · دبلجة</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32.png">
+    <link rel="stylesheet" href="stats.css">
+  </head>
+  <body>
+    <div class="wash" aria-hidden="true"></div>
+    <img class="bg-wave" src="../popup/wave.png" alt="" aria-hidden="true">
+    <main class="page">
+      <header class="page-header">
+        <img class="wordmark" src="../popup/wordmark.png" alt="دبلجة">
+        <div class="title-block">
+          <div class="title-row">
+            <h1>إحصائياتك</h1>
+            <div class="range" role="tablist" aria-label="الفترة">
+              <button type="button" data-range="week" class="on">هذا الأسبوع</button>
+              <button type="button" data-range="month">هذا الشهر</button>
+              <button type="button" data-range="all">الكل</button>
+            </div>
+          </div>
+          <p>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3zm0 10.7 5-5L15.6 6 12 9.6 8.4 6 7 7.4l5 5.3z"/></svg>
+            محلياً على هذا الجهاز، لا تُرسل إلى أحد.
+          </p>
+        </div>
+      </header>
+
+      <section class="kpis">
+        <article class="card kpi">
+          <div class="kpi-copy">
+            <span class="kpi-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h5v-2h-3V7h-2z"/></svg>
+              وقت الدبلجة
+            </span>
+            <strong id="totalDuration">٠ د</strong>
+            <span id="weekDelta" class="delta">أول أسبوع لك</span>
+          </div>
+          <div id="spark" class="spark" aria-hidden="true"></div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-copy">
+            <span class="kpi-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h2v2h6V2h2v2h3v18H4V4h3zm13 8H4v10h16z"/></svg>
+              آخر جلسة
+            </span>
+            <strong id="lastSessionWhen">—</strong>
+            <span id="lastSessionSite" class="kpi-sub">لم تبدأ بعد</span>
+            <span id="lastSessionAgo" class="ago">—</span>
+          </div>
+          <div id="lastSessionBadge" class="badge" data-kind="empty" aria-hidden="true"></div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-copy">
+            <span class="kpi-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM8 12a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 8 12zm8 2c-3 0-8 1.5-8 4.5V21h16v-2.5C24 15.5 19 14 16 14zm-8 1c-.3 0-.7 0-1 .1-2.4.5-5 1.8-5 3.9V21h6v-3.5c0-1.1.4-2.1 1.2-3A10 10 0 0 1 8 15z"/></svg>
+              متوسط الجلسة
+            </span>
+            <strong id="averageSession">٠ د</strong>
+            <span id="sessionCount" class="kpi-sub">٠ جلسات</span>
+          </div>
+          <div class="badge mint" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h4v-2h-2V7h-2z"/></svg>
+          </div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-copy">
+            <span class="kpi-label">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 10h2v8H3zm4-4h2v12H7zm4 2h2v10h-2zm4-6h2v16h-2zm4 8h2v8h-2z"/></svg>
+              التأخير التقريبي
+            </span>
+            <strong id="averageLatency">—</strong>
+            <span id="streak" class="delta">٠ أيام متتالية</span>
+          </div>
+          <div class="badge mint" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 14h2v4H4zm4-5h2v9H8zm4-3h2v12h-2zm4 6h2v6h-2z"/></svg>
+          </div>
+        </article>
+      </section>
+
+      <section class="split">
+        <article class="card panel">
+          <div class="panel-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm6.9 9h-3.1a15 15 0 0 0-1.3-6 8 8 0 0 1 4.4 6zM12 4.1A13 13 0 0 1 13.8 11H10.2A13 13 0 0 1 12 4.1zM4.1 13a8 8 0 0 1 4.4-6 15 15 0 0 0-1.3 6zm5.1 0h5.6A13 13 0 0 1 12 19.9 13 13 0 0 1 9.2 13zm1.5 6.9A15 15 0 0 0 12 13h3.1a15 15 0 0 0 1.3 6 8 8 0 0 1-6.7.9z"/></svg>
+            <h2>أين تدبلج</h2>
+          </div>
+          <div id="siteList" class="site-list"></div>
+          <p id="siteEmpty" class="empty">ابدأ الدبلجة على يوتيوب أو أي موقع، وستظهر هنا.</p>
+          <div id="siteTotalRow" class="site-total hidden">
+            <span>الإجمالي</span>
+            <b>٪١٠٠</b>
+          </div>
+        </article>
+
+        <article class="card panel">
+          <div class="panel-head">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 18h2V8H4zm4 0h2V4H8zm4 0h2v-7h-2zm4 0h2V6h-2z"/></svg>
+            <h2 id="activityTitle">نشاطك هذا الأسبوع</h2>
+          </div>
+          <div class="week-plot">
+            <div id="weekY" class="week-y" aria-hidden="true"></div>
+            <div id="weekStrip" class="week-strip"></div>
+          </div>
+          <div class="week-meta">
+            <div>
+              <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h5v-2h-3V7h-2z"/></svg>
+                المتوسط اليومي
+              </span>
+              <strong id="weekAvg">٠ د</strong>
+            </div>
+            <div>
+              <span>أطول يوم</span>
+              <strong id="weekLongestDay" class="accent">—</strong>
+              <small id="weekLongestDur">٠ د</small>
+            </div>
+            <div>
+              <span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h5v-2h-3V7h-2z"/></svg>
+                <span id="activityTotalLabel">إجمالي هذا الأسبوع</span>
+              </span>
+              <strong id="weekTotal">٠ د</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card last-bar">
+        <div class="last-title">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 11h5v-2h-3V7h-2z"/></svg>
+          آخر جلسة
+        </div>
+        <dl>
+          <div>
+            <dt>المنصة</dt>
+            <dd id="detailSite">—</dd>
+          </div>
+          <div>
+            <dt>المدة</dt>
+            <dd id="detailDuration">—</dd>
+          </div>
+          <div>
+            <dt>التأخير التقريبي</dt>
+            <dd id="detailLatency">—</dd>
+          </div>
+          <div>
+            <dt>التاريخ</dt>
+            <dd id="detailDate">—</dd>
+          </div>
+          <div>
+            <dt>الوقت</dt>
+            <dd id="detailTime">—</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card review-card" id="reviewCard" aria-labelledby="reviewTitle">
+        <div class="review-card-inner">
+          <img class="review-avatar" src="yzn.jpg" alt="Yaz" width="72" height="72">
+          <div class="review-copy">
+            <p class="review-intro" id="reviewTitle">أنا <strong>يزن</strong>، صانع دبلجة.</p>
+            <p class="review-text">إذا كانت الدبلجة العربية مفيدة لك، أرسل ملاحظتك أو اترك تقييماً يساعد الآخرين على اكتشافها.</p>
+            <p class="review-emphasis">رأيك بساعد أكثر مما تتخيل!</p>
+          </div>
+          <div class="review-actions">
+            <button class="review-cta" id="reviewCta" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>
+              <span>اترك تقييماً</span>
+            </button>
+            <span class="review-hint">ملاحظاتك تساعد على تحسين الإضافة</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card privacy">
+        <div>
+          <h2>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 5v6c0 5.2 3.4 10 8 11 4.6-1 8-5.8 8-11V5l-8-3z"/></svg>
+            خصوصيتك
+          </h2>
+          <p>نخزن فقط أسماء المواقع التي تستخدمها للدبلجة، وليس عناوين الفيديو أو الروابط الكاملة أو محتوى الصوت.</p>
+        </div>
+        <div class="privacy-actions">
+          <button id="openFeedback" type="button">أرسل ملاحظة</button>
+          <button id="clearStats" type="button">
+            مسح الإحصائيات
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 7h12l-1 14H7zm3-3h6l1 2H8z"/></svg>
+          </button>
+        </div>
+        <p id="clearMessage" class="clear-message hidden" role="status">تم المسح من هذا الجهاز.</p>
+      </section>
+    </main>
+    <div id="tip" class="tip hidden" role="tooltip"></div>
+    <script type="module" src="stats.js"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Arabic Live Dubbing — Audio Harness</title>
+    <link rel="stylesheet" href="audio-harness.css">
+  </head>
+  <body>
+    <main>
+      <h1>AudioWorklet integration harness</h1>
+      <p>Uses synthetic audio only. No API key, network audio, or transcripts.</p>
+      <button id="run" type="button">Run audio integration tests</button>
+      <p id="summary" aria-live="polite">Not run</p>
+      <ol id="results"></ol>
+    </main>
+    <script type="module" src="audio-harness.js"></script>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>الترجمة الثنائية المباشرة</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32.png">
+    <link rel="stylesheet" href="sidepanel.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="panel-brand">
+          <img class="brand-mark" src="../../icons/icon-48.png" width="31" height="31" alt="">
+          <div>
+            <p class="eyebrow">الدبلجة العربية المباشرة</p>
+            <h1 id="panelTitle">الترجمة الثنائية</h1>
+          </div>
+        </div>
+        <button id="languageToggle" class="language-toggle" type="button">English</button>
+        <span id="panelStatus" class="status-pill">متوقف</span>
+      </header>
+
+      <section id="emptyState" class="empty-state">
+        <div class="empty-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <h2 id="emptyTitle">ستظهر الكلمات هنا مباشرةً</h2>
+        <p id="emptyCopy">ابدأ الدبلجة من نافذة الإضافة، ثم شغّل فيديو أو ندوة باللغة الإنجليزية.</p>
+      </section>
+
+      <section id="captions" class="captions hidden" aria-live="polite">
+        <div class="caption-column source-column">
+          <div class="column-heading">
+            <span id="sourceHeading">النص الأصلي</span>
+            <small>English / Source</small>
+          </div>
+          <div id="sourceFeed" class="feed" dir="ltr"></div>
+        </div>
+        <div class="caption-column target-column">
+          <div class="column-heading">
+            <span id="targetHeading">الترجمة العربية</span>
+            <small>Arabic dub</small>
+          </div>
+          <div id="targetFeed" class="feed" dir="rtl"></div>
+        </div>
+      </section>
+
+      <section class="session-stats" aria-label="Session stats">
+        <div class="stat-card">
+          <span class="stat-label" id="durationLabel">مدة الجلسة</span>
+          <strong id="durationValue">—</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label" id="captionCountLabel">السطور</span>
+          <strong id="captionCountValue">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label" id="latencyLabel">التأخير</span>
+          <strong id="latencyValue">—</strong>
+        </div>
+        <div class="activity-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </section>
+
+      <footer>
+        <span id="latency">التأخير المرصود: —</span>
+        <span id="retentionNote">لا تُحفظ النصوص</span>
+      </footer>
+    </main>
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>
