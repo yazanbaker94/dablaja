@@ -2,7 +2,7 @@
 
 ## الاسم / Title
 
-**الدبلجة العربية المباشرة — Arabic Live Dubbing**
+**الدبلجة العربية المباشرة — dablaja Arabic Live Dubbing**
 
 ## الوصف المختصر (Arabic-first)
 

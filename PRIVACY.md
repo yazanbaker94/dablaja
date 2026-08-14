@@ -1,4 +1,4 @@
-# سياسة الخصوصية — Arabic Live Dubbing
+# سياسة الخصوصية — dablaja Arabic Live Dubbing
 
 **تاريخ السريان:** 11 أغسطس 2026  
 **الإصدار:** 0.2.0

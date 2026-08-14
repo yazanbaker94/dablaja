@@ -1,4 +1,4 @@
-# Arabic Live Dubbing — MVP Chrome extension
+# dablaja Arabic Live Dubbing — MVP Chrome extension
 
 > **وعد V1:** افهم الفيديوهات والدورات والندوات الإنجليزية مباشرةً بالعربية، بصوت عربي وترجمة ثنائية مباشرة.
 
@@ -19,7 +19,7 @@ Manifest V3 Chrome extension that captures **audio only** from the active tab af
 
    `C:\Users\Yazan\Desktop\Projects\Arabic Live Dubbing`
 
-5. Pin **Arabic Live Dubbing** if desired.
+5. Pin **dablaja Arabic Live Dubbing** if desired.
 
 ## Use
 
