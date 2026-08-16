@@ -359,13 +359,16 @@ body:has(.demo-dialog[open]), body:has(.studio-dialog[open]), body:has(.tutorial
   .site-nav a { padding: 12px 14px; border-radius: 10px; }
   .site-nav a:hover { background: var(--mint); }
   .section-grid, .feature-band, .install-cta { grid-template-columns: 1fr; }
-  .hero { min-height: 0; padding: 28px 0 56px; gap: 48px; }
-  .hero h1 { font-size: clamp(2.05rem, 9.3vw, 2.8rem); line-height: 1.12; }
+  .hero { min-height: 0; padding: 16px 0 56px; gap: 36px; }
+  /* Mobile headline = one grouped block: drop the <br>'s empty line box and control the gap directly. */
+  .hero h1 { font-size: clamp(2.05rem, 9.3vw, 2.8rem); line-height: 1.08; }
+  .hero h1 br { display: none; }
   .hero h1 > span, .hero h1 em { display: block; white-space: normal; }
+  .hero h1 em { margin-top: 10px; }
   .hero-copy { text-align: center; }
   .hero .eyebrow { justify-content: center; }
-  .hero-lede { margin: 19px auto 23px; font-size: .98rem; line-height: 1.65; }
-  .hero-proof { justify-content: center; flex-wrap: wrap; gap: 10px 15px; margin-top: 5px; }
+  .hero-lede { margin: 22px auto 26px; font-size: .98rem; line-height: 1.65; }
+  .hero-proof { justify-content: center; flex-wrap: wrap; gap: 10px 15px; margin-top: 0; }
   .proof-rating { font-size: .68rem; }
   .proof-rating small { font-size: .62rem; }
   .trust-line { justify-content: center; }

@@ -54,6 +54,10 @@
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M5 19V9h3v10zm6 0V5h3v14zm6 0v-6h3v6z"/></svg>
           <span data-i18n="usageStats">الإحصائيات</span>
         </button>
+        <button id="openLibrary" class="sheet-tab" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 4h5v16H4zm7 0h5v16h-5zm7 .5 2.4.6-3.9 15-2.4-.6z"/></svg>
+          <span>Plus</span>
+        </button>
       </nav>
 
       <section id="audioOverlay" class="sheet hidden" aria-labelledby="audioTitle">
@@ -88,6 +92,10 @@
           </h2>
         </div>
         <p class="sheet-hint" data-i18n="keyHint">ألصق مفتاح API الخاص بك للوصول إلى ميزات دبلجة أكثر.</p>
+        <label class="consent-row" for="geminiConsent">
+          <input id="geminiConsent" type="checkbox">
+          <span data-i18n="consent">أوافق على إرسال صوت التبويب والنصوص المؤقتة مباشرةً إلى Google Gemini لإنتاج الدبلجة والترجمة. لا تحفظ دبلجة الصوت أو النصوص إلا إذا اخترت حفظ جلسة في Plus.</span>
+        </label>
         <div class="key-row">
           <input id="apiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ألصق المفتاح هنا" data-i18n-placeholder="pasteKey">
           <button id="toggleKey" class="eye-button" type="button" aria-label="إظهار">

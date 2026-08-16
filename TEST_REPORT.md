@@ -1,55 +1,42 @@
-# Test report — dablaja 0.2.0
+# Test report — dablaja 0.3.0 (Plus corrective passes)
 
-**Date:** 15 August 2026  
-**Environment:** Windows 11, Chrome, Node.js, Python 3.11, AudioFetcher VPS (`95.217.18.203`)
+**Date:** 16 August 2026  
+**Environment:** Windows 11, Node.js 22, Python 3.11 (server unit test). No Chrome was controlled in this pass.
 
-## Automated verification
+## Commands actually run
+
+| Command | Result |
+|---|---|
+| `npm run verify` | PASS — see breakdown below |
+| `npm run package:dev` | PASS — creates `dist/dablaja-v0.3.0-DEVELOPMENT-PREVIEW.zip` (52 files, manifest at root) |
+| `npm run package:release` | **FAILS AS REQUIRED** — `Release build refused: PLUS_DEV_PREVIEW_ENABLED is still true in src/shared/plus-entitlement.js`; npm exits 1; no ZIP is produced |
+
+## Automated verification detail (2026-08-16, after the data-integrity pass)
 
 | Check | Result |
 |---|---|
-| Node tests | PASS — 42 tests, including PCM/audio, protocol, lifecycle, captions, queues, local stats, coarse platform classification, minimal payload, and consent gating |
-| Server test | PASS — deduplication, aggregation, category percentages, and absence of URL/title/audio/transcript/key/install-ID columns |
-| Syntax/security scan | PASS — 16 runtime JavaScript files; no secrets, console output, dynamic code, inline script, or inline style blocks |
-| Manifest validation | PASS — MV3, five permissions, Gemini + AudioFetcher hosts only, strict CSP, all runtime files present |
-| Clean package | PASS — `dist/dablaja-v0.2.0.zip`, 37 files, root manifest, no tests/source maps/secrets/dev files |
+| Node tests | PASS — **170 tests**: all prior suites (controller lifecycle/races, message-boundary gating, integration, entitlement verifier, integrity/durability/backup) plus the final corrections: in-flight note edits drained without loss, second-commit failure blocking navigation, 10-into-495 import reporting added=5/rejected=5/updated=0, full-library truthful counts, superseded duplicates, non-string backup rejection |
+| Server test | PASS — `server/test_dablaja.py`, 1 test |
+| Syntax/security scan | PASS — 29 runtime JavaScript files; no secrets, console output, dynamic code, inline script, or inline style blocks |
+| Manifest validation (dev) | PASS — MV3, five permissions, Gemini + AudioFetcher hosts only, strict CSP, 20 referenced/required runtime files; prints the development-preview warning |
+| Manifest validation (release, `DABLAJA_RELEASE=1`) | FAILS by design while the preview flag is on; also enforces manifest/package version parity |
 
-Command: `npm run verify`
+## Corrective-pass coverage (all backed by the new tests)
 
-## Website and VPS verification
+- Full HTTP(S) origin/URL → `hostname[:port]` normalization shared by sessions and site profiles; real `originOf()` output accepted; credentials/fragments never stored.
+- Title fallback (page title → hostname sans `www.` → placeholder) in drafts and the library list.
+- Entitlement: a plain local `{ state: "active" }` record can never unlock Plus; only the verifier-pipeline shape (or the labelled dev preview) can; revoked/expired verified records beat the preview switch; malformed input defaults to locked.
+- Draft controller: entitled-only capture, serialized generation-checked writes, stale-session rejection, mid-session save → continue → stop produces ONE record, idempotent finish, revocation freeze, saved-vs-unsaved reload recovery, byte-budget truncation with disclosure, IDB-failure fallback to unsaved draft with warning.
+- Message boundary: every paid mutation rejected while locked (10 message types tested); read/export/delete of owned data remains available; import parses raw text inside the worker — renderer "parsed" claims ignored; consistent `{ ok, plus, draft, storageWarning }` shape.
+- IndexedDB: updates allowed at the 500 cap, new records rejected with the Arabic limit message, batch import planned deterministically (deduped) and written atomically; `onversionchange` closes the cached connection.
+- Multiline notes sanitizer: line breaks preserved, per-line trimming, blank-line reduction, safe default length.
+- No API key/audio fields in exports/backups (existing suites re-run); anonymous-statistics consent gating unchanged (telemetry suite re-run).
 
-| Scenario | Result / evidence |
-|---|---|
-| Existing database preserved | PASS — existing `error_reports`, `feedback_reports`, and `daily_budget` remained; migration added only `usage_event_ids` and `usage_daily` |
-| Existing feedback data | PASS — 2 feedback and 1 uninstall record observed before migration |
-| Safe deployment | PASS — backup `/opt/ytmp3-backups/dablaja-pre-20260815-0138.tgz` created before overwrite |
-| Service health | PASS — `ytmp3-api` active on `127.0.0.1:8080` after restart |
-| Public landing | PASS — `https://audiofetcher.com/dablaja/` returns 200 |
-| Public privacy / terms | PASS — both HTTPS pages return 200 and are linked from the footer |
-| Public stats API | PASS — real zero-state JSON returned; no fabricated totals |
-| Usage write restriction | PASS — request without extension origin returns 403; valid extension preflight returns 204 |
-| Visual desktop QA | PASS — 1440px Chrome render, real popup asset, supplied globe/chart assets, no broken images, no horizontal overflow |
-| Console | PASS — no warnings or errors on the deployed page |
-| Demo modal | PASS — button close and backdrop close pause media immediately; reopening plays with `readyState=4` and no media error |
+## Manual Chrome testing — PENDING
 
-## Installed extension / live API status
+No real Chrome, Gemini API, or audio testing was performed in this pass. Before release evaluation, run TEST_PLAN items 1–24 in Chrome, especially: explicit key consent, locked-vs-preview entitlement via a test override, live save-halfway→continue→stop→one-record, stopped-draft save with title/URL, autosave, fatal/start-failure cleanup, notes/bookmarks, TXT/SRT/JSON/print, backup/import, site volume profiles (effective slider values), reload during/after a session, and console inspection. Automated tests here do NOT substitute for that listening/UI confirmation.
 
-| Scenario | Status | Evidence / residual item |
-|---|---|---|
-| Unpacked installation | PASS | Previously loaded and used successfully in the user's Chrome session |
-| Valid Gemini dubbing | PASS (prior build) | User confirmed the extension “works great” after the Gemini session protocol fix |
-| Real popup/RTL, key controls, volume controls, captions | PASS (prior session) | Previously exercised during the live API debugging session; no key is recorded in this report |
-| New anonymous-statistics consent | AUTOMATED PASS / INSTALLED UI RELOAD NEEDED | Message routing, storage, payload, decline path, and withdrawal control pass static/tests; Chrome's protected extension manager could not be controlled by this browser tool, so reload the unpacked extension once to activate this latest code |
-| Human listening quality | PARTIAL | Arabic output was confirmed working; exact confirmation for delay, crackling/overlap, and both sliders should be repeated on the release ZIP |
-| 15–20 minute sustained run on latest build | NOT REPEATED | Keep as a release-candidate test before Web Store submission |
+## Known constraints
 
-## Data verification
-
-- No API key, URL, page title, audio, transcript, or persistent user/install identifier is sent in community-usage events.
-- Community events contain exactly `event_id`, `platform`, and `dubbed_ms` after opt-in.
-- One-time event IDs are retained for deduplication for at most 8 days; daily aggregates power the public page.
-- Error diagnostics require the same opt-in and use a per-event random ID and coarse platform category.
-- Audio and transcripts continue to travel directly to Google Gemini, never through AudioFetcher.
-
-## Acceptance statement
-
-The landing page, VPS migration, live statistics API, legal pages, and automated extension safeguards are verified. The remaining release-candidate checks are a one-time unpacked-extension reload, a fresh listening confirmation, and a sustained session on the exact packaged build.
+- The observed-latency badge, silence gating, and audio-quality constraints from 0.2.0 still apply.
+- `landing/styles.css` contains pre-existing unrelated visual work and was intentionally not touched by this pass.

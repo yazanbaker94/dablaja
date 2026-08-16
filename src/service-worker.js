@@ -10,6 +10,19 @@ import {
 import { transitionState } from './shared/lifecycle.js';
 import { EMPTY_USAGE_STATS, normalizeUsageStats, recordSessionEnd, recordSessionStart } from './shared/usage-stats.js';
 import { configureUninstallUrl, feedbackPageUrl, reportRemoteError, reportUsageSession } from './shared/telemetry.js';
+import { validateKeySave } from './shared/key-consent.js';
+import { resolveEntitlement } from './shared/plus-entitlement.js';
+import { createPlusDraftController } from './shared/plus-draft-controller.js';
+import { createPlusMessageHandler } from './shared/plus-messages.js';
+import {
+  clearSavedSessions,
+  deleteSavedSession,
+  getSavedSession,
+  listSavedSessions,
+  putSavedSession,
+  putSavedSessionBatch
+} from './shared/plus-db.js';
+import { profileForOrigin, removeProfile, upsertProfile } from './shared/site-profiles.js';
 
 const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
 let state = publicState();
@@ -81,6 +94,10 @@ async function loadInitialState() {
   const previous = await chrome.storage.session.get(SESSION_STATE_KEY);
   const previousState = previous[SESSION_STATE_KEY];
   const wasActive = ACTIVE_STATUSES.has(previousState?.status);
+  // A persisted active draft can only belong to a session from before this
+  // worker (re)started — that session can no longer be running. Finalize it
+  // into the unsaved list immediately so it never accepts new bookmarks.
+  await plusController.restore().catch(() => undefined);
   if (trackedSession) {
     await recordEnd(
       previousState || { tabOrigin: trackedSession.site },
@@ -99,6 +116,138 @@ async function loadInitialState() {
 
 const initialStateReady = loadInitialState().catch(() => undefined);
 
+// ---------------------------------------------------------------------------
+// Dablaja Plus — local session drafts and entitlement.
+// Drafts live in chrome.storage.session (survives service-worker suspension,
+// cleared when the browser closes). Saved sessions live in IndexedDB. No
+// transcript content is ever sent to AudioFetcher or logged.
+// Draft lifecycle, persistence races and byte budgets are owned by the
+// adapter-injected controller; paid mutations are gated centrally in
+// createPlusMessageHandler — UI disabled states are never trusted.
+// ---------------------------------------------------------------------------
+
+const plusStorageAdapter = {
+  async get(key) {
+    return chrome.storage.session.get(key);
+  },
+  async set(items) {
+    return chrome.storage.session.set(items);
+  },
+  async remove(key) {
+    return chrome.storage.session.remove(key);
+  }
+};
+
+const plusLibraryAdapter = {
+  get: (id) => getSavedSession(id),
+  list: () => listSavedSessions(),
+  put: (record) => putSavedSession(record),
+  delete: (id) => deleteSavedSession(id),
+  clear: () => clearSavedSessions(),
+  putBatch: (records) => putSavedSessionBatch(records)
+};
+
+const plusSettingsAdapter = {
+  get: () => getPlusSettings(),
+  async setAutosave(value) {
+    await chrome.storage.local.set({ [STORAGE_KEYS.PLUS_AUTOSAVE]: value === true });
+    return getPlusSettings();
+  },
+  async setRemember(value) {
+    const enabled = value === true;
+    await chrome.storage.local.set({ [STORAGE_KEYS.PLUS_REMEMBER_VOLUMES]: enabled });
+    // If enabled during a running session, capture both effective levels
+    // immediately. The user should not have to move a slider again merely to
+    // create the first per-site profile.
+    if (enabled && state.tabOrigin && sessionVolumes) {
+      const current = await getPlusSettings();
+      const profiles = upsertProfile(current.siteProfiles, {
+        origin: state.tabOrigin,
+        originalVolume: sessionVolumes.original,
+        dubbedVolume: sessionVolumes.dubbed
+      });
+      await chrome.storage.local.set({ [STORAGE_KEYS.PLUS_SITE_PROFILES]: profiles });
+    }
+    return getPlusSettings();
+  },
+  async deleteProfile(origin) {
+    const plus = await getPlusSettings();
+    const profiles = removeProfile(plus.siteProfiles, origin);
+    await chrome.storage.local.set({ [STORAGE_KEYS.PLUS_SITE_PROFILES]: profiles });
+    return { ...plus, siteProfiles: profiles };
+  }
+};
+
+const plusController = createPlusDraftController({
+  storage: plusStorageAdapter,
+  db: { putSession: (record) => putSavedSession(record) },
+  getEntitlement: async () => (await getPlusSettings()).entitlement
+});
+
+plusController.subscribe((event) => {
+  chrome.runtime.sendMessage(event).catch(() => undefined);
+});
+
+const handlePlusMessage = createPlusMessageHandler({
+  controller: plusController,
+  library: plusLibraryAdapter,
+  settings: plusSettingsAdapter,
+  // The message boundary needs the complete settings object so it can both
+  // enforce `settings.entitlement.plusEnabled` and return the same shape to
+  // the library UI. Passing only the nested entitlement made every paid
+  // action appear locked even during the development preview.
+  entitlement: () => getPlusSettings()
+});
+
+// Effective volumes for the ACTIVE session (site-profile values when a
+// profile applied). Popup sliders display these; profile updates preserve
+// the other value from here instead of a stale global.
+let sessionVolumes = null;
+
+async function getPlusSettings() {
+  const stored = await chrome.storage.local.get([
+    STORAGE_KEYS.PLUS_LICENSE,
+    STORAGE_KEYS.PLUS_AUTOSAVE,
+    STORAGE_KEYS.PLUS_REMEMBER_VOLUMES,
+    STORAGE_KEYS.PLUS_SITE_PROFILES
+  ]);
+  return {
+    // A plain local { state: 'active' } record is NOT verifiable evidence;
+    // only the Stripe-phase verifier pipeline (or the dev-preview switch)
+    // can unlock Plus. Missing/malformed data defaults to locked.
+    entitlement: resolveEntitlement({ licenseRecord: stored[STORAGE_KEYS.PLUS_LICENSE] }),
+    autosave: stored[STORAGE_KEYS.PLUS_AUTOSAVE] === true,
+    rememberVolumes: stored[STORAGE_KEYS.PLUS_REMEMBER_VOLUMES] === true,
+    siteProfiles: Array.isArray(stored[STORAGE_KEYS.PLUS_SITE_PROFILES])
+      ? stored[STORAGE_KEYS.PLUS_SITE_PROFILES]
+      : []
+  };
+}
+
+// Profiles are a paid feature: never apply them unless Plus is enabled.
+async function applySiteProfileVolumes(origin) {
+  const plus = await getPlusSettings();
+  if (!plus.entitlement.plusEnabled || !plus.rememberVolumes || !origin) return null;
+  const profile = profileForOrigin(plus.siteProfiles, origin);
+  if (!profile) return null;
+  const volumes = {};
+  if (Number.isFinite(profile.originalVolume)) volumes.originalVolume = profile.originalVolume;
+  if (Number.isFinite(profile.dubbedVolume)) volumes.dubbedVolume = profile.dubbedVolume;
+  return Object.keys(volumes).length ? volumes : null;
+}
+
+async function rememberVolumesForActiveSite(kind, value) {
+  if (!state.tabOrigin || !sessionVolumes) return;
+  const plus = await getPlusSettings();
+  if (!plus.entitlement.plusEnabled || !plus.rememberVolumes) return;
+  // Preserve the other value from the session's effective volumes, never a
+  // stale global setting.
+  const originalVolume = kind === 'original' ? value : sessionVolumes.original;
+  const dubbedVolume = kind === 'dubbed' ? value : sessionVolumes.dubbed;
+  const profiles = upsertProfile(plus.siteProfiles, { origin: state.tabOrigin, originalVolume, dubbedVolume });
+  await chrome.storage.local.set({ [STORAGE_KEYS.PLUS_SITE_PROFILES]: profiles });
+}
+
 async function persistState() {
   await chrome.storage.session.set({ [SESSION_STATE_KEY]: state });
 }
@@ -106,7 +255,10 @@ async function persistState() {
 async function setState(patch) {
   state = transitionState(state, patch);
   await persistState();
-  chrome.runtime.sendMessage({ type: 'STATE_CHANGED', state }).catch(() => undefined);
+  chrome.runtime.sendMessage({
+    type: 'STATE_CHANGED',
+    state: { ...state, sessionVolumes: ACTIVE_STATUSES.has(state.status) ? sessionVolumes : null }
+  }).catch(() => undefined);
 }
 
 async function ensureOffscreenDocument() {
@@ -181,11 +333,10 @@ function safeVolume(value) {
 }
 
 async function saveKey(apiKey, consent) {
-  const key = typeof apiKey === 'string' ? apiKey.trim() : '';
-  if (key.length < 20 || key.length > 256) throw new Error('صيغة مفتاح Gemini غير صالحة.');
-  if (consent !== true) throw new Error('يجب الموافقة على إرسال صوت التبويب إلى Google.');
+  const validated = validateKeySave({ apiKey, consent });
+  if (!validated.ok) throw new Error(validated.error);
   await chrome.storage.local.set({
-    [STORAGE_KEYS.API_KEY]: key,
+    [STORAGE_KEYS.API_KEY]: validated.apiKey,
     [STORAGE_KEYS.CONSENT]: new Date().toISOString()
   });
   await setState({ status: STATUS.READY, message: '' });
@@ -219,7 +370,7 @@ async function resolveStartTab({ tabId = null, tabUrl = '' } = {}) {
   return { id: tab.id, url, origin: originOf(url) || originOf(tabUrl) || tabUrl || null };
 }
 
-async function startSession({ tabId = null, tabUrl = '', streamId = null } = {}) {
+async function startSession({ tabId = null, tabUrl = '', tabTitle = '', streamId = null } = {}) {
   await initialStateReady;
   if (ACTIVE_STATUSES.has(state.status)) {
     throw new Error('أوقف الدبلجة الحالية قبل بدء التقاط جديد.');
@@ -256,6 +407,29 @@ async function startSession({ tabId = null, tabUrl = '', streamId = null } = {})
     startedAt
   }));
   await recordStart(startedAt, tab.origin);
+  // Plus drafts start only for entitled users (checked inside the
+  // controller). Title/URL are temporary session-storage metadata that move
+  // into the permanent record only on explicit save or enabled autosave.
+  await plusController.start({
+    startedAt,
+    siteOrigin: tab.origin,
+    title: typeof tabTitle === 'string' ? tabTitle : '',
+    pageUrl: tab.url || tabUrl || ''
+  }).catch(() => undefined);
+
+  // Opt-in, entitlement-gated per-site profiles override the globals at
+  // session start; track them so the popup shows effective volumes and
+  // profile updates never clobber one value with a stale global.
+  const profileVolumes = await applySiteProfileVolumes(tab.origin);
+  const originalVolume = profileVolumes?.originalVolume
+    ?? (Number.isFinite(stored[STORAGE_KEYS.ORIGINAL_VOLUME])
+      ? stored[STORAGE_KEYS.ORIGINAL_VOLUME]
+      : DEFAULTS.originalVolume);
+  const dubbedVolume = profileVolumes?.dubbedVolume
+    ?? (Number.isFinite(stored[STORAGE_KEYS.DUBBED_VOLUME])
+      ? stored[STORAGE_KEYS.DUBBED_VOLUME]
+      : DEFAULTS.dubbedVolume);
+  sessionVolumes = { original: originalVolume, dubbed: dubbedVolume };
 
   await ensureOffscreenDocument();
   const mediaStreamId = streamId || await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
@@ -266,12 +440,8 @@ async function startSession({ tabId = null, tabUrl = '', streamId = null } = {})
     streamId: mediaStreamId,
     apiKey,
     tabId: tab.id,
-    originalVolume: Number.isFinite(stored[STORAGE_KEYS.ORIGINAL_VOLUME])
-      ? stored[STORAGE_KEYS.ORIGINAL_VOLUME]
-      : DEFAULTS.originalVolume,
-    dubbedVolume: Number.isFinite(stored[STORAGE_KEYS.DUBBED_VOLUME])
-      ? stored[STORAGE_KEYS.DUBBED_VOLUME]
-      : DEFAULTS.dubbedVolume,
+    originalVolume,
+    dubbedVolume,
     autoDucking: typeof stored[STORAGE_KEYS.AUTO_DUCKING] === 'boolean'
       ? stored[STORAGE_KEYS.AUTO_DUCKING]
       : DEFAULTS.autoDucking
@@ -293,12 +463,20 @@ async function performStopSession(message) {
     await closeOffscreenDocument().catch(() => undefined);
     const previousState = state;
     const settings = await getSettings();
+    const plus = await getPlusSettings();
+    sessionVolumes = null;
     const finalState = publicState({
       status: settings.hasKey && settings.hasConsent ? STATUS.STOPPED : STATUS.NO_KEY,
       message
     });
     await setState(finalState);
     await recordEnd(previousState, false);
+    // Idempotent terminal path: updates an explicitly-saved record, autosaves
+    // when enabled + entitled, otherwise preserves a bounded unsaved draft.
+    await plusController.finish({
+      autosave: plus.autosave && plus.entitlement.plusEnabled,
+      reason: 'stop'
+    }).catch(() => undefined);
   }
   return state;
 }
@@ -317,6 +495,13 @@ async function setVolume(kind, value) {
   const key = kind === 'original' ? STORAGE_KEYS.ORIGINAL_VOLUME : STORAGE_KEYS.DUBBED_VOLUME;
   await chrome.storage.local.set({ [key]: volume });
   if (ACTIVE_STATUSES.has(state.status)) {
+    if (sessionVolumes) {
+      sessionVolumes = {
+        original: kind === 'original' ? volume : sessionVolumes.original,
+        dubbed: kind === 'dubbed' ? volume : sessionVolumes.dubbed
+      };
+    }
+    await rememberVolumesForActiveSite(kind, volume).catch(() => undefined);
     await chrome.runtime.sendMessage({
       target: 'offscreen',
       type: 'SET_VOLUME',
@@ -367,10 +552,19 @@ async function testStoredKey() {
 }
 
 async function handleUiMessage(message) {
+  if (String(message.type || '').startsWith('PLUS_')) {
+    return handlePlusMessage(message);
+  }
   switch (message.type) {
     case 'GET_STATE':
       await initialStateReady;
-      return { ok: true, state, settings: await getSettings() };
+      return {
+        ok: true,
+        state,
+        settings: await getSettings(),
+        plus: await getPlusSettings(),
+        sessionVolumes: ACTIVE_STATUSES.has(state.status) ? sessionVolumes : null
+      };
     case 'GET_STATS':
       await initialStateReady;
       return { ok: true, stats: normalizeUsageStats(usageStats) };
@@ -392,6 +586,7 @@ async function handleUiMessage(message) {
       return { ok: true, state: await startSession({
         tabId: message.tabId,
         tabUrl: message.tabUrl,
+        tabTitle: message.tabTitle,
         streamId: message.streamId
       }) };
     case 'START_SESSION_FOR_LAST_TAB':
@@ -441,10 +636,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           site: state.tabOrigin,
           reconnectCount: state.reconnectCount
         }))
+        .then(() => plusController.finish({ reason: 'fatal' }))
         .then(() => closeOffscreenDocument())
         .catch(() => undefined);
     }
     if (message.type === 'CAPTION') {
+      if (!message.clear) plusController.caption({
+        channel: message.channel,
+        text: message.text,
+        final: message.final,
+        speaker: message.speaker,
+        turnId: message.turnId
+      });
       const { source: _source, ...caption } = message;
       chrome.runtime.sendMessage(caption).catch(() => undefined);
     }
@@ -465,6 +668,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           status: STATUS.ERROR,
           site: state.tabOrigin
         });
+        sessionVolumes = null;
+        await plusController.finish({ reason: 'start_failure' }).catch(() => undefined);
       }
       sendResponse({ ok: false, error: errorMessage, state });
     });

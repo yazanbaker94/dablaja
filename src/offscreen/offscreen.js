@@ -266,6 +266,7 @@ function handleServerObject(object) {
       type: 'CAPTION',
       channel: 'source',
       text: parsed.sourceText,
+      turnId: session.captionTurnId,
       language: parsed.sourceLanguage,
       speaker: parsed.sourceSpeaker,
       final: parsed.sourceFinished
@@ -276,6 +277,7 @@ function handleServerObject(object) {
       type: 'CAPTION',
       channel: 'target',
       text: parsed.targetText,
+      turnId: session.captionTurnId,
       language: parsed.targetLanguage || 'ar',
       speaker: parsed.targetSpeaker,
       final: parsed.targetFinished
@@ -295,6 +297,10 @@ function handleServerObject(object) {
     }
   } else if (parsed.generationComplete && session.ready) {
     statePatch({ status: STATUS.LISTENING, message: 'أستمع إلى صوت التبويب…' });
+  }
+
+  if (parsed.generationComplete || parsed.interrupted) {
+    session.captionTurnId += 1;
   }
 
   if (parsed.goAwayTimeLeft) {
@@ -406,6 +412,7 @@ async function startSession(message) {
       sentAudioMs: 0,
       reconnectCount: 0,
       voiceStartedAt: performance.now(),
+      captionTurnId: 0,
       sourcePaused: false,
       noiseGate: new AdaptiveNoiseGate(),
       originalBaseVolume: Math.max(0, Math.min(1.5, Number(message.originalVolume) || 0)),

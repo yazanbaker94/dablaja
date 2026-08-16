@@ -1,5 +1,14 @@
 # Release checklist
 
+## Dablaja Plus gate (blocking)
+
+- [ ] Stripe payment/license integration implemented per `src/shared/plus-entitlement.js` contract.
+- [ ] `PLUS_DEV_PREVIEW_ENABLED` set to `false` in `src/shared/plus-entitlement.js` and no UI shows «نسخة تطوير Plus».
+- [ ] `npm run package:release` succeeds (it refuses while the development-preview entitlement remains enabled) and enforces manifest/package version parity.
+- [ ] `npm run package:dev` output is used only for local testing; its `-DEVELOPMENT-PREVIEW` ZIP must never be uploaded.
+- [ ] Store copy still does not advertise Plus as purchasable unless Stripe is live.
+- [ ] Plus privacy disclosures (local-only storage, no audio, no AudioFetcher content) verified in `PRIVACY.md`, `privacy.html`, and `landing/privacy.html`.
+
 ## Code and quality
 
 - [ ] `npm run verify` passes from a clean checkout.

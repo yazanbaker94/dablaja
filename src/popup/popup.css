@@ -297,3 +297,7 @@ html[dir="ltr"] .switch-row input:checked + .switch-ui::after { transform: trans
 .shell.sheet-open .sheet-hint { margin-bottom: 8px; }
 .shell.sheet-open .or-label { margin: 8px 0 4px; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+.consent-row { display: flex; gap: 9px; align-items: flex-start; margin: 10px 0 12px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; background: #f4f9ff; font-size: .72rem; line-height: 1.65; color: var(--muted); cursor: pointer; }
+.consent-row input { margin-top: 3px; width: 15px; height: 15px; accent-color: var(--green-dark); flex: none; }
+.consent-row:focus-within { outline: 2px solid var(--green-dark); outline-offset: 1px; }

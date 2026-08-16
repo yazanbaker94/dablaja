@@ -44,6 +44,19 @@
         </div>
       </section>
 
+      <section id="plusToolbar" class="plus-toolbar hidden" aria-label="أدوات Plus">
+        <div class="plus-row">
+          <button id="plusSave" class="plus-save" type="button">احفظ الجلسة</button>
+          <button id="plusLibrary" class="plus-library" type="button">المكتبة</button>
+        </div>
+        <div class="plus-row">
+          <label class="sr-only" for="plusBookmarkNote">ملاحظة العلامة</label>
+          <input id="plusBookmarkNote" type="text" maxlength="500" placeholder="ملاحظة سريعة للعلامة…">
+          <button id="plusAddBookmark" class="plus-bookmark" type="button">أضف علامة الآن</button>
+        </div>
+        <p id="plusStatus" class="plus-status" role="status"></p>
+      </section>
+
       <section class="session-stats" aria-label="Session stats">
         <div class="stat-card">
           <span class="stat-label" id="durationLabel">مدة الجلسة</span>

@@ -16,6 +16,14 @@
 12. Server deduplication/aggregation with no URL, title, audio, transcript, key, or install-ID columns.
 13. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
 14. Clean package generation and ZIP-root manifest check.
+15. Plus entitlement states: development preview, locked, active, expired/revoked; malformed licenses ignored.
+16. Plus draft lifecycle: interim/cumulative merge, punctuation and final-flag finalization, source/target separation, reconnect duplicate suppression, snapshot-vs-live independence, stop finalization.
+17. Plus bounds: segment text, per-channel segment counts, bookmarks, notes/title sanitization, session and draft caps, total-character ceiling.
+18. Plus search normalization: Arabic diacritics/tatweel/letter-form folding, case folding, AND semantics, title/notes/bookmark/transcript matching.
+19. Plus exports: TXT/SRT/JSON content and timestamps, bilingual SRT pairing, zero-length cue handling, forbidden-field absence.
+20. Plus backup: envelope validation, malformed rejection, per-record validation, merge dedupe by newest, session cap, import never deletes existing data.
+21. Per-site volume profiles: origin normalization, partial updates, clamping, exact-origin lookup, insertion-order eviction, deletion.
+22. Explicit Gemini key-save consent (unchecked checkbox blocks save; masked viewing does not re-require it).
 
 Commands:
 
@@ -48,6 +56,12 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 16 | Non-YouTube page | At least one second ordinary audible HTTPS source. |
 | 17 | Console inspection | Worker/offscreen/panel show no repeated exceptions and no sensitive output. |
 | 18 | Sustained run | Target 15–20 minutes; bounded buffer, reconnection near connection limit, no obvious growth/leak. |
+| 19 | Plus save flow | Side-panel «احفظ الجلسة» during a live session stores bilingual transcript in the library (IndexedDB); URL captured only at save. |
+| 20 | Plus library UI | Search filters cards; detail shows bilingual timeline; notes save; bookmarks add/edit/delete; exports (TXT/SRT/JSON/print) download; delete + delete-all with confirmation. |
+| 21 | Plus backup | Full backup export downloads; importing a tampered or wrong-kind file is rejected with an Arabic error; valid import merges without losing existing sessions. |
+| 22 | Plus drafts | Stop without saving keeps the draft card (≤3); starting a new session preserves the previous draft; discarding removes it. |
+| 23 | Plus entitlement | Dev-preview chip «نسخة تطوير Plus» visible in library; features gated when entitlement disabled. |
+| 24 | Site volume profiles | Opt-in toggle; volumes applied on next session start for the same hostname; profile deletable; off by default. |
 
 ## Human listening prompt
 
@@ -59,3 +73,11 @@ After a valid session has produced Arabic output, ask the tester to confirm exac
 4. There is no severe crackling, overlapping runaway audio, or steadily increasing lag.
 
 Browser automation must not mark these as passed without that confirmation.
+
+## Plus corrective-pass additions (0.3.0)
+
+23. Draft controller lifecycle: entitled-only capture, serialized writes, stale-generation rejection, mid-session save updating one record at stop, idempotent finish, revocation freeze, reload recovery (saved vs unsaved), byte-budget truncation, IDB-failure fallback.
+24. Message-boundary entitlement enforcement: all paid mutations rejected while locked; read/export/delete of owned data remains available; raw-backup parsing happens only in the service worker.
+25. IndexedDB cap: updates allowed at 500, new records rejected with an actionable Arabic error, deterministic deduped batch planning, atomic import.
+26. Multiline note sanitizer, origin normalization, and title fallback ordering.
+27. Packaging gates: `package:dev` preview ZIP naming; `package:release` refusal while the preview flag is on and manifest/package version parity.

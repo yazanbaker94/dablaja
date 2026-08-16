@@ -432,6 +432,10 @@ async function openFeedbackPage() {
 elements.openFeedback?.addEventListener('click', openFeedbackPage);
 elements.reviewCta?.addEventListener('click', openFeedbackPage);
 
+document.querySelector('#openLibrary')?.addEventListener('click', async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+});
+
 elements.clearStats.addEventListener('click', async () => {
   const response = await request({ type: 'CLEAR_STATS' });
   render(response.stats);

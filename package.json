@@ -1,6 +1,6 @@
 {
   "name": "dablaja",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Arabic-first live dubbing Chrome extension MVP",
@@ -9,7 +9,9 @@
     "test:server": "python -m unittest server/test_dablaja.py",
     "check": "node scripts/check.mjs",
     "validate": "node scripts/validate-manifest.mjs",
-    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1",
+    "package": "npm run package:dev",
+    "package:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Mode dev",
+    "package:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Mode release",
     "verify": "npm run test && npm run test:server && npm run check && npm run validate"
   },
   "engines": {

@@ -16,7 +16,16 @@ export const STORAGE_KEYS = Object.freeze({
   USAGE_STATS: 'localUsageStats',
   INSTALL_ID: 'installId',
   ANALYTICS_CONSENT: 'anonymousUsageConsent',
-  ANALYTICS_DECIDED_AT: 'anonymousUsageDecisionAt'
+  ANALYTICS_DECIDED_AT: 'anonymousUsageDecisionAt',
+  PLUS_LICENSE: 'plusLicense',
+  PLUS_AUTOSAVE: 'plusAutosave',
+  PLUS_REMEMBER_VOLUMES: 'plusRememberVolumes',
+  PLUS_SITE_PROFILES: 'plusSiteProfiles'
+});
+
+export const SESSION_STORAGE_KEYS = Object.freeze({
+  PLUS_ACTIVE_DRAFT: 'plusActiveDraft',
+  PLUS_UNSAVED_DRAFTS: 'plusUnsavedDrafts'
 });
 
 export const DEFAULTS = Object.freeze({

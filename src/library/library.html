@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>dablaja Plus — الجلسات المحفوظة</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32.png">
+    <link rel="stylesheet" href="library.css">
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-head">
+        <div class="brand-row">
+          <img src="../../icons/icon-48.png" width="34" height="34" alt="">
+          <div>
+            <h1>dablaja <span class="plus-badge">Plus</span></h1>
+            <p id="priceLine" class="price-line">Plus · دفعة واحدة 10$ · بدون اشتراك</p>
+          </div>
+        </div>
+        <div class="head-actions">
+          <span id="entitlementChip" class="chip chip-preview">نسخة تطوير Plus</span>
+          <a id="backToTab" class="ghost-button" href="#">عودة</a>
+        </div>
+      </header>
+
+      <p id="lockedNotice" class="notice hidden" role="status"></p>
+
+      <section id="draftSection" class="card draft-card" aria-labelledby="draftTitle">
+        <div class="card-head">
+          <h2 id="draftTitle">الجلسة الحالية</h2>
+          <span id="draftMeta" class="muted"></span>
+        </div>
+        <div id="draftBody" class="draft-body"></div>
+      </section>
+      <p id="saveStatus" class="notice hidden" role="status" aria-live="polite"></p>
+
+      <section class="toolbar" aria-label="البحث والنسخ الاحتياطي">
+        <label class="search-wrap">
+          <span class="sr-only" id="searchLabel">البحث في الجلسات</span>
+          <input id="searchInput" type="search" placeholder="ابحث في العناوين والملاحظات والنصوص…" aria-labelledby="searchLabel">
+        </label>
+        <div class="toolbar-actions">
+          <button id="exportBackup" class="ghost-button" type="button">نسخة احتياطية كاملة</button>
+          <label class="ghost-button import-label" for="importFile">استيراد نسخة</label>
+          <input id="importFile" class="sr-only" type="file" accept="application/json,.json">
+        </div>
+      </section>
+      <p id="searchStatus" class="search-status hidden" role="status" aria-live="polite"></p>
+      <p id="importStatus" class="notice hidden" role="status"></p>
+
+      <section id="listSection" aria-labelledby="listTitle">
+        <h2 id="listTitle" class="section-title">الجلسات المحفوظة <span id="sessionCount" class="muted"></span></h2>
+        <div id="sessionList" class="session-list"></div>
+        <div id="emptyState" class="empty hidden">
+          <p class="empty-title">لا توجد جلسات محفوظة بعد</p>
+          <p class="empty-copy">ابدأ الدبلجة ثم اختر «احفظ الجلسة» من لوحة الترجمة لتظهر هنا مع النصين العربي والإنجليزي.</p>
+        </div>
+      </section>
+
+      <section id="detailSection" class="hidden" aria-labelledby="detailTitle">
+        <div class="detail-head">
+          <button id="backToList" class="ghost-button" type="button">← كل الجلسات</button>
+          <h2 id="detailTitle"></h2>
+        </div>
+        <div class="detail-meta" id="detailMeta"></div>
+
+        <div class="detail-columns">
+          <section class="card transcript-card" aria-labelledby="transcriptTitle">
+            <h3 id="transcriptTitle">الترجمة الثنائية</h3>
+            <div id="transcriptView" class="transcript" dir="auto"></div>
+          </section>
+
+          <aside class="detail-side">
+            <section class="card" aria-labelledby="notesTitle">
+              <h3 id="notesTitle">ملاحظات الجلسة</h3>
+              <label class="sr-only" for="notesEditor">ملاحظات الجلسة</label>
+              <textarea id="notesEditor" rows="5" placeholder="أضف ملاحظاتك هنا…"></textarea>
+              <p id="notesStatus" class="muted small" role="status"></p>
+            </section>
+
+            <section class="card" aria-labelledby="bookmarksTitle">
+              <h3 id="bookmarksTitle">العلامات</h3>
+              <ul id="bookmarkList" class="bookmark-list"></ul>
+              <p id="noBookmarks" class="muted small">لا توجد علامات في هذه الجلسة.</p>
+            </section>
+
+            <section class="card actions-card" aria-labelledby="actionsTitle">
+              <h3 id="actionsTitle">إجراءات</h3>
+              <div class="action-grid">
+                <button id="openOriginal" class="ghost-button" type="button">فتح الصفحة الأصلية</button>
+                <button id="exportTxt" class="ghost-button" type="button">تصدير نص</button>
+                <button id="exportSrt" class="ghost-button" type="button">تصدير SRT ثنائي</button>
+                <button id="exportJson" class="ghost-button" type="button">تصدير JSON</button>
+                <button id="printSession" class="ghost-button" type="button">طباعة / PDF</button>
+                <button id="deleteSession" class="danger-button" type="button">حذف الجلسة</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+        <section class="print-area" id="printArea" aria-hidden="true"></section>
+      </section>
+
+      <section class="card settings-card" aria-labelledby="settingsTitle">
+        <h2 id="settingsTitle">إعدادات Plus</h2>
+        <div class="settings-grid">
+          <label class="switch-row">
+            <input id="autosaveToggle" type="checkbox">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>الحفظ التلقائي للجلسات عند الإيقاف</span>
+          </label>
+          <label class="switch-row">
+            <input id="rememberVolumesToggle" type="checkbox">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span>تذكر مستويات الصوت لكل موقع (يُحفظ اسم الموقع فقط)</span>
+          </label>
+        </div>
+        <p id="settingsStatus" class="settings-status hidden" role="status" aria-live="polite"></p>
+        <div class="profiles-block">
+          <h3>ملفات المواقع المحفوظة</h3>
+          <ul id="profileList" class="profile-list"></ul>
+          <p id="noProfiles" class="muted small">لا توجد مواقع محفوظة.</p>
+        </div>
+        <div class="danger-zone">
+          <button id="deleteAll" class="danger-button" type="button">حذف كل الجلسات المحفوظة</button>
+        </div>
+        <p id="storageInfo" class="muted small"></p>
+        <p class="privacy-note">
+          كل بيانات Plus (النصوص والملاحظات والعلامات وعناوين المصدر) محفوظة على هذا الجهاز فقط،
+          ولا تُرسل إلى أي خدمة، ولا يُحفظ أي صوت. لا مزامنة سحابية في هذه الإصدارة،
+          وحذف الإضافة يمسح البيانات ما لم تصدّر نسخة احتياطية.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="library.js"></script>
+  </body>
+</html>

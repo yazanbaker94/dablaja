@@ -62,11 +62,30 @@ Google documents roughly ten-minute connection lifetimes and 15-minute uncompres
 
 Protocol note: Google's Live Translate page currently shows transcription objects nested in `generationConfig`, while the current official `@google/genai` serializer emits `inputAudioTranscription` and `outputAudioTranscription` directly under `setup`. Live testing rejected the nested shape with WebSocket code 1007, so this implementation follows the official SDK's accepted wire shape: transcription objects at setup level and `translationConfig` inside `generationConfig`.
 
+## Dablaja Plus (local session library — in development)
+
+> **وعد Plus:** «اسمعه بالعربية الآن، واحفظ النص واللحظات المهمة للرجوع إليها.»
+
+Core live dubbing stays free and unchanged. Plus adds a **local-only** saved-session library on top of the transcripts Gemini already returns during a live session:
+
+- Explicit **«احفظ الجلسة»** from the side panel or the library page; optional autosave on stop (default OFF).
+- English source + Arabic target transcripts with session-relative timestamps, stored in IndexedDB on this device only.
+- Saved-session library with search across Arabic/English transcripts, titles, notes and bookmarks.
+- Session notes and timestamped bookmarks (editable, deletable).
+- The source URL/title is stored **only when the user explicitly saves** the session.
+- Exports: plain text, bilingual SRT, print/PDF, JSON; full local backup + validated import that never corrupts existing data.
+- Opt-in per-site volume profiles (hostname only, deletable).
+- Up to three recent unsaved drafts survive service-worker suspension in `chrome.storage.session`.
+
+**Privacy boundaries:** no audio is ever stored; no saved-session content (transcripts, notes, bookmarks, URLs, titles) is sent to AudioFetcher or anywhere else; Plus makes no additional Gemini requests; the API key never enters the session database, exports or logs.
+
+**Payment is not connected yet.** Plus currently runs under a clearly labelled `development_preview` entitlement (`src/shared/plus-entitlement.js`) so every feature can be tested locally. The UI shows «نسخة تطوير Plus» and the planned $10-lifetime pricing without claiming purchase availability. A plain local `{ state: "active" }` license record can never unlock production Plus — only the future Stripe-phase verifier pipeline (signed token or the Dablaja entitlement endpoint) can; see the `STRIPE_INTEGRATION_CONTRACT` notes in that module, including cross-device/reinstall recovery, refunds/revocation and offline-grace behavior.
+
 ## Security model and important BYOK trade-off
 
 - The key is stored only in `chrome.storage.local`, never sync storage, and is revealed only when the user explicitly presses the show/change control.
-- Audio and captions are not written to storage. Captions exist only in extension-page memory.
-- No ads, content scripts, page-title collection, browsing-history collection, or URL storage.
+- Audio is never written to storage. Captions exist only in extension-page memory; with an entitled Plus session active, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session — locked/free users get no such draft capture.
+- No ads, content scripts, or browsing-history collection. Core/free captions are never stored; the only locally stored page title/URL belongs to an entitled Plus session — temporarily while live, permanently only after an explicit save or enabled autosave.
 - Core audio and transcripts go directly to Google; they never pass through the developer server.
 - With separate opt-in consent, the extension sends only dubbed duration, a coarse platform category, and bounded technical error diagnostics to `audiofetcher.com`. Declining does not affect dubbing.
 - Feedback and uninstall forms are user-submitted and hosted on `audiofetcher.com`.
@@ -82,15 +101,16 @@ The free tier is **not marketed as unlimited**. Availability and rate limits can
 ## Development and packaging
 
 ```powershell
-npm run verify
-npm run package
+npm run verify        # tests + server tests + static checks + manifest validation
+npm run package:dev   # development build (preview entitlement allowed)
+npm run package:release  # release build — REFUSES while the preview is enabled
 ```
 
-The package command re-runs static and manifest checks, copies only runtime files into a clean staging folder, rejects common secret/test/dev artifacts, and creates:
+`package:dev` re-runs static and manifest checks, copies only runtime files into a clean staging folder, rejects common secret/test/dev artifacts, and creates an unmistakably named build:
 
-`dist\dablaja-v0.2.0.zip`
+`dist\dablaja-v0.3.0-DEVELOPMENT-PREVIEW.zip`
 
-It does not publish or upload anything.
+`package:release` additionally enforces manifest/package version parity and fails while `PLUS_DEV_PREVIEW_ENABLED` is true, so a publishable ZIP can never be produced from a preview build. It does not publish or upload anything.
 
 Regenerate toolbar and page icons from `design images/logo toolbar.png` (cropped, transparency kept) with:
 

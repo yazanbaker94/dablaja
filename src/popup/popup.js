@@ -1,9 +1,11 @@
 import { ACTIVE_STATUSES, STATUS } from '../shared/constants.js';
+import { GEMINI_CONSENT_TEXT_AR, GEMINI_CONSENT_TEXT_EN, requiresFreshConsent } from '../shared/key-consent.js';
 
 const elements = {
   controls: document.querySelector('#controls'),
   apiKey: document.querySelector('#apiKey'),
   keyError: document.querySelector('#keyError'),
+  geminiConsent: document.querySelector('#geminiConsent'),
   toggleKey: document.querySelector('#toggleKey'),
   saveKey: document.querySelector('#saveKey'),
   clearKey: document.querySelector('#clearKey'),
@@ -19,6 +21,7 @@ const elements = {
   openAudio: document.querySelector('#openAudio'),
   openKey: document.querySelector('#openKey'),
   openStats: document.querySelector('#openStats'),
+  openLibrary: document.querySelector('#openLibrary'),
   openFeedback: document.querySelector('#openFeedback'),
   analyticsNotice: document.querySelector('#analyticsNotice'),
   acceptAnalytics: document.querySelector('#acceptAnalytics'),
@@ -31,7 +34,7 @@ const elements = {
 const translations = {
   ar: {
     title: 'دبلجة', setupEyebrow: 'الإعداد الأول', addKey: 'أضف مفتاح Gemini', keyHint: 'ألصق مفتاح API الخاص بك للوصول إلى ميزات دبلجة أكثر.',
-    apiKey: 'مفتاح API', pasteKey: 'ألصق المفتاح هنا', show: 'إظهار', hide: 'إخفاء', consent: 'أوافق على إرسال صوت التبويب ونصوصه مؤقتاً إلى Google Gemini لإنتاج الدبلجة والترجمة. لا تحفظ الإضافة الصوت أو النصوص.',
+    apiKey: 'مفتاح API', pasteKey: 'ألصق المفتاح هنا', show: 'إظهار', hide: 'إخفاء', consent: GEMINI_CONSENT_TEXT_AR,
     saveKey: 'حفظ', geminiKey: 'مفتاح API', savedLocal: '•••••••• محفوظ محلياً', testKey: 'اختبار', change: 'تغيير', delete: 'حذف', clearKey: 'مسح', deleteKey: 'حذف المفتاح', or: 'أو',
     originalAudio: 'الصوت الأصلي', originalHelp: 'اخفضه كي يبقى الكلام الإنجليزي مرجعاً هادئاً.', dubbedAudio: 'الصوت العربي', audioBalance: 'الصوت', audioBalanceHelp: 'اجعل الدبلجة واضحة مع إبقاء المصدر مرجعاً هادئاً.', autoDucking: 'خفض الصوت الأصلي تلقائياً',
     autoDuckingHelp: 'يخفضه بسلاسة أثناء كلام الدبلجة ثم يعيده.', usageStats: 'الإحصائيات', totalDubbed: 'إجمالي الدبلجة', sessions: 'جلسات', activeDays: 'أيام نشطة', averageDelay: 'متوسط التأخير', details: 'عرض التفاصيل', openCaptions: 'فتح الترجمة الثنائية', clearPrivacy: 'خصوصية واضحة',
@@ -39,7 +42,7 @@ const translations = {
   },
   en: {
     title: 'دبلجة', setupEyebrow: 'First setup', addKey: 'Add your Gemini key', keyHint: 'Paste your API key to unlock more dubbing features.',
-    apiKey: 'API key', pasteKey: 'Paste the key here', show: 'Show', hide: 'Hide', consent: 'I agree to send the current tab audio and temporary transcripts to Google Gemini to produce dubbing and captions. The extension does not store audio or transcripts.',
+    apiKey: 'API key', pasteKey: 'Paste the key here', show: 'Show', hide: 'Hide', consent: GEMINI_CONSENT_TEXT_EN,
     saveKey: 'Save', geminiKey: 'API key', savedLocal: '•••••••• stored locally', testKey: 'Test', change: 'Change', delete: 'Delete', clearKey: 'Clear', deleteKey: 'Delete key', or: 'or',
     originalAudio: 'Original audio', originalHelp: 'Keep the English speech audible as a quiet reference.', dubbedAudio: 'Arabic dubbed audio', audioBalance: 'Audio', audioBalanceHelp: 'Keep the Arabic dub clear with a quiet source reference.', autoDucking: 'Automatically duck original audio',
     autoDuckingHelp: 'Smoothly lowers it while Arabic speech plays, then restores it.', usageStats: 'Usage stats', totalDubbed: 'Total dubbed', sessions: 'Sessions', activeDays: 'Active days', averageDelay: 'Average delay', details: 'View details', openCaptions: 'Open bilingual captions', clearPrivacy: 'Clear privacy',
@@ -122,7 +125,7 @@ async function getActiveWebTab() {
 async function captureActiveTab() {
   const tab = await getActiveWebTab();
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-  return { tabId: tab.id, tabUrl: tab.url || '', streamId };
+  return { tabId: tab.id, tabUrl: tab.url || '', tabTitle: tab.title || '', streamId };
 }
 
 function setBusy(value) {
@@ -149,8 +152,17 @@ function fillSavedKeyField() {
 }
 
 function renderVolumes() {
-  const originalPercent = Math.round((settings?.originalVolume ?? 0.25) * 100);
-  const dubbedPercent = Math.round((settings?.dubbedVolume ?? 1) * 100);
+  // While a session runs with an entitlement-gated site profile applied, the
+  // sliders reflect the EFFECTIVE volumes, not the global defaults.
+  const active = currentState && ACTIVE_STATUSES.has(currentState.status);
+  const effectiveOriginal = active && currentState?.sessionVolumes?.original != null
+    ? currentState.sessionVolumes.original
+    : (settings?.originalVolume ?? 0.25);
+  const effectiveDubbed = active && currentState?.sessionVolumes?.dubbed != null
+    ? currentState.sessionVolumes.dubbed
+    : (settings?.dubbedVolume ?? 1);
+  const originalPercent = Math.round(effectiveOriginal * 100);
+  const dubbedPercent = Math.round(effectiveDubbed * 100);
   elements.originalVolume.value = String(originalPercent);
   elements.dubbedVolume.value = String(dubbedPercent);
   elements.originalOutput.textContent = formatPercent(originalPercent);
@@ -243,6 +255,15 @@ async function saveEnteredKey() {
     showError(language() === 'en' ? 'Paste a Gemini API key first.' : 'ألصق مفتاح Gemini أولاً.');
     return false;
   }
+  // A brand-new key needs the explicit Gemini consent checkbox ticked; merely
+  // viewing an already-saved masked key does not re-require it.
+  if (requiresFreshConsent({ keyEdited, hasSavedKey: Boolean(settings?.hasKey) })
+    && elements.geminiConsent.checked !== true) {
+    showError(language() === 'en'
+      ? 'Please confirm the Gemini processing disclosure before saving.'
+      : 'أكّد الموافقة على إرسال الصوت إلى Gemini قبل الحفظ.');
+    return false;
+  }
   if (savePromise) return savePromise;
   showError();
   savePromise = (async () => {
@@ -251,10 +272,11 @@ async function saveEnteredKey() {
       const response = await request({
         type: 'SAVE_KEY',
         apiKey,
-        consent: true
+        consent: elements.geminiConsent.checked === true
       });
       settings = response.settings;
       keyEdited = false;
+      elements.geminiConsent.checked = false;
       renderVolumes();
       render();
       closeKeyOverlay();
@@ -395,6 +417,9 @@ elements.openKey.addEventListener('click', () => {
 });
 elements.openStats.addEventListener('click', async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL('src/stats/stats.html') });
+});
+elements.openLibrary.addEventListener('click', async () => {
+  await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
 });
 elements.openFeedback?.addEventListener('click', async () => {
   try {

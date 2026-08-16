@@ -1,3 +1,8 @@
+param(
+  [ValidateSet('dev', 'release')]
+  [string]$Mode = 'dev'
+)
+
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -6,8 +11,22 @@ if (-not $distRoot.StartsWith($projectRoot + [System.IO.Path]::DirectorySeparato
   throw 'Refusing to package outside the project workspace.'
 }
 
+if ($Mode -eq 'release') {
+  # Release mode: validate-manifest refuses while the Plus development
+  # preview is enabled and enforces package/manifest version parity.
+  $env:DABLAJA_RELEASE = '1'
+} else {
+  Remove-Item Env:\DABLAJA_RELEASE -ErrorAction SilentlyContinue
+}
+
 & node (Join-Path $projectRoot 'scripts/validate-manifest.mjs')
+if ($LASTEXITCODE -ne 0) {
+  throw "Manifest validation failed (mode: $Mode); no package was created."
+}
 & node (Join-Path $projectRoot 'scripts/check.mjs')
+if ($LASTEXITCODE -ne 0) {
+  throw "Static checks failed (mode: $Mode); no package was created."
+}
 
 if (Test-Path -LiteralPath $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
@@ -28,9 +47,12 @@ if ($forbidden) {
 }
 
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $projectRoot 'manifest.json') | ConvertFrom-Json).version
-$zipPath = Join-Path $distRoot "dablaja-v$packageVersion.zip"
+# A preview build must never share a filename with a future Store upload.
+$zipName = if ($Mode -eq 'release') { "dablaja-v$packageVersion.zip" } else { "dablaja-v$packageVersion-DEVELOPMENT-PREVIEW.zip" }
+$zipPath = Join-Path $distRoot $zipName
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -CompressionLevel Optimal
 
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
 try {
   if (-not ($archive.Entries | Where-Object FullName -eq 'manifest.json')) {
