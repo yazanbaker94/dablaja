@@ -45,6 +45,42 @@ function siteHost(site) {
   }
 }
 
+export function platformCategory(site = '') {
+  const host = siteHost(site);
+  if (host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtu.be') return 'youtube';
+  if (host === 'x.com' || host.endsWith('.x.com') || host === 'twitter.com' || host.endsWith('.twitter.com')) return 'x';
+  if (host === 'twitch.tv' || host.endsWith('.twitch.tv')) return 'twitch';
+  return 'other';
+}
+
+export function usageEventPayload({ site = '', dubbedMs = 0, eventId = '' } = {}) {
+  const duration = Math.max(0, Math.min(8 * 60 * 60 * 1000, Math.round(Number(dubbedMs) || 0)));
+  if (duration < 5_000) return null;
+  return {
+    event_id: String(eventId || crypto.randomUUID()),
+    platform: platformCategory(site),
+    dubbed_ms: duration
+  };
+}
+
+export async function reportUsageSession({ site = '', dubbedMs = 0 } = {}) {
+  try {
+    const stored = await chrome.storage.local.get(STORAGE_KEYS.ANALYTICS_CONSENT);
+    if (stored[STORAGE_KEYS.ANALYTICS_CONSENT] !== true) return false;
+    const payload = usageEventPayload({ site, dubbedMs });
+    if (!payload) return false;
+    await fetch(`${DABLAJA_BASE}/api/usage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(2_500)
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function shouldReportMessage(message = '') {
   const text = String(message || '');
   return !SKIP.some((prefix) => text.includes(prefix));
@@ -57,19 +93,20 @@ export async function reportRemoteError(payload = {}) {
   if (!shouldReportMessage(message)) return;
   const stamp = `${payload.code || ''}|${message.slice(0, 80)}|${payload.site || ''}`;
   if (stamp === lastReport) return;
-  lastReport = stamp;
   try {
-    const installId = await ensureInstallId();
+    const stored = await chrome.storage.local.get(STORAGE_KEYS.ANALYTICS_CONSENT);
+    if (stored[STORAGE_KEYS.ANALYTICS_CONSENT] !== true) return;
+    lastReport = stamp;
     const manifest = chrome.runtime.getManifest();
     await fetch(`${DABLAJA_BASE}/api/errors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        install_id: installId,
+        install_id: crypto.randomUUID(),
         error_code: String(payload.code || 'unknown').slice(0, 80),
         error_message: message.slice(0, 400),
         status: String(payload.status || '').slice(0, 40),
-        site_host: siteHost(payload.site),
+        site_host: platformCategory(payload.site),
         extension_version: manifest.version,
         reconnect_count: Number(payload.reconnectCount) || 0
       })

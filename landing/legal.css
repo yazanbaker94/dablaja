@@ -1,0 +1,19 @@
+:root { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: #122b4f; background: #f6faff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at 86% 0, #dff8f6, transparent 28%), #f6faff; }
+main { width: min(860px, calc(100% - 32px)); margin: 34px auto; padding: clamp(24px, 5vw, 52px); border: 1px solid #e3edf4; border-radius: 26px; background: rgba(255,255,255,.96); box-shadow: 0 24px 70px rgba(18,43,79,.08); }
+.brand { display: inline-flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+.brand img { width: 130px; height: auto; }
+h1 { margin: 22px 0 4px; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.04em; }
+h2 { margin: 32px 0 8px; font-size: 1.25rem; }
+p, li { color: #526780; font-size: .94rem; line-height: 1.85; }
+li { margin-bottom: 7px; }
+.meta { margin: 0 0 24px; color: #8191a3; font-size: .78rem; }
+.summary { padding: 17px 19px; border: 1px solid #ccefeb; border-radius: 16px; background: #f0fbfa; }
+.summary strong { color: #118c85; }
+.summary p { margin: 4px 0 0; }
+a { color: #0c8e88; }
+code { padding: 2px 5px; border-radius: 5px; background: #edf3f6; direction: ltr; }
+.links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; padding-top: 18px; border-top: 1px solid #e8eff4; }
+html[dir="ltr"] main { direction: ltr; }
+@media (max-width: 560px) { main { width: 100%; margin: 0; border: 0; border-radius: 0; } }

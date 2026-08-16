@@ -14,7 +14,9 @@ export const STORAGE_KEYS = Object.freeze({
   AUTO_DUCKING: 'autoDucking',
   UI_LANGUAGE: 'uiLanguage',
   USAGE_STATS: 'localUsageStats',
-  INSTALL_ID: 'installId'
+  INSTALL_ID: 'installId',
+  ANALYTICS_CONSENT: 'anonymousUsageConsent',
+  ANALYTICS_DECIDED_AT: 'anonymousUsageDecisionAt'
 });
 
 export const DEFAULTS = Object.freeze({

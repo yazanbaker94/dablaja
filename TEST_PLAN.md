@@ -12,8 +12,10 @@
 8. Cleanup LIFO order, error tolerance, and idempotence.
 9. Syntax checks for every runtime JavaScript file.
 10. Secret-pattern, logging, dynamic-code, and inline-script/style scan.
-11. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
-12. Clean package generation and ZIP-root manifest check.
+11. Consent-gated community telemetry and exact three-field usage payload.
+12. Server deduplication/aggregation with no URL, title, audio, transcript, key, or install-ID columns.
+13. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
+14. Clean package generation and ZIP-root manifest check.
 
 Commands:
 
@@ -31,7 +33,7 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 1 | Unpacked installation | No manifest errors; icon, popup, and side panel registered. |
 | 2 | Popup RTL layout | Visual screenshot/inspection; no clipped controls. |
 | 3 | Key save/change/delete | Masked field; local-only behavior; key never appears in UI response or console. |
-| 4 | Consent gate | Save rejected without checkbox; disclosure visible before transmission. |
+| 4 | Consent gates | Google audio disclosure precedes key use. Separate anonymous-statistics disclosure supports accept, decline, and later withdrawal; declining must not block dubbing. |
 | 5 | Invalid key | Actionable Arabic error; capture/audio restored; no reconnect loop. |
 | 6 | Valid start | Ready → connecting → listening/translating. |
 | 7 | Captions | Source and Arabic text update in side panel; no storage entries contain text. |

@@ -268,6 +268,22 @@ html[dir="ltr"] .switch-row input:checked + .switch-ui::after { transform: trans
 .delete-button:hover { color: #c2473c; }
 .error-text { margin: -2px 0 10px; color: var(--danger); font-size: 11px; }
 .test-result { margin: 8px 0 0; color: var(--green-dark); font-size: 10px; }
+.analytics-notice {
+  margin: 0 14px 10px;
+  padding: 11px 12px;
+  border: 1px solid #ccefeb;
+  border-radius: 14px;
+  background: #f0fbfa;
+  color: var(--navy);
+  text-align: right;
+}
+.analytics-notice strong { display: block; margin-bottom: 3px; font-size: 12px; }
+.analytics-notice p { margin: 0; color: #596b7e; font-size: 10px; line-height: 1.55; }
+.analytics-actions { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
+.analytics-actions button { padding: 6px 11px; border-radius: 999px; font: inherit; font-size: 10px; font-weight: 800; }
+.analytics-accept { border: 0; background: var(--navy); color: #fff; }
+.analytics-decline { border: 1px solid #d8e3e9; background: #fff; color: var(--navy); }
+.analytics-actions a { margin-inline-start: auto; color: #118c85; font-size: 10px; }
 .hidden { display: none !important; }
 .shell.sheet-open .hero,
 .shell.sheet-open .hero-actions { min-height: 168px; }

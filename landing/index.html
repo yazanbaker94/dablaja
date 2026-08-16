@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7faff" />
+    <meta name="description" content="دبلجة عربية مباشرة للفيديوهات الإنجليزية داخل Chrome بصوت عربي وترجمة ثنائية." />
+    <title>dablaja — شاهد بالإنجليزية، اسمع بالعربية</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header" data-header>
+        <a class="brand" href="#top" aria-label="dablaja — الصفحة الرئيسية">
+          <img src="assets/dablaja-wordmark.png" alt="dablaja دبلجة" />
+        </a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+          <span></span><span></span><span></span><span class="sr-only">فتح القائمة</span>
+        </button>
+        <nav class="site-nav" id="site-nav" aria-label="التنقل الرئيسي">
+          <a href="#features">المميزات</a>
+          <a href="#how">كيف تعمل</a>
+          <a href="#live-stats">الأرقام</a>
+          <a href="#key-guide">مفتاح Gemini</a>
+        </nav>
+        <a class="chrome-cta chrome-cta--header" href="#install">
+          <img class="chrome-mark" src="assets/chrome-logo.svg" alt="" aria-hidden="true" />
+          <span class="cta-label" dir="rtl">أضف دبلجة إلى <bdi>Chrome</bdi></span>
+        </a>
+      </header>
+
+      <main id="top">
+        <section class="hero section-grid" aria-labelledby="hero-title">
+          <div class="hero-copy reveal">
+            <h1 id="hero-title"><span>شاهد بالإنجليزية.</span><br /><em>اسمع بالعربية.</em></h1>
+            <p class="hero-lede">دبلجة عربية مباشرة لأي فيديو على الويب، بصوت عربي وترجمة ثنائية — بنقرة واحدة فقط.</p>
+            <div class="hero-actions">
+              <a class="chrome-cta" href="#install"><img class="chrome-mark" src="assets/chrome-logo.svg" alt="" aria-hidden="true" /><span class="cta-label" dir="rtl">أضف دبلجة إلى <bdi>Chrome</bdi></span></a>
+              <svg class="hero-cta-arrow hero-cta-arrow--desktop" viewBox="0 0 64 92" aria-hidden="true" focusable="false">
+                <path class="connector-line" d="M11 14 C24 15 33 26 33 40 C33 54 29 70 25 80" />
+                <path class="connector-head" d="M19 78 L25 86 L32 77" />
+              </svg>
+              <svg class="hero-cta-arrow hero-cta-arrow--mobile" viewBox="0 0 40 60" aria-hidden="true" focusable="false">
+                <path class="connector-line" d="M16 8 C30 14 36 26 34 38 C33 46 28 48 24 52" />
+                <path class="connector-head" d="M28 55 L19 56 L20 47" />
+              </svg>
+              <a class="text-link hero-add-note" href="#install">مجاني وسهل الإضافة</a>
+            </div>
+            <div class="hero-proof" aria-label="نسخة تجريبية مبكرة تهدف إلى تجربة من خمس نجوم">
+              <div class="proof-rating">
+                <span class="proof-stars" aria-hidden="true">★★★★★</span>
+                <span><b>هدفنا: 5 من 5</b><small>نسخة تجريبية — رأيك يهمنا</small></span>
+              </div>
+              <div class="proof-product-icons" aria-hidden="true">
+                <span><img src="assets/dablaja-toolbar-mark.png" alt="" /></span>
+                <span><svg viewBox="0 0 24 24"><path d="M4 12h2m2-5v10m3-13v16m3-11v13m3-16v12m3-6h2" /></svg></span>
+                <span>ع</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-demo reveal reveal-delay-1">
+            <div class="orbit orbit--one"></div><div class="orbit orbit--two"></div>
+            <div class="browser-window" aria-label="عرض توضيحي للدبلجة">
+              <span class="window-dots browser-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div class="demo-stage">
+                <video class="demo-video" playsinline preload="metadata" poster="assets/demo-poster-clean.jpg" aria-label="معاينة لتشغيل الدبلجة وفتح لوحة الإحصائيات">
+                  <source src="assets/demo-full.mp4" type="video/mp4" />
+                </video>
+                <div class="video-vignette"></div>
+                <button class="demo-launch" type="button" aria-haspopup="dialog" aria-controls="demo-dialog">
+                  <span class="play-badge" aria-hidden="true">▶</span>
+                  <span class="sr-only">شاهد العرض الكامل بالصوت</span>
+                </button>
+                <img class="hero-popup-card" src="assets/popup-ready-real.png" alt="نافذة dablaja الحقيقية وزر بدء الدبلجة" />
+              </div>
+              <div class="toolbar-callout" aria-hidden="true"><img src="assets/dablaja-toolbar-mark.png" alt="" /></div>
+              <svg class="toolbar-callout-arrow toolbar-callout-arrow--desktop" viewBox="0 0 142 82" aria-hidden="true" focusable="false">
+                <path class="connector-line" d="M10 4 C12 35 35 43 73 45 C104 47 123 57 129 71" />
+                <path class="connector-head" d="M117 66 L130 72 L130 58" />
+              </svg>
+              <svg class="toolbar-callout-arrow toolbar-callout-arrow--mobile" viewBox="0 0 60 28" aria-hidden="true" focusable="false">
+                <path class="connector-line" d="M6 8 C20 2 34 3 46 9" />
+                <path class="connector-head" d="M49 6 L52 13 L44 16" />
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="how" aria-labelledby="how-title">
+          <div class="section-heading reveal">
+            <h2 id="how-title">كيف تعمل <span>dablaja</span>؟</h2>
+            <p>لا تغيّر الموقع ولا ترفع ملفاتك. افتح الفيديو، ابدأ الدبلجة، واستمع فوراً.</p>
+          </div>
+          <div class="steps-grid">
+            <article class="step-card reveal">
+              <span class="step-number">١</span>
+              <div class="step-browser-shot">
+                <span class="step-browser-bar"><i></i><i></i><i></i></span>
+                <img src="assets/demo-poster-clean.jpg" alt="فيديو مفتوح داخل المتصفح" />
+              </div>
+              <h3>افتح أي فيديو</h3>
+              <p>YouTube أو دورة أو ندوة — أي تبويب يصدر صوتاً.</p>
+            </article>
+            <div class="step-connector step-connector--desktop" aria-hidden="true">
+              <svg viewBox="0 0 56 32" focusable="false">
+                <defs>
+                  <marker id="step-head-1" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="12" refX="9" refY="6" orient="auto">
+                    <path d="M1 2 L9 6 L1 10" />
+                  </marker>
+                </defs>
+                <path class="connector-line" d="M51 22 C40 8 20 8 9 16" marker-end="url(#step-head-1)" />
+              </svg>
+            </div>
+            <div class="step-connector step-connector--mobile" aria-hidden="true">
+              <svg viewBox="0 0 24 56" focusable="false">
+                <defs>
+                  <marker id="mstep-head-1" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="15" refX="11" refY="7" orient="auto">
+                    <path d="M1.5 2 L11 7 L1.5 12" />
+                  </marker>
+                </defs>
+                <path class="connector-line" d="M12 6 L12 46" marker-end="url(#mstep-head-1)" />
+              </svg>
+            </div>
+            <article class="step-card reveal reveal-delay-1">
+              <span class="step-number">٢</span>
+              <div class="step-popup-shot"><img src="assets/popup-ready-real.png" alt="نافذة dablaja وزر ابدأ الدبلجة" /></div>
+              <h3>اضغط على dablaja</h3>
+              <p>اختر «ابدأ الدبلجة» من نافذة الإضافة.</p>
+            </article>
+            <div class="step-connector step-connector--desktop" aria-hidden="true">
+              <svg viewBox="0 0 56 32" focusable="false">
+                <defs>
+                  <marker id="step-head-2" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="12" refX="9" refY="6" orient="auto">
+                    <path d="M1 2 L9 6 L1 10" />
+                  </marker>
+                </defs>
+                <path class="connector-line" d="M51 13 C40 27 20 27 9 21" marker-end="url(#step-head-2)" />
+              </svg>
+            </div>
+            <div class="step-connector step-connector--mobile" aria-hidden="true">
+              <svg viewBox="0 0 24 56" focusable="false">
+                <defs>
+                  <marker id="mstep-head-2" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="15" refX="11" refY="7" orient="auto">
+                    <path d="M1.5 2 L11 7 L1.5 12" />
+                  </marker>
+                </defs>
+                <path class="connector-line" d="M12 6 L12 46" marker-end="url(#mstep-head-2)" />
+              </svg>
+            </div>
+            <article class="step-card reveal reveal-delay-2">
+              <span class="step-number">٣</span>
+              <div class="wave-state" aria-hidden="true">
+                <div class="wave-icon"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <span>دبلجة نشطة</span>
+              </div>
+              <h3>اسمع بالعربية فوراً</h3>
+              <p>صوت عربي حي، مع إبقاء الصوت الأصلي تحت تحكمك.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="feature-band section" id="features" aria-labelledby="features-title">
+          <div class="feature-band-visual reveal">
+            <div class="visual-glow"></div>
+            <div class="panel-stack">
+              <div class="product-panel product-panel--back" aria-hidden="true">
+                <img src="assets/popup-ready-real.png" alt="" />
+              </div>
+              <div class="product-panel product-panel--controls">
+                <div class="product-panel-header">
+                  <img src="assets/dablaja-wordmark.png" alt="dablaja دبلجة" />
+                  <span><i></i> دبلجة نشطة</span>
+                </div>
+                <div class="active-controls-crop"><img src="assets/popup-active-real.png" alt="التحكم في مستوى الصوت العربي والصوت الأصلي" /></div>
+              </div>
+            </div>
+            <img class="mascot mascot--crossed" src="assets/mascot-crossed-arms.png" alt="شخصية dablaja بذراعين متقاطعتين" />
+          </div>
+          <div class="feature-band-copy reveal reveal-delay-1">
+            <h2 id="features-title">كل ما تحتاجه<br /><span>في نافذة واحدة</span></h2>
+            <ul class="feature-list">
+              <li><span class="feature-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2m2-5v10m3-13v16m3-12v8m3-11v14m3-7h2" /></svg></span><div><b>دبلجة مباشرة بجودة عالية</b><small>ترجمة صوتية عربية طبيعية وسلسة</small></div></li>
+              <li><span class="feature-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Zm12-2c1.4 1.1 2 2.4 2 4s-.6 2.9-2 4m2-10c2.1 1.6 3 3.6 3 6s-.9 4.4-3 6" /></svg></span><div><b>تحكم كامل في الصوت</b><small>وازن بين الصوت الأصلي والدبلجة</small></div></li>
+              <li><span class="feature-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11m5 8V5m5 14v-6m4 6V8" /></svg></span><div><b>إحصائيات مفصلة</b><small>تابع جلساتك ووقتك المترجم</small></div></li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="community-stats section" id="live-stats" aria-labelledby="live-stats-title">
+          <div class="community-stats-card reveal">
+            <div class="stats-total">
+              <p class="stats-kicker">من مجتمعنا حول العالم</p>
+              <h2 id="live-stats-title">Dablaja <span>في أرقام</span></h2>
+              <div class="stats-number"><strong id="communityHours">—</strong><span>ساعة مدبلجة</span></div>
+              <p class="stats-week" id="communityWeek">جارٍ تحميل الأرقام الحقيقية…</p>
+              <div class="stats-history" id="communityHistory" aria-label="ساعات الدبلجة خلال آخر 30 يوماً"></div>
+              <small>آخر 30 يوماً</small>
+            </div>
+            <div class="stats-platforms">
+              <h3>أين تُستخدم Dablaja؟</h3>
+              <div class="platform-row" data-platform="youtube"><span class="platform-name"><b class="platform-icon platform-icon--youtube">▶</b>YouTube</span><i><u></u></i><strong>—</strong></div>
+              <div class="platform-row" data-platform="x"><span class="platform-name"><b class="platform-icon platform-icon--x">X</b>X / Twitter</span><i><u></u></i><strong>—</strong></div>
+              <div class="platform-row" data-platform="twitch"><span class="platform-name"><b class="platform-icon platform-icon--twitch">◫</b>Twitch</span><i><u></u></i><strong>—</strong></div>
+              <div class="platform-row" data-platform="other"><span class="platform-name"><b class="platform-icon platform-icon--other">◎</b>مواقع أخرى</span><i><u></u></i><strong>—</strong></div>
+            </div>
+            <div class="stats-globe" aria-hidden="true">
+              <img class="globe-art" src="assets/community-globe.png" alt="" />
+              <div class="globe-badge"><img src="assets/community-chart.png" alt="" /><span id="communitySessions">— جلسة</span></div>
+            </div>
+          </div>
+          <p class="stats-privacy-note">أرقام مجمعة مجهولة: مدة الدبلجة وفئة الموقع فقط. لا روابط، لا عناوين فيديو، لا صوت، لا نصوص، ولا مفتاح Gemini.</p>
+        </section>
+
+        <section class="key-guide section" id="key-guide" aria-labelledby="key-guide-title">
+          <div class="key-guide-copy reveal">
+            <p class="eyebrow">إعداد سريع لأول مرة</p>
+            <h2 id="key-guide-title">أول مرة تستخدم Gemini؟</h2>
+            <p>إنشاء مفتاح API مجاني وسهل، ويأخذ أقل من دقيقة. شاهد الخطوات ثم الصق المفتاح داخل الإضافة بنفسك.</p>
+            <div class="key-guide-actions">
+              <button class="guide-button" id="openTutorialVideo" type="button"><span>▶</span> شاهد الشرح (45 ثانية)</button>
+              <button class="guide-link" id="openStudioGuide" type="button">Google AI Studio <span>↗</span></button>
+            </div>
+          </div>
+          <button class="key-video reveal reveal-delay-1" id="openTutorialPreview" type="button" aria-haspopup="dialog" aria-controls="tutorial-dialog" aria-label="شاهد شرح إنشاء مفتاح Gemini داخل الصفحة">
+            <span class="key-video-time">يبدأ من 00:14</span>
+            <div class="studio-title">Google AI<br />Studio</div>
+            <div class="studio-card"><small>API keys</small><span>Gemini AI Studio</span><i>••••••••••••••</i><b>Create API key</b></div>
+            <span class="key-video-play">▶</span>
+            <span class="key-video-progress"><i></i></span>
+          </button>
+        </section>
+
+        <section class="install-cta section" id="install" aria-labelledby="install-title">
+          <svg class="install-wave" viewBox="0 0 1440 190" preserveAspectRatio="none" aria-hidden="true">
+            <path class="install-wave-line install-wave-line--one" d="M-50 121 C112 40 275 176 458 112 C643 47 775 51 942 118 C1110 186 1297 55 1490 107" />
+            <path class="install-wave-line install-wave-line--two" d="M-50 143 C128 184 278 65 467 129 C650 191 816 82 988 111 C1160 140 1308 168 1490 86" />
+            <path class="install-wave-line install-wave-line--three" d="M-50 92 C114 143 271 151 446 91 C621 31 793 166 968 131 C1144 96 1290 58 1490 137" />
+            <path class="install-wave-line install-wave-line--four" d="M-50 111 C134 84 286 115 455 146 C634 178 803 44 984 89 C1159 133 1320 149 1490 116" />
+          </svg>
+          <div class="install-copy reveal">
+            <h2 id="install-title">جاهز تسمع الويب بالعربية؟</h2>
+            <p>دبلجة فورية لأي فيديو، أينما كنت.</p>
+            <div class="install-actions">
+              <a class="chrome-cta" href="install.html"><img class="chrome-mark" src="assets/chrome-logo.svg" alt="" aria-hidden="true" /><span class="cta-label" dir="rtl">أضف دبلجة إلى <bdi>Chrome</bdi></span></a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer" id="community">
+        <div class="footer-mascot" aria-hidden="true"><div class="mascot-halo"></div><img src="assets/mascot-cta-presenting.png" alt="" /></div>
+        <div class="footer-brand"><img src="assets/dablaja-wordmark.png" alt="dablaja دبلجة" /><span>فهم أكثر. حواجز أقل.</span></div>
+        <div class="footer-links"><a href="#how">كيف تعمل</a><a href="privacy.html">الخصوصية</a><a href="terms.html">الشروط</a><a href="#install">التثبيت</a><a href="#features">المميزات</a></div>
+        <a class="footer-audiofetcher" href="https://audiofetcher.com/" target="_blank" rel="noopener noreferrer" aria-label="AudioFetcher — يفتح في نافذة جديدة">
+          <span>AudioFetcher</span>
+          <svg viewBox="0 0 38 30" aria-hidden="true">
+            <path d="M3 12 V18 M9 8 V22 M15 4 V26 M21 10 V20 M27 6 V24 M33 12 V18" />
+          </svg>
+        </a>
+    </footer>
+  </div>
+
+    <dialog class="studio-dialog" id="studio-dialog" aria-labelledby="studio-dialog-title">
+      <div class="studio-dialog-shell">
+        <div class="studio-dialog-header">
+          <div>
+            <strong id="studio-dialog-title">Google AI Studio</strong>
+            <span>أنشئ مفتاح Gemini هنا ثم الصقه داخل إضافة dablaja.</span>
+          </div>
+          <button class="studio-close" type="button" aria-label="إغلاق">×</button>
+        </div>
+        <div class="studio-dialog-body">
+          <div class="studio-dialog-steps">
+            <div><b>١</b><span>افتح صفحة <strong>API keys</strong> في Google AI Studio.</span></div>
+            <div><b>٢</b><span>اضغط <strong>Create API key</strong> وانسخ المفتاح.</span></div>
+            <div><b>٣</b><span>الصقه في الإضافة فقط. لا تشاركه مع أي شخص.</span></div>
+          </div>
+          <div class="studio-dialog-card" aria-label="معاينة إعداد مفتاح Gemini">
+            <div class="studio-dialog-brand"><span class="studio-dialog-spark">✦</span><strong>Google AI Studio</strong></div>
+            <small>API keys</small>
+            <div class="studio-dialog-key">••••••••••••••••</div>
+            <a class="studio-open-link" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">فتح Google AI Studio في تبويب جديد <span>↗</span></a>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="tutorial-dialog" id="tutorial-dialog" aria-labelledby="tutorial-dialog-title">
+      <div class="tutorial-dialog-shell">
+        <div class="tutorial-dialog-header">
+          <div>
+            <strong id="tutorial-dialog-title">شرح إنشاء مفتاح Gemini</strong>
+            <span>الفيديو يعمل داخل dablaja — يبدأ من الثانية 00:14.</span>
+          </div>
+          <button class="tutorial-close" type="button" aria-label="إغلاق الشرح">×</button>
+        </div>
+        <div class="tutorial-frame-wrap">
+          <iframe class="tutorial-frame" title="شرح إنشاء مفتاح Gemini" src="about:blank" data-src="https://www.youtube.com/embed/Uyn-P2nRvDA?start=14&rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="demo-dialog" id="demo-dialog" aria-labelledby="demo-dialog-title">
+      <div class="demo-dialog-shell">
+        <div class="demo-dialog-header">
+          <div>
+            <strong id="demo-dialog-title">شاهد dablaja تعمل فعلياً</strong>
+            <span>تشغيل الدبلجة، الاستماع للصوت العربي، ثم فتح لوحة الإحصائيات.</span>
+          </div>
+          <button class="demo-close" type="button" aria-label="إغلاق العرض">×</button>
+        </div>
+        <video class="demo-full-video" controls playsinline preload="metadata" disablepictureinpicture poster="assets/demo-poster-popup.jpg">
+          <source src="assets/demo-full.mp4" type="video/mp4" />
+          متصفحك لا يدعم تشغيل الفيديو.
+        </video>
+      </div>
+    </dialog>
+    <script src="app.js" defer></script>
+  </body>
+</html>

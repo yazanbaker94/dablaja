@@ -20,6 +20,10 @@ const elements = {
   openKey: document.querySelector('#openKey'),
   openStats: document.querySelector('#openStats'),
   openFeedback: document.querySelector('#openFeedback'),
+  analyticsNotice: document.querySelector('#analyticsNotice'),
+  acceptAnalytics: document.querySelector('#acceptAnalytics'),
+  declineAnalytics: document.querySelector('#declineAnalytics'),
+  changeAnalytics: document.querySelector('#changeAnalytics'),
   audioOverlay: document.querySelector('#audioOverlay'),
   keyOverlay: document.querySelector('#keyOverlay')
 };
@@ -60,6 +64,7 @@ let currentState = null;
 let settings = null;
 let busy = false;
 let keyEdited = false;
+let analyticsNoticeForced = false;
 
 function language() {
   return settings?.uiLanguage === 'en' ? 'en' : 'ar';
@@ -163,6 +168,7 @@ function render() {
   elements.startStop.classList.toggle('stop', active);
   elements.startStop.disabled = busy;
   fillSavedKeyField();
+  elements.analyticsNotice.classList.toggle('hidden', settings.analyticsDecisionRecorded && !analyticsNoticeForced);
 }
 
 async function request(message) {
@@ -296,6 +302,32 @@ elements.clearKey.addEventListener('click', async () => {
     render();
     elements.apiKey.focus();
   }
+});
+
+async function chooseAnalyticsConsent(value) {
+  elements.acceptAnalytics.disabled = true;
+  elements.declineAnalytics.disabled = true;
+  analyticsNoticeForced = false;
+  settings = { ...settings, analyticsConsent: value === true, analyticsDecisionRecorded: true };
+  render();
+  try {
+    const response = await request({ type: 'SET_ANALYTICS_CONSENT', value });
+    settings = response.settings;
+    render();
+  } catch {
+    settings = { ...settings, analyticsDecisionRecorded: false };
+    render();
+    elements.acceptAnalytics.disabled = false;
+    elements.declineAnalytics.disabled = false;
+  }
+}
+
+elements.acceptAnalytics.addEventListener('click', () => chooseAnalyticsConsent(true));
+elements.declineAnalytics.addEventListener('click', () => chooseAnalyticsConsent(false));
+elements.changeAnalytics.addEventListener('click', () => {
+  analyticsNoticeForced = true;
+  toggleOverlay(elements.keyOverlay);
+  render();
 });
 
 elements.startStop.addEventListener('click', async () => {

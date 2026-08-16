@@ -12,7 +12,7 @@ if (-not $distRoot.StartsWith($projectRoot + [System.IO.Path]::DirectorySeparato
 if (Test-Path -LiteralPath $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
 }
-$stage = Join-Path $distRoot 'arabic-live-dubbing'
+$stage = Join-Path $distRoot 'dablaja'
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
 foreach ($item in @('manifest.json', 'src', 'icons', 'privacy.html', 'privacy.css')) {
@@ -28,7 +28,7 @@ if ($forbidden) {
 }
 
 $packageVersion = (Get-Content -Raw -LiteralPath (Join-Path $projectRoot 'manifest.json') | ConvertFrom-Json).version
-$zipPath = Join-Path $distRoot "arabic-live-dubbing-v$packageVersion.zip"
+$zipPath = Join-Path $distRoot "dablaja-v$packageVersion.zip"
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -CompressionLevel Optimal
 
 $archive = [System.IO.Compression.ZipFile]::OpenRead($zipPath)

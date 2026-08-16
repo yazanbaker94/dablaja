@@ -1,4 +1,4 @@
-# dablaja Arabic Live Dubbing — MVP Chrome extension
+# dablaja — MVP Chrome extension
 
 > **وعد V1:** افهم الفيديوهات والدورات والندوات الإنجليزية مباشرةً بالعربية، بصوت عربي وترجمة ثنائية مباشرة.
 
@@ -19,7 +19,7 @@ Manifest V3 Chrome extension that captures **audio only** from the active tab af
 
    `C:\Users\Yazan\Desktop\Projects\Arabic Live Dubbing`
 
-5. Pin **dablaja Arabic Live Dubbing** if desired.
+5. Pin **dablaja** if desired.
 
 ## Use
 
@@ -64,10 +64,12 @@ Protocol note: Google's Live Translate page currently shows transcription object
 
 ## Security model and important BYOK trade-off
 
-- The key is stored only in `chrome.storage.local`, never sync storage, and is never returned to UI code after saving.
+- The key is stored only in `chrome.storage.local`, never sync storage, and is revealed only when the user explicitly presses the show/change control.
 - Audio and captions are not written to storage. Captions exist only in extension-page memory.
-- No analytics, telemetry, ads, content scripts, page-title collection, browsing-history collection, or URL storage.
-- No developer server; the only remote host permission is Google's Gemini API host.
+- No ads, content scripts, page-title collection, browsing-history collection, or URL storage.
+- Core audio and transcripts go directly to Google; they never pass through the developer server.
+- With separate opt-in consent, the extension sends only dubbed duration, a coarse platform category, and bounded technical error diagnostics to `audiofetcher.com`. Declining does not affect dubbing.
+- Feedback and uninstall forms are user-submitted and hosted on `audiofetcher.com`.
 - No runtime dependency, remote code, `eval`, or inline script.
 - Logs intentionally exclude keys, URLs, audio, and transcripts.
 
@@ -86,7 +88,7 @@ npm run package
 
 The package command re-runs static and manifest checks, copies only runtime files into a clean staging folder, rejects common secret/test/dev artifacts, and creates:
 
-`dist\arabic-live-dubbing-v0.2.0.zip`
+`dist\dablaja-v0.2.0.zip`
 
 It does not publish or upload anything.
 

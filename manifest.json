@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "dablaja Arabic Live Dubbing",
+  "name": "dablaja",
   "version": "0.2.0",
   "description": "افهم الفيديوهات الإنجليزية مباشرةً بالعربية، بصوت عربي وترجمة ثنائية.",
   "minimum_chrome_version": "116",

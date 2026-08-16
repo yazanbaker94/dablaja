@@ -9,12 +9,17 @@ if (manifest.manifest_version !== 3) throw new Error('Manifest must use MV3');
 if (JSON.stringify(actualPermissions) !== JSON.stringify(expectedPermissions.sort())) {
   throw new Error(`Unexpected permissions: ${actualPermissions.join(', ')}`);
 }
-if (JSON.stringify(manifest.host_permissions) !== JSON.stringify(['https://generativelanguage.googleapis.com/*'])) {
-  throw new Error('Host permissions must be limited to the Gemini endpoint host');
+const expectedHosts = [
+  'https://generativelanguage.googleapis.com/*',
+  'https://audiofetcher.com/*'
+];
+if (JSON.stringify([...manifest.host_permissions].sort()) !== JSON.stringify(expectedHosts.sort())) {
+  throw new Error('Host permissions must be limited to Gemini and the disclosed Dablaja service');
 }
 if (!manifest.content_security_policy?.extension_pages.includes("script-src 'self'")) throw new Error('Missing self-only script CSP');
 if (manifest.content_security_policy.extension_pages.includes("'unsafe-eval'")) throw new Error('unsafe-eval is forbidden');
 if (!manifest.content_security_policy.extension_pages.includes('wss://generativelanguage.googleapis.com')) throw new Error('Gemini WSS missing from connect-src');
+if (!manifest.content_security_policy.extension_pages.includes('https://audiofetcher.com')) throw new Error('Dablaja HTTPS endpoint missing from connect-src');
 
 const referenced = [
   manifest.background.service_worker,

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>تثبيت dablaja</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      .install-page { width: min(760px, calc(100% - 40px)); margin: 0 auto; padding: 70px 0 110px; }
+      .install-page .brand { margin-bottom: 48px; }
+      .install-page .brand img { width: 145px; }
+      .install-page h1 { font-size: clamp(2.3rem, 6vw, 4rem); line-height: 1.1; margin: 0 0 18px; }
+      .install-page > p { color: var(--ink-soft); font-size: 1.1rem; }
+      .install-list { display: grid; gap: 16px; margin: 38px 0; padding: 0; list-style: none; counter-reset: install; }
+      .install-list li { counter-increment: install; display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: start; padding: 21px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 12px 26px rgba(11,35,65,.06); }
+      .install-list li::before { content: counter(install); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--teal); font-weight: 900; }
+      .install-list b { display: block; margin-bottom: 4px; font-size: 1.03rem; }
+      .install-list span { color: var(--ink-soft); font-size: .92rem; }
+      .install-note { padding: 18px 20px; border-radius: 15px; color: #466176; background: var(--mint); font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+    <main class="install-page">
+      <a class="brand" href="index.html"><img src="assets/dablaja-wordmark.png" alt="dablaja دبلجة" /></a>
+      <p class="eyebrow"><span class="eyebrow-dot"></span> الوصول المبكر</p>
+      <h1>ثبّت dablaja<br /><em style="color:var(--teal)">في أقل من دقيقة.</em></h1>
+      <p>الإضافة غير منشورة على Chrome Web Store بعد. هذه هي طريقة التثبيت المحلي الآمنة من نسخة المشروع.</p>
+      <ol class="install-list">
+        <li><div><b>نزّل نسخة المشروع</b><span>احصل على مجلد الإضافة من صاحب المشروع أو من مستودع dablaja الخاص.</span></div></li>
+        <li><div><b>افتح صفحة الإضافات</b><span>اكتب <code>chrome://extensions</code> في شريط العنوان، ثم فعّل Developer mode.</span></div></li>
+        <li><div><b>حمّل المجلد</b><span>اضغط Load unpacked واختر مجلد المشروع الذي يحتوي على <code>manifest.json</code>.</span></div></li>
+        <li><div><b>أدخل مفتاح Gemini بنفسك</b><span>افتح dablaja، احفظ مفتاحك في الواجهة، ثم ابدأ الدبلجة من أي تبويب مسموع.</span></div></li>
+      </ol>
+      <p class="install-note">لا تضع مفتاح API داخل الملفات أو ترسله لأي شخص. dablaja لا تملك خادماً وسيطاً؛ الاتصال يتم مباشرةً من الإضافة إلى Google باستخدام مفتاحك.</p>
+      <p style="margin-top:28px"><a class="text-link" href="index.html">العودة إلى الصفحة الرئيسية <span aria-hidden="true">←</span></a></p>
+    </main>
+  </body>
+</html>

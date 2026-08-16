@@ -9,7 +9,7 @@ import {
 } from './shared/constants.js';
 import { transitionState } from './shared/lifecycle.js';
 import { EMPTY_USAGE_STATS, normalizeUsageStats, recordSessionEnd, recordSessionStart } from './shared/usage-stats.js';
-import { configureUninstallUrl, feedbackPageUrl, reportRemoteError } from './shared/telemetry.js';
+import { configureUninstallUrl, feedbackPageUrl, reportRemoteError, reportUsageSession } from './shared/telemetry.js';
 
 const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
 let state = publicState();
@@ -48,17 +48,20 @@ async function recordStart(startedAt, site = null) {
 async function recordEnd(finalState, error = false) {
   if (!trackedSession) return;
   const startedAt = trackedSession.startedAt;
+  const site = finalState?.tabOrigin || trackedSession.site;
+  const sentAudioMs = Math.max(0, Number(finalState?.sentAudioMs) || 0);
   usageStats = recordSessionEnd(usageStats, {
     durationMs: Math.max(0, Date.now() - startedAt),
-    sentAudioMs: finalState?.sentAudioMs,
+    sentAudioMs,
     latencyMs: finalState?.latencyMs,
     reconnectCount: finalState?.reconnectCount,
     error,
-    site: finalState?.tabOrigin || trackedSession.site
+    site
   });
   trackedSession = null;
   await persistUsageStats();
   await persistTrackedSession();
+  await reportUsageSession({ site, dubbedMs: sentAudioMs });
 }
 
 async function loadInitialState() {
@@ -71,7 +74,9 @@ async function loadInitialState() {
     STORAGE_KEYS.ORIGINAL_VOLUME,
     STORAGE_KEYS.DUBBED_VOLUME,
     STORAGE_KEYS.AUTO_DUCKING,
-    STORAGE_KEYS.UI_LANGUAGE
+    STORAGE_KEYS.UI_LANGUAGE,
+    STORAGE_KEYS.ANALYTICS_CONSENT,
+    STORAGE_KEYS.ANALYTICS_DECIDED_AT
   ]);
   const previous = await chrome.storage.session.get(SESSION_STATE_KEY);
   const previousState = previous[SESSION_STATE_KEY];
@@ -135,8 +140,15 @@ async function getSettings() {
     STORAGE_KEYS.ORIGINAL_VOLUME,
     STORAGE_KEYS.DUBBED_VOLUME,
     STORAGE_KEYS.AUTO_DUCKING,
-    STORAGE_KEYS.UI_LANGUAGE
+    STORAGE_KEYS.UI_LANGUAGE,
+    STORAGE_KEYS.ANALYTICS_CONSENT,
+    STORAGE_KEYS.ANALYTICS_DECIDED_AT
   ]);
+  const hasLegacyAnalyticsDecision = typeof stored[STORAGE_KEYS.ANALYTICS_CONSENT] === 'boolean';
+  const analyticsDecisionRecorded = Boolean(stored[STORAGE_KEYS.ANALYTICS_DECIDED_AT]) || hasLegacyAnalyticsDecision;
+  if (hasLegacyAnalyticsDecision && !stored[STORAGE_KEYS.ANALYTICS_DECIDED_AT]) {
+    await chrome.storage.local.set({ [STORAGE_KEYS.ANALYTICS_DECIDED_AT]: new Date().toISOString() });
+  }
   return {
     hasKey: Boolean(stored[STORAGE_KEYS.API_KEY]),
     hasConsent: Boolean(stored[STORAGE_KEYS.CONSENT]),
@@ -149,8 +161,17 @@ async function getSettings() {
     autoDucking: typeof stored[STORAGE_KEYS.AUTO_DUCKING] === 'boolean'
       ? stored[STORAGE_KEYS.AUTO_DUCKING]
       : DEFAULTS.autoDucking,
-    uiLanguage: stored[STORAGE_KEYS.UI_LANGUAGE] === 'en' ? 'en' : DEFAULTS.uiLanguage
+    uiLanguage: stored[STORAGE_KEYS.UI_LANGUAGE] === 'en' ? 'en' : DEFAULTS.uiLanguage,
+    analyticsConsent: stored[STORAGE_KEYS.ANALYTICS_CONSENT] === true,
+    analyticsDecisionRecorded
   };
+}
+
+async function setAnalyticsConsent(value) {
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.ANALYTICS_CONSENT]: value === true,
+    [STORAGE_KEYS.ANALYTICS_DECIDED_AT]: new Date().toISOString()
+  });
 }
 
 function safeVolume(value) {
@@ -384,6 +405,9 @@ async function handleUiMessage(message) {
       return { ok: true, value: await setAutoDucking(message.enabled) };
     case 'SET_UI_LANGUAGE':
       return { ok: true, value: await setUiLanguage(message.language) };
+    case 'SET_ANALYTICS_CONSENT':
+      await setAnalyticsConsent(message.value);
+      return { ok: true, settings: await getSettings() };
     case 'TEST_KEY':
       return { ok: true, ...(await testStoredKey()) };
     case 'GET_FEEDBACK_URL':

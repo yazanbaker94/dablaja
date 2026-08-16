@@ -10,3 +10,13 @@ coverage/
 .env
 .env.*
 secrets.*
+
+# Local design sources, recordings, generated promo renders, and deployment scratch files
+design images/
+recordings/
+promo/*.mp4
+promo/preview*.png
+.deploy-arrow/
+.deploy-mobile/
+.deploy-vps/
+server/__pycache__/

@@ -26,7 +26,8 @@
 - [ ] Confirm stop closes tracks, socket, contexts/worklets, timers, queues, and restores normal tab audio.
 - [ ] Inspect worker/offscreen/side-panel consoles for sensitive values and repeated errors.
 - [ ] Replace temporary publisher/support wording with real publisher identity and support email.
-- [ ] Host `privacy.html` on a stable HTTPS URL controlled by the publisher and insert that URL in the Web Store dashboard.
+- [x] Host `privacy.html` on a stable HTTPS URL controlled by the publisher: `https://audiofetcher.com/dablaja/privacy.html`.
+- [x] Publish Dablaja terms at `https://audiofetcher.com/dablaja/terms.html`.
 - [ ] Complete Web Store data-use questionnaire exactly as documented in `STORE_LISTING.md`.
 - [ ] Add the Limited Use disclosure one click away from the product homepage/store support surface.
 
