@@ -216,8 +216,8 @@ async function getPlusSettings() {
     // only the Stripe-phase verifier pipeline (or the dev-preview switch)
     // can unlock Plus. Missing/malformed data defaults to locked.
     entitlement: resolveEntitlement({ licenseRecord: stored[STORAGE_KEYS.PLUS_LICENSE] }),
-    autosave: stored[STORAGE_KEYS.PLUS_AUTOSAVE] === true,
-    rememberVolumes: stored[STORAGE_KEYS.PLUS_REMEMBER_VOLUMES] === true,
+    autosave: stored[STORAGE_KEYS.PLUS_AUTOSAVE] !== false,
+    rememberVolumes: stored[STORAGE_KEYS.PLUS_REMEMBER_VOLUMES] !== false,
     siteProfiles: Array.isArray(stored[STORAGE_KEYS.PLUS_SITE_PROFILES])
       ? stored[STORAGE_KEYS.PLUS_SITE_PROFILES]
       : []
