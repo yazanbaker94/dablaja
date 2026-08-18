@@ -15,6 +15,7 @@ const elements = {
   dubbedOutput: document.querySelector('#dubbedOutput'),
   autoDucking: document.querySelector('#autoDucking'),
   startStop: document.querySelector('#startStop'),
+  quickBookmark: document.querySelector('#quickBookmark'),
   actionError: document.querySelector('#actionError'),
   openPanel: document.querySelector('#openPanel'),
   openDiagnostics: document.querySelector('#openDiagnostics'),
@@ -179,6 +180,9 @@ function render() {
   else elements.startStop.textContent = active ? tr('stop') : tr('start');
   elements.startStop.classList.toggle('stop', active);
   elements.startStop.disabled = busy;
+  if (elements.quickBookmark) {
+    elements.quickBookmark.classList.toggle('hidden', !active);
+  }
   fillSavedKeyField();
   elements.analyticsNotice.classList.toggle('hidden', settings.analyticsDecisionRecorded && !analyticsNoticeForced);
 }
@@ -375,6 +379,23 @@ elements.startStop.addEventListener('click', async () => {
     render();
   }
 });
+
+if (elements.quickBookmark) {
+  elements.quickBookmark.addEventListener('click', async () => {
+    try {
+      elements.quickBookmark.disabled = true;
+      await request({ type: 'PLUS_ADD_BOOKMARK', note: '' });
+      const origHtml = elements.quickBookmark.innerHTML;
+      elements.quickBookmark.innerHTML = '<span>تم حفظ اللحظة! ✓</span>';
+      setTimeout(() => {
+        elements.quickBookmark.innerHTML = origHtml;
+        elements.quickBookmark.disabled = false;
+      }, 1600);
+    } catch {
+      elements.quickBookmark.disabled = false;
+    }
+  });
+}
 
 elements.autoDucking.addEventListener('change', async () => {
   const enabled = elements.autoDucking.checked;
