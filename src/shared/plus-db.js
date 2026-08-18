@@ -104,33 +104,37 @@ async function withStore(mode, run) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, mode);
     const store = tx.objectStore(STORE);
-    let outcome;
-    let failed = false;
-    try {
-      outcome = run(store, settle);
-    } catch (error) {
-      failed = true;
+    let result;
+    let settled = false;
+
+    const succeed = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
+      try { tx.abort(); } catch {}
       reject(error);
-      return;
+    };
+
+    tx.oncomplete = () => succeed(result);
+    tx.onerror = () => fail(tx.error || new Error('فشلت العملية على البيانات المحلية.'));
+    tx.onabort = () => fail(tx.error || new Error('أُلغيت العملية على البيانات المحلية.'));
+
+    try {
+      const outcome = run(store, settle);
+      Promise.resolve(outcome)
+        .then((value) => {
+          result = value;
+          if (mode === 'readonly') succeed(value);
+        })
+        .catch(fail);
+    } catch (error) {
+      fail(error);
     }
-    Promise.resolve(outcome)
-      .then((value) => {
-        if (failed) return;
-        tx.oncomplete = () => resolve(value);
-      })
-      .catch((error) => {
-        failed = true;
-        try {
-          tx.abort();
-        } catch {}
-        reject(error);
-      });
-    tx.onerror = () => {
-      if (!failed) reject(tx.error || new Error('فشلت العملية على البيانات المحلية.'));
-    };
-    tx.onabort = () => {
-      if (!failed) reject(tx.error || new Error('أُلغيت العملية على البيانات المحلية.'));
-    };
   });
 }
 
