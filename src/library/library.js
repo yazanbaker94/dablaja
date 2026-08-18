@@ -611,7 +611,14 @@ async function renderDraftCard() {
   } else {
     elements.draftSection.classList.add('hidden');
   }
-  renderEntitlement();
+  // Entitlement notice
+  const entitlement = plusSettings?.entitlement;
+  const isActive = entitlement?.plusEnabled === true;
+  elements.entitlementNotice.classList.toggle('hidden', isActive);
+  if (!isActive) {
+    elements.entitlementNotice.textContent = describeEntitlement(entitlement) || 'يتطلب اشتراك Plus مفعلاً لحفظ الجلسات.';
+  }
+  elements.plusState.textContent = isActive ? 'مفعّل على هذا الجهاز' : describeEntitlement(entitlement) || 'غير مفعّل';
 }
 
 function showSaveStatus(message = '', tone = '') {
@@ -866,17 +873,24 @@ function sessionCard(summary, session) {
   playBtn.type = 'button';
   playBtn.className = 'btn-continue-play';
   playBtn.innerHTML = `<span>▶</span> <span>${isAudio ? 'تابع الاستماع' : 'تابع المشاهدة'}</span>`;
-  playBtn.addEventListener('click', open);
+  playBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (session.pageUrl) {
+      chrome.tabs.create({ url: session.pageUrl });
+    } else {
+      open();
+    }
+  });
 
   const bmkBtn = document.createElement('button');
   bmkBtn.type = 'button';
   const hasBookmarks = (session.bookmarks || []).length > 0;
   bmkBtn.className = hasBookmarks ? 'btn-card-bookmark is-bookmarked' : 'btn-card-bookmark';
-  bmkBtn.setAttribute('aria-label', 'العلامات');
+  bmkBtn.setAttribute('aria-label', hasBookmarks ? `${(session.bookmarks || []).length} علامات محفوظة` : 'لا توجد علامات');
   bmkBtn.append(iconNode('bookmark'));
   bmkBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    open();
+    openDetail(summary.id).catch(() => undefined);
   });
 
   actionsRow.append(playBtn, bmkBtn);
