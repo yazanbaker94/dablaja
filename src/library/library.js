@@ -907,7 +907,16 @@ function sessionCard(summary, session) {
   playBtn.innerHTML = `<span>▶</span> <span>${isAudio ? 'تابع الاستماع' : 'تابع المشاهدة'}</span>`;
   playBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    open();
+    if (session.pageUrl) {
+      let targetUrl = session.pageUrl;
+      const atSeconds = Math.floor((coverage.atMs || 0) / 1000);
+      if (atSeconds > 5 && targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
+        targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
+      }
+      chrome.tabs.create({ url: targetUrl });
+    } else {
+      open();
+    }
   });
 
   const bmkBtn = document.createElement('button');
