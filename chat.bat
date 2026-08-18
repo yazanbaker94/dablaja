@@ -6,5 +6,7 @@ if not exist ".venv-kimi\Scripts\python.exe" (
     pause
     exit /b 1
 )
+rem Prevent Python from generating __pycache__ (underscore-prefixed dirs break Chrome extension loading)
+set PYTHONDONTWRITEBYTECODE=1
 .venv-kimi\Scripts\python.exe chat_kimi.py
 pause

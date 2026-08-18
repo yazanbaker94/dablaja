@@ -17,6 +17,9 @@ if ($env:HTTPS_PROXY -like "*127.0.0.1*" -or $env:HTTPS_PROXY -like "*localhost*
 if ($env:ALL_PROXY -like "*127.0.0.1*" -or $env:ALL_PROXY -like "*localhost*") { $env:ALL_PROXY = "" }
 $env:NO_PROXY = "*"
 
+# Prevent Python from generating __pycache__ (underscore-prefixed dirs break Chrome extension loading)
+$env:PYTHONDONTWRITEBYTECODE = "1"
+
 # Check and kill stale bridge processes on port 8765 if present
 try {
     $existing = Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue

@@ -41,6 +41,7 @@ function statePatch(patch) {
 
 function setGain(gainNode, value) {
   if (!gainNode || !session?.audioContext) return;
+  if (session.audioContext.state === 'closed') return;
   const safe = Math.max(0, Math.min(1.5, Number(value) || 0));
   gainNode.gain.cancelScheduledValues(session.audioContext.currentTime);
   gainNode.gain.setTargetAtTime(safe, session.audioContext.currentTime, 0.015);
@@ -84,13 +85,13 @@ async function cleanup({ preserveSession = false } = {}) {
   current.pendingInput.clear();
   current.preRoll.clear();
   current.playbackNode?.port.postMessage({ type: 'CLEAR' });
-  try { current.sourceNode?.disconnect(); } catch {}
-  try { current.captureNode?.disconnect(); } catch {}
-  try { current.captureMute?.disconnect(); } catch {}
-  try { current.originalGain?.disconnect(); } catch {}
-  try { current.playbackNode?.disconnect(); } catch {}
-  try { current.dubbedGain?.disconnect(); } catch {}
-  try { current.outputLimiter?.disconnect(); } catch {}
+  try { current.sourceNode?.disconnect(); } catch { }
+  try { current.captureNode?.disconnect(); } catch { }
+  try { current.captureMute?.disconnect(); } catch { }
+  try { current.originalGain?.disconnect(); } catch { }
+  try { current.playbackNode?.disconnect(); } catch { }
+  try { current.dubbedGain?.disconnect(); } catch { }
+  try { current.outputLimiter?.disconnect(); } catch { }
   await current.resources?.dispose();
   current.apiKey = '';
   notify({ type: 'CAPTION', clear: true });
@@ -174,6 +175,7 @@ function scheduleReconnect(failure, immediate = false) {
   session.streamEnded = false;
   closeSocket(session.socket);
   session.socket = null;
+  session.preRoll.clear();
   session.reconnectAttempt += 1;
   session.reconnectCount += 1;
   if (session.reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {

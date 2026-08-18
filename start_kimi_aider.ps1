@@ -12,6 +12,9 @@ if (-not (Test-Path $venvAider)) {
     exit 1
 }
 
+# Prevent Python from generating __pycache__ (underscore-prefixed dirs break Chrome extension loading)
+$env:PYTHONDONTWRITEBYTECODE = "1"
+
 # 1. Verify Bridge Health
 Write-Host "Checking Kimi Bridge at http://127.0.0.1:8765/health ..." -ForegroundColor Cyan
 try {
