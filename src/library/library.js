@@ -10,7 +10,8 @@ import {
   deleteSavedSession,
   estimatePlusStorage,
   getSavedSession,
-  listSavedSessions
+  listSavedSessions,
+  putSavedSessionBatch
 } from '../shared/plus-db.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1329,9 +1330,106 @@ elements.deleteAll.addEventListener('click', async () => {
   await reloadAll();
 });
 
+function generateSampleSessions() {
+  const now = Date.now();
+  const seg = (startMs, durMs, text) => ({
+    id: 'seg_' + Math.random().toString(36).slice(2, 9),
+    startMs,
+    endMs: startMs + durMs,
+    text
+  });
+  const mk = (over) => Object.assign({
+    id: 'plussession_sample' + Math.random().toString(36).slice(2, 9),
+    schemaVersion: 1,
+    title: '', pageUrl: '', siteOrigin: '',
+    saveRequested: true, truncated: false,
+    createdAt: Date.now(), updatedAt: Date.now(), startedAt: Date.now(), endedAt: null,
+    durationMs: 0, sourceSegments: [], targetSegments: [],
+    bookmarks: [], notes: '', originalVolume: null, dubbedVolume: null
+  }, over);
+
+  return [
+    mk({
+      title: 'ماذا تعرف عن الكواكب خارج المجموعة الشمسية؟',
+      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo1',
+      durationMs: 4365000, updatedAt: now - 36e5,
+      sourceSegments: [
+        seg(0, 15000, 'Our solar system began four and a half billion years ago.'),
+        seg(15000, 42000, 'Gravity pulled dust and gas into the sun and the planets.'),
+        seg(2280000, 2301000, 'Mars once had rivers and lakes on its surface.')
+      ],
+      targetSegments: [
+        seg(0, 15000, 'بدأ نظامنا الشمسي قبل أربعة مليارات ونصف المليار سنة.'),
+        seg(15000, 42000, 'جذبت الجاذبية الغبار والغاز لتشكّل الشمس والكواكب.'),
+        seg(2280000, 2301000, 'كان على المريخ أنهار وبحيرات في الماضي.')
+      ],
+      bookmarks: [
+        { id: 'bmk_a1', atMs: 1185000, note: 'قسم المريخ والأنهار القديمة', createdAt: now - 36e5 },
+        { id: 'bmk_a2', atMs: 2400000, note: 'حجم الأرض مقارنة بالمشتري', createdAt: now - 34e5 }
+      ],
+      notes: 'أفضل وثائقي عن الكواكب — مراجعة أجزاء المريخ لاحقاً.'
+    }),
+    mk({
+      title: 'شرح JavaScript من الصفر للمبتدئين',
+      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo4',
+      durationMs: 3378000, updatedAt: now - 864e5,
+      sourceSegments: [
+        seg(0, 25000, 'Variables let us store values in memory.'),
+        seg(920000, 947000, 'Functions are reusable blocks of code.')
+      ],
+      targetSegments: [
+        seg(0, 25000, 'المتغيرات تتيح لنا تخزين القيم في الذاكرة.'),
+        seg(920000, 947000, 'الدوال كتل قابلة لإعادة الاستخدام من الكود.')
+      ],
+      bookmarks: [{ id: 'bmk_c1', atMs: 385000, note: 'شرح الدوال — أعد المشاهدة', createdAt: now - 4 * 864e5 }],
+      notes: 'دورة ممتازة للمراجعة والتطبيق العملي.'
+    }),
+    mk({
+      title: 'Deep Learning Specialization – Andrew Ng',
+      siteOrigin: 'www.coursera.org', pageUrl: 'https://www.coursera.org/learn/machine-learning',
+      durationMs: 8133000, updatedAt: now - 2 * 864e5,
+      sourceSegments: [
+        seg(0, 20000, 'Learning rate controls how fast we move down the gradient.'),
+        seg(3700000, 3731000, 'Feature scaling speeds up convergence dramatically.')
+      ],
+      targetSegments: [
+        seg(0, 20000, 'معدل التعلم يحدد سرعة التحرك نحو الحد الأدنى.'),
+        seg(3700000, 3731000, 'تحجيم الخصائص يسرّع الوصول إلى التقارب بشكل كبير.')
+      ],
+      bookmarks: [{ id: 'bmk_b1', atMs: 905000, note: 'مثال feature scaling', createdAt: now - 26 * 36e5 }],
+      notes: 'ملاحظة: معادلة الـ Gradient Descent في الدقيقة 15.'
+    }),
+    mk({
+      title: 'بودكاست فنجان - هل الذكاء الاصطناعي يهدد وظائفنا؟',
+      siteOrigin: 'open.spotify.com', pageUrl: 'https://open.spotify.com/episode/demo3',
+      durationMs: 2709000, updatedAt: now - 3 * 864e5,
+      sourceSegments: [
+        seg(0, 30000, 'Welcome to the podcast.'),
+        seg(720000, 750000, 'Education will be transformed by large language models.')
+      ],
+      targetSegments: [
+        seg(0, 30000, 'أهلاً بكم في الحلقة الجديدة.'),
+        seg(720000, 750000, 'ستتغير التعليم بفعل النماذج اللغوية الكبيرة.')
+      ],
+      bookmarks: []
+    })
+  ];
+}
+
 if (elements.emptyCta) {
-  elements.emptyCta.addEventListener('click', () => {
-    showToast('افتح أي صفحة فيديو واضغط أيقونة دبلجة لبدء جلسة جديدة');
+  elements.emptyCta.addEventListener('click', async () => {
+    elements.emptyCta.disabled = true;
+    elements.emptyCta.textContent = 'جارٍ تحميل الجلسات…';
+    try {
+      const samples = generateSampleSessions();
+      await putSavedSessionBatch(samples);
+      showToast('تمت إضافة الجلسات النموذجية بنجاح!');
+      await reloadAll();
+    } catch (err) {
+      showToast(`فشل التحميل: ${err.message}`, 'error');
+      elements.emptyCta.disabled = false;
+      elements.emptyCta.textContent = 'تحميل جلسات نموذجية لتجربة المكتبة';
+    }
   });
 }
 
