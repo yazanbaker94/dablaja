@@ -1722,6 +1722,7 @@ img {
   /* Hide all interactive shell components, navigation, sidebars, buttons, and popups */
   header.top-nav,
   aside.sidebar,
+  .sidebar,
   .detail-top-nav,
   .detail-head,
   .detail-layout,
@@ -1743,6 +1744,23 @@ img {
     display: none !important;
   }
 
+  /* CRITICAL: Explicitly hide ALL views (#view-moments, #view-audio, #view-settings, etc.) */
+  .view {
+    display: none !important;
+  }
+
+  /* Only allow detail view wrapper to exist for the print document */
+  .view[data-view="detail"],
+  #view-detail,
+  #view-detail.view {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
   body, html {
     background: #FFF !important;
     color: #0F172A !important;
@@ -1753,7 +1771,7 @@ img {
     font-size: 11pt !important;
   }
 
-  .app-root, .app-layout, .main-content, .view, .view.is-active {
+  .app-root, .app-layout, .main-content {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
