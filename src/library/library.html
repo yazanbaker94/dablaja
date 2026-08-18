@@ -15,17 +15,16 @@
       <header class="top-nav" aria-label="الشريط العلوي">
         <div class="top-nav-inner">
           <div class="top-nav-start">
-            <div class="brand">
+            <a class="brand-link" href="#" aria-label="dablaja الرئيسية">
               <img class="brand-logo" src="assets/dablaja-logo.png" width="130" height="42" alt="Dablaja دبلجة">
-            </div>
-          </div>
-          <div class="top-nav-end">
-            <div class="plus-badge-btn" id="topPlusBadge">
+            </a>
+            <div class="plus-badge-btn" id="topPlusBadge" role="status" aria-label="نسخة Plus مدى الحياة">
               <span>Plus</span>
               <span class="diamond-icon" aria-hidden="true">💎</span>
             </div>
-            <span class="brand-wordmark">dablaja</span>
-            <button class="menu-toggle-btn" id="menuButton" type="button" aria-label="القائمة">
+          </div>
+          <div class="top-nav-end">
+            <button class="menu-toggle-btn" id="menuButton" type="button" aria-label="القائمة الجانبية" aria-controls="sidebar" aria-expanded="false">
               <span data-icon="menu" aria-hidden="true"></span>
             </button>
           </div>
@@ -49,7 +48,7 @@
               <p id="saveStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
             </section>
 
-            <!-- Page Header: Title + Actions -->
+            <!-- Page Header: Title + Utility Actions -->
             <header class="library-header">
               <div class="library-title-group">
                 <h1 id="libraryTitle" class="page-main-title">جلساتي المحفوظة</h1>
@@ -59,18 +58,23 @@
                 </p>
               </div>
               <div class="library-head-actions">
-                <div class="import-export-wrap">
-                  <button id="headImportExport" class="btn-action-outline" type="button">
+                <div class="dropdown-wrap">
+                  <button id="headImportExport" class="btn-utility" type="button" aria-haspopup="menu" aria-expanded="false" title="استيراد وتصدير النسخ الاحتياطية">
                     <span data-icon="download" aria-hidden="true"></span>
                     <span>استيراد / تصدير</span>
+                    <span data-icon="chevron-down" class="dropdown-caret" aria-hidden="true"></span>
                   </button>
-                  <!-- Hidden triggers mapped to JS buttons -->
-                  <button id="headExport" class="sr-only" type="button">تصدير</button>
-                  <button id="headImport" class="sr-only" type="button">استيراد</button>
+                  <div class="dropdown-menu hidden" id="headExportMenu" role="menu">
+                    <button id="headExport" class="menu-item" type="button" role="menuitem">
+                      <span data-icon="download" aria-hidden="true"></span>
+                      <span>تصدير نسخة احتياطية (.json)</span>
+                    </button>
+                    <button id="headImport" class="menu-item" type="button" role="menuitem">
+                      <span data-icon="upload" aria-hidden="true"></span>
+                      <span>استيراد نسخة احتياطية…</span>
+                    </button>
+                  </div>
                 </div>
-                <button id="headMoreOptions" class="btn-icon-more" type="button" aria-label="خيارات إضافية">
-                  <span data-icon="more" aria-hidden="true"></span>
-                </button>
               </div>
             </header>
 
@@ -78,12 +82,12 @@
             <div class="search-container">
               <span class="search-icon" data-icon="search" aria-hidden="true"></span>
               <label class="sr-only" for="searchInput">البحث في الجلسات والعناوين والملاحظات</label>
-              <input id="searchInput" type="search" placeholder="ابحث في الجلسات والعناوين والملاحظات..." autocomplete="off">
+              <input id="searchInput" type="search" placeholder="ابحث في الجلسات والعناوين والملاحظات…" autocomplete="off">
             </div>
 
             <!-- Category Pills / Filter Chips -->
             <div class="category-tabs-row" id="categoryChips" role="tablist" aria-label="تصفية حسب التصنيف">
-              <!-- Dynamically rendered or defaulted -->
+              <!-- Rendered via JS -->
             </div>
 
             <!-- Secondary Filter & Sort Row -->
@@ -91,7 +95,7 @@
               <div class="filter-controls-group">
                 <label class="select-chip">
                   <span class="chip-icon" data-icon="calendar" aria-hidden="true"></span>
-                  <select id="sortDate">
+                  <select id="sortDate" aria-label="ترتيب حسب التاريخ">
                     <option value="newest" selected>التاريخ: الأحدث أولاً</option>
                     <option value="oldest">التاريخ: الأقدم أولاً</option>
                   </select>
@@ -100,8 +104,8 @@
 
                 <label class="select-chip">
                   <span class="chip-icon" data-icon="clock" aria-hidden="true"></span>
-                  <select id="filterDuration">
-                    <option value="all" selected>جميع المدة</option>
+                  <select id="filterDuration" aria-label="تصفية حسب المدة">
+                    <option value="all" selected>جميع المدد</option>
                     <option value="short">أقل من 10 دقائق</option>
                     <option value="medium">10 – 30 دقيقة</option>
                     <option value="long">أكثر من 30 دقيقة</option>
@@ -111,17 +115,17 @@
 
                 <label class="select-chip">
                   <span class="chip-icon" data-icon="globe" aria-hidden="true"></span>
-                  <select id="filterSite">
+                  <select id="filterSite" aria-label="تصفية حسب الموقع">
                     <option value="all" selected>كل المواقع والمصادر</option>
                   </select>
                   <span class="chevron" aria-hidden="true">▾</span>
                 </label>
-              </div>
 
-              <button id="resetFilters" class="btn-reset-filters" type="button">
-                <span data-icon="refresh" aria-hidden="true"></span>
-                <span>إعادة ضبط الفلاتر</span>
-              </button>
+                <button id="resetFilters" class="btn-reset-filters" type="button">
+                  <span data-icon="refresh" aria-hidden="true"></span>
+                  <span>إعادة ضبط</span>
+                </button>
+              </div>
             </div>
 
             <p id="searchStatus" class="result-status hidden" role="status" aria-live="polite"></p>
@@ -132,14 +136,14 @@
             <!-- Empty Mascot Banner (shown only when 0 sessions exist) -->
             <div class="hero-mascot-banner hidden" id="emptyState">
               <div class="mascot-visual">
-                <img class="mascot-img" src="assets/mascot-main.png" width="220" height="220" alt="Dablaja Mascot">
+                <img class="mascot-img" src="assets/mascot.png" width="220" height="220" alt="Dablaja Mascot">
               </div>
               <div class="mascot-banner-content">
                 <h2 class="mascot-banner-title">ما حفظت أي جلسة بعد</h2>
-                <p class="mascot-banner-desc">ابدأ دبلجة فيديو باللغة الإنجليزية، ثم احفظه للرجوع إليه في أي وقت.</p>
+                <p class="mascot-banner-desc">ابدأ دبلجة أي فيديو أو محتوى تعليمي، وستُحفظ نصوصه وملاحظاتك تلقائياً هنا.</p>
                 <button id="emptyCta" class="btn-cta-navy" type="button">
                   <span class="btn-star-icon" aria-hidden="true">✦</span>
-                  <span>افتح فيديو وابدأ الدبلجة</span>
+                  <span>ابدأ تجربة الدبلجة الحية</span>
                 </button>
               </div>
             </div>
@@ -147,14 +151,14 @@
             <!-- Hidden empty state for no filter results -->
             <div id="noResults" class="empty empty-compact hidden">
               <p class="empty-title">لا توجد جلسات تطابق هذه الفلاتر</p>
-              <p class="empty-copy">جرّب كلمات أخرى أو أعد ضبط الفلاتر.</p>
+              <p class="empty-copy">جرّب كلمات بحث أخرى أو أعد ضبط خيارات التصفية.</p>
             </div>
 
             <!-- Footer Privacy Notice -->
             <footer class="library-footer-note">
-              <span class="privacy-shield-icon" aria-hidden="true">🛡️</span>
+              <span class="privacy-shield-icon" data-icon="shield" aria-hidden="true"></span>
               <p class="privacy-text">
-                <b>كل بياناتك محفوظة محلياً على جهازك فقط.</b> نحن نحترم خصوصيتك.
+                <b>كل بياناتك محفوظة محلياً على هذا الجهاز فقط.</b> نحن نحترم خصوصيتك بالكامل.
               </p>
             </footer>
           </section>
@@ -166,10 +170,12 @@
               <p class="view-sub">العلامات والملاحظات التي حفظتها أثناء الدبلجة.</p>
             </header>
             <div id="momentsList" class="moments-list"></div>
-            <div id="momentsEmpty" class="empty hidden">
-              <img class="empty-mascot empty-mascot-s" src="assets/mascot-empty.png" width="150" height="190" alt="">
-              <p class="empty-title">لا توجد لحظات محفوظة بعد</p>
-              <p class="empty-copy">أثناء الدبلجة اضغط زر العلامة لحفظ لحظة مهمة والرجوع إليها لاحقاً.</p>
+            <div id="momentsEmpty" class="empty-center-container hidden">
+              <div class="empty-mascot-wrap">
+                <img class="empty-mascot-img" src="assets/mascot.png" width="180" height="180" alt="Dablaja Mascot">
+              </div>
+              <h2 class="empty-title">لا توجد لحظات محفوظة بعد</h2>
+              <p class="empty-copy">أثناء تشغيل الدبلجة اضغط زر العلامة لحفظ أي فكرة أو اقتباس مهم والرجوع إليه لاحقاً.</p>
             </div>
           </section>
 
@@ -177,15 +183,15 @@
           <section class="view" data-view="audio" aria-labelledby="audioTitle">
             <header class="view-head">
               <h1 id="audioTitle" class="page-main-title">إعدادات الصوت</h1>
-              <p class="view-sub">تفضيلات الاستماع وملفات المواقع المحفوظة.</p>
+              <p class="view-sub">تفضيلات الاستماع ومستويات الصوت المحفوظة لكل موقع.</p>
             </header>
 
-            <section class="panel" aria-labelledby="audioPrefsTitle">
-              <h2 id="audioPrefsTitle" class="panel-title">تفضيلات الاستماع</h2>
+            <section class="panel settings-group-panel" aria-labelledby="audioVolumeTitle">
+              <h2 id="audioVolumeTitle" class="panel-title">التحكم في الصوت</h2>
               <label class="switch-row">
                 <span class="switch-text">
                   <span class="switch-head">تذكر مستويات الصوت لكل موقع</span>
-                  <span class="switch-sub">يُحفظ اسم الموقع فقط — بدون عناوين صفحات.</span>
+                  <span class="switch-sub">يتم حفظ وضبط مستوى صوت الفيديو الأصلي والدبلجة تلقائياً لكل موقع.</span>
                 </span>
                 <input id="rememberVolumesToggle" type="checkbox" class="switch-input">
                 <span class="switch-ui" aria-hidden="true"></span>
@@ -193,26 +199,29 @@
               <p id="audioStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
             </section>
 
-            <section class="panel" aria-labelledby="profilesTitle">
+            <section class="panel settings-group-panel" aria-labelledby="profilesTitle">
               <h2 id="profilesTitle" class="panel-title">ملفات المواقع المحفوظة</h2>
               <ul id="profileList" class="profile-list"></ul>
-              <p id="noProfiles" class="panel-empty hidden">لا توجد مواقع محفوظة بعد — فعّل تذكر الصوت وعدّل المستويات أثناء جلسة لإنشاء أول ملف.</p>
+              <div id="noProfiles" class="empty-profile-box hidden">
+                <span class="empty-profile-icon" data-icon="globe" aria-hidden="true"></span>
+                <p class="empty-profile-text">لا توجد مواقع محفوظة بعد — عدّل مستوى الصوت أثناء أي جلسة لحفظ تفضيل الموقع.</p>
+              </div>
             </section>
           </section>
 
-          <!-- ================= Settings View ================= -->
+          <!-- ================= General Settings View ================= -->
           <section class="view" data-view="settings" aria-labelledby="settingsTitle">
             <header class="view-head">
-              <h1 id="settingsTitle" class="page-main-title">الإعدادات</h1>
-              <p class="view-sub">إعدادات Plus العامة.</p>
+              <h1 id="settingsTitle" class="page-main-title">خلاصة الإعدادات</h1>
+              <p class="view-sub">تفضيلات dablaja Plus العامة وخيارات المزامنة المحلية.</p>
             </header>
 
-            <section class="panel" aria-labelledby="generalTitle">
+            <section class="panel settings-group-panel" aria-labelledby="generalTitle">
               <h2 id="generalTitle" class="panel-title">عام</h2>
               <label class="switch-row">
                 <span class="switch-text">
                   <span class="switch-head">الحفظ التلقائي للجلسات عند الإيقاف</span>
-                  <span class="switch-sub">تُحفظ الجلسة تلقائياً في المكتبة عند إيقاف الدبلجة.</span>
+                  <span class="switch-sub">تُحفظ الجلسة تلقائياً في مكتبتك عند إيقاف الدبلجة لتفادي فقدان النصوص.</span>
                 </span>
                 <input id="autosaveToggle" type="checkbox" class="switch-input">
                 <span class="switch-ui" aria-hidden="true"></span>
@@ -220,9 +229,34 @@
               <p id="settingsStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
             </section>
 
-            <section class="panel" aria-labelledby="aboutTitle">
+            <section class="panel settings-group-panel" aria-labelledby="aboutTitle">
               <h2 id="aboutTitle" class="panel-title">حول dablaja Plus</h2>
-              <p class="panel-copy" id="aboutPlus">…</p>
+              <div class="about-plus-card">
+                <div class="about-plus-badge">
+                  <span class="diamond-icon-large" aria-hidden="true">💎</span>
+                  <div>
+                    <h3 class="about-plus-name">dablaja Plus</h3>
+                    <span class="about-plus-tag">ترخيص مدى الحياة مفعل</span>
+                  </div>
+                </div>
+                <p class="about-plus-desc" id="aboutPlus">
+                  مكتبة دبلجة المتقدمة تمنحك إمكانية حفظ وإدارة جميع الجلسات والملاحظات والترجمات الصوتية محلياً على جهازك بسرعة وأمان.
+                </p>
+                <div class="about-features-grid">
+                  <div class="about-feat-item">
+                    <span class="feat-check" aria-hidden="true">✓</span>
+                    <span>تخزين واسترجاع محلي فوري</span>
+                  </div>
+                  <div class="about-feat-item">
+                    <span class="feat-check" aria-hidden="true">✓</span>
+                    <span>تصدير بصيغ TXT و SRT و JSON</span>
+                  </div>
+                  <div class="about-feat-item">
+                    <span class="feat-check" aria-hidden="true">✓</span>
+                    <span>خصوصية تامة بدون جمع بيانات</span>
+                  </div>
+                </div>
+              </div>
             </section>
           </section>
 
@@ -230,30 +264,57 @@
           <section class="view" data-view="backup" aria-labelledby="backupTitle">
             <header class="view-head">
               <h1 id="backupTitle" class="page-main-title">النسخ الاحتياطي</h1>
-              <p class="view-sub">بياناتك محفوظة محلياً على هذا الجهاز فقط — صدّر نسخة للاحتفاظ بها خارج المتصفح.</p>
+              <p class="view-sub">بياناتك محفوظة محلياً على هذا الجهاز فقط — صدّر نسخة للاحتفاظ بها أو نقلها لجهاز آخر.</p>
             </header>
 
-            <section class="panel" aria-labelledby="exportTitle">
-              <h2 id="exportTitle" class="panel-title">تصدير نسخة احتياطية</h2>
-              <p class="panel-copy">تنزيل ملف JSON يحتوي على كافة الجلسات واللحظات المحفوظة وإعدادات المواقع.</p>
-              <button id="exportBackup" class="btn-primary" type="button">تصدير النسخة الاحتياطية (.json)</button>
-            </section>
+            <div class="backup-grid">
+              <section class="panel backup-card" aria-labelledby="exportTitle">
+                <div class="backup-card-head">
+                  <div class="backup-icon-wrap" aria-hidden="true">
+                    <span data-icon="download"></span>
+                  </div>
+                  <div>
+                    <h2 id="exportTitle" class="panel-title">تصدير نسخة احتياطية</h2>
+                    <p class="panel-copy">تنزيل ملف JSON يحتوي على كافة الجلسات والملاحظات والعلامات.</p>
+                  </div>
+                </div>
+                <button id="exportBackup" class="btn-primary-compact" type="button">
+                  <span data-icon="download" aria-hidden="true"></span>
+                  <span>تصدير النسخة (.json)</span>
+                </button>
+              </section>
 
-            <section class="panel" aria-labelledby="importTitle">
-              <h2 id="importTitle" class="panel-title">استيراد نسخة احتياطية</h2>
-              <p class="panel-copy">استعادة البيانات من ملف نسخة احتياطية سابق تم تصديره من dablaja Plus.</p>
-              <label class="btn-secondary file-btn">
-                <span>اختر ملف النسخة الاحتياطية…</span>
-                <input id="importFile" type="file" accept=".json,application/json" class="sr-only">
-              </label>
-              <p id="importStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
-            </section>
+              <section class="panel backup-card" aria-labelledby="importTitle">
+                <div class="backup-card-head">
+                  <div class="backup-icon-wrap" aria-hidden="true">
+                    <span data-icon="upload"></span>
+                  </div>
+                  <div>
+                    <h2 id="importTitle" class="panel-title">استيراد نسخة احتياطية</h2>
+                    <p class="panel-copy">استعادة الجلسات من ملف نسخة احتياطية تم تصديره سابقاً.</p>
+                  </div>
+                </div>
+                <label class="btn-secondary-compact file-btn">
+                  <span data-icon="upload" aria-hidden="true"></span>
+                  <span>اختيار ملف للاستيراد…</span>
+                  <input id="importFile" type="file" accept=".json,application/json" class="sr-only">
+                </label>
+                <p id="importStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
+              </section>
+            </div>
 
-            <section class="panel panel-danger" aria-labelledby="dangerTitle">
-              <h2 id="dangerTitle" class="panel-title danger-head">حذف كافة البيانات</h2>
-              <p class="panel-copy">حذف جميع الجلسات واللحظات المحفوظة من المتصفح نهائياً. لا يمكن التراجع عن هذا الإجراء.</p>
-              <p class="storage-meta" id="storageInfo">…</p>
-              <button id="deleteAll" class="btn-danger" type="button">مسح كافة البيانات المخزنة</button>
+            <section class="panel panel-danger-zone" aria-labelledby="dangerTitle">
+              <div class="danger-zone-content">
+                <div>
+                  <h2 id="dangerTitle" class="danger-head">منطقة الخطر: حذف كافة البيانات</h2>
+                  <p class="danger-copy">حذف جميع الجلسات واللحظات المحفوظة من المتصفح نهائياً. لا يمكن التراجع عن هذا الإجراء.</p>
+                  <p class="storage-meta-text" id="storageInfo">…</p>
+                </div>
+                <button id="deleteAll" class="btn-danger-compact" type="button">
+                  <span data-icon="trash" aria-hidden="true"></span>
+                  <span>مسح كافة البيانات</span>
+                </button>
+              </div>
             </section>
           </section>
 
@@ -273,7 +334,7 @@
                   <button id="detailExportBtn" class="btn-ghost-s" type="button" aria-haspopup="menu" aria-expanded="false">
                     <span data-icon="download" aria-hidden="true"></span>
                     <span>تصدير</span>
-                    <span data-icon="chevron-down" aria-hidden="true"></span>
+                    <span data-icon="chevron-down" class="dropdown-caret" aria-hidden="true"></span>
                   </button>
                   <div class="dropdown-menu hidden" role="menu" id="exportMenu">
                     <button id="exportTxt" class="menu-item" type="button" role="menuitem">نص عادي (.txt)</button>
@@ -328,7 +389,7 @@
           </section>
         </main>
 
-        <!-- Right Sidebar (Sidebar Widget Column) -->
+        <!-- Right Sidebar (Sidebar Navigation & Widgets) -->
         <aside class="sidebar" id="sidebar" aria-label="الشريط الجانبي">
           <!-- Sidebar Navigation -->
           <nav class="sidebar-nav" aria-label="التنقل الرئيسي">
@@ -355,48 +416,25 @@
             </button>
           </nav>
 
-          <!-- Quick Stats Widget (ملخص سريع) -->
-          <div class="sidebar-card stats-card" aria-label="ملخص سريع">
+          <!-- Quick Stats Widget (ملخص سريع - visible only on sessions & moments) -->
+          <div class="sidebar-card stats-card" id="quickStatsCard" aria-label="ملخص سريع">
             <h3 class="sidebar-card-title">ملخص سريع</h3>
-            <div class="stats-list">
-              <div class="stat-row">
-                <div class="stat-text-side">
-                  <span class="stat-lbl">إجمالي الجلسات</span>
-                  <span class="stat-num" id="statSessions">0</span>
-                </div>
-                <div class="stat-icon-wrap" aria-hidden="true">
-                  <span data-icon="video-stack"></span>
-                </div>
+            <div class="stats-grid-2x2">
+              <div class="stat-grid-item">
+                <span class="stat-lbl">إجمالي الجلسات</span>
+                <span class="stat-num" id="statSessions">0</span>
               </div>
-
-              <div class="stat-row">
-                <div class="stat-text-side">
-                  <span class="stat-lbl">إجمالي وقت المشاهدة</span>
-                  <span class="stat-num stat-highlight" id="statTime">0 ساعة</span>
-                </div>
-                <div class="stat-icon-wrap" aria-hidden="true">
-                  <span data-icon="clock"></span>
-                </div>
+              <div class="stat-grid-item">
+                <span class="stat-lbl">وقت المشاهدة</span>
+                <span class="stat-num stat-highlight" id="statTime">0 دقيقة</span>
               </div>
-
-              <div class="stat-row">
-                <div class="stat-text-side">
-                  <span class="stat-lbl">المواقع</span>
-                  <span class="stat-num stat-highlight" id="statSites">0</span>
-                </div>
-                <div class="stat-icon-wrap" aria-hidden="true">
-                  <span data-icon="globe"></span>
-                </div>
+              <div class="stat-grid-item">
+                <span class="stat-lbl">المواقع</span>
+                <span class="stat-num" id="statSites">0</span>
               </div>
-
-              <div class="stat-row">
-                <div class="stat-text-side">
-                  <span class="stat-lbl">اللحظات المحفوظة</span>
-                  <span class="stat-num stat-highlight" id="statMoments">0</span>
-                </div>
-                <div class="stat-icon-wrap" aria-hidden="true">
-                  <span data-icon="bookmark"></span>
-                </div>
+              <div class="stat-grid-item">
+                <span class="stat-lbl">اللحظات</span>
+                <span class="stat-num" id="statMoments">0</span>
               </div>
             </div>
           </div>
@@ -404,49 +442,40 @@
           <!-- Local Storage Widget (التخزين المحلي) -->
           <div class="sidebar-card storage-card" id="storageCard">
             <div class="storage-head-row">
-              <span class="storage-title">
-                <span class="storage-hdd-icon" aria-hidden="true">🗄️</span>
-                التخزين المحلي
-              </span>
+              <span class="storage-title">التخزين المحلي</span>
             </div>
-            <div class="storage-desc" id="storageValue">4.1 جيجابايت مستخدمة من 10 جيجابايت</div>
+            <div class="storage-desc" id="storageValue">0 ميغابايت مستخدمة</div>
             <div class="storage-progress-bar" aria-hidden="true">
-              <div class="storage-progress-fill" id="storageFill" style="width: 41%;"></div>
+              <div class="storage-progress-fill" id="storageFill" style="width: 2%;"></div>
             </div>
             <button class="storage-action-link" type="button" data-nav="backup">
-              <span data-icon="settings-small" aria-hidden="true"></span>
-              <span>إدارة التخزين</span>
+              <span>إدارة التخزين ←</span>
             </button>
           </div>
 
-          <!-- User Status Widget (حالتك Plus) -->
+          <!-- Plus Status Widget (حالتك Plus) -->
           <div class="sidebar-card plus-status-card" id="plusCard">
-            <span class="card-kicker">حالتك</span>
             <div class="plus-status-head">
               <span class="diamond-icon-large" aria-hidden="true">💎</span>
-              <span class="plus-title-bold">Plus</span>
+              <span class="plus-title-bold">Plus مدى الحياة</span>
             </div>
-            <div class="plus-period-lbl">مدى الحياة</div>
             <div class="plus-active-row">
               <span class="active-check-circle" aria-hidden="true">✓</span>
-              <span class="active-text" id="plusState">مفعل على هذا الجهاز</span>
+              <span class="active-text" id="plusState">مفعّل على هذا الجهاز</span>
             </div>
-            <button class="btn-manage-sub" type="button" data-nav="settings">إدارة الاشتراك</button>
+            <button class="btn-manage-sub" type="button" data-nav="settings">تفاصيل Plus</button>
           </div>
 
-          <!-- Help & Support Widget (تحتاج مساعدة؟) -->
-          <div class="sidebar-card help-card">
-            <h3 class="sidebar-card-title">تحتاج مساعدة؟</h3>
-            <div class="help-links-list">
-              <a class="help-link-item" href="https://dablaja.com/faq" target="_blank" rel="noopener">
-                <span class="help-icon" aria-hidden="true">❓</span>
-                <span>عرض الأسئلة الشائعة</span>
-              </a>
-              <a class="help-link-item" href="mailto:support@dablaja.com">
-                <span class="help-icon" aria-hidden="true">💬</span>
-                <span>تواصل معنا</span>
-              </a>
-            </div>
+          <!-- Quiet Help & Support Links -->
+          <div class="sidebar-footer-links">
+            <a class="footer-help-link" href="https://dablaja.com/faq" target="_blank" rel="noopener">
+              <span data-icon="info" aria-hidden="true"></span>
+              <span>الأسئلة الشائعة</span>
+            </a>
+            <span class="footer-dot-sep" aria-hidden="true">·</span>
+            <a class="footer-help-link" href="mailto:support@dablaja.com">
+              <span>تواصل معنا</span>
+            </a>
           </div>
         </aside>
       </div>

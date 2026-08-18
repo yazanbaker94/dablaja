@@ -19,12 +19,15 @@ const elements = {
   scrim: $('scrim'),
   menuButton: $('menuButton'),
   navMomentsCount: $('navMomentsCount'),
+  quickStatsCard: $('quickStatsCard'),
   statSessions: $('statSessions'),
   statTime: $('statTime'),
   statSites: $('statSites'),
   statMoments: $('statMoments'),
+  storageCard: $('storageCard'),
   storageValue: $('storageValue'),
   storageFill: $('storageFill'),
+  plusCard: $('plusCard'),
   plusState: $('plusState'),
   entitlementNotice: $('lockedNotice'),
   draftSection: $('draftSection'),
@@ -54,6 +57,8 @@ const elements = {
   bookmarkList: $('bookmarkList'),
   noBookmarks: $('noBookmarks'),
   openOriginal: $('openOriginal'),
+  detailExportBtn: $('detailExportBtn'),
+  exportMenu: $('exportMenu'),
   exportTxt: $('exportTxt'),
   exportSrt: $('exportSrt'),
   exportJson: $('exportJson'),
@@ -68,6 +73,8 @@ const elements = {
   profileList: $('profileList'),
   noProfiles: $('noProfiles'),
   exportBackup: $('exportBackup'),
+  headImportExport: $('headImportExport'),
+  headExportMenu: $('headExportMenu'),
   headExport: $('headExport'),
   headImport: $('headImport'),
   importFile: $('importFile'),
@@ -90,7 +97,7 @@ let activeDetail = null;
 let activeCategory = 'all';
 
 // ---------------------------------------------------------------------------
-// Icons — one rounded line family, injected into [data-icon] placeholders.
+// Icons — unified rounded line family, injected into [data-icon] placeholders.
 // ---------------------------------------------------------------------------
 
 const icon = (paths) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -120,17 +127,17 @@ const ICONS = {
   more: icon('<circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/>'),
   'chevron-right': icon('<path d="m9 18 6-6-6-6"/>'),
   'chevron-down': icon('<path d="m6 9 6 6 6-6"/>'),
-  'settings-small': icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  'settings-small': icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
   clock: icon('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
   globe: icon('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.6 2.3 4 5.2 4 8.5s-1.4 6.2-4 8.5c-2.6-2.3-4-5.2-4-8.5s1.4-6.2 4-8.5Z"/>'),
   bookmark: icon('<path d="M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-3.6L5.5 20V5.5a1 1 0 0 1 1-1Z"/>'),
   play: icon('<path d="M8.5 5.8v12.4a.7.7 0 0 0 1.07.6l9.8-6.2a.7.7 0 0 0 0-1.2l-9.8-6.2a.7.7 0 0 0-1.07.6Z"/>'),
-  dots: icon('<circle cx="12" cy="5.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="18.6" r="1.15" fill="currentColor" stroke="none"/>'),
-  x: icon('<path d="M6 6l12 12M18 6 6 18"/>'),
-  check: icon('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
-  edit: icon('<path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0 0-3l-.2-.2a2.1 2.1 0 0 0-3 0L5 16.8V20Z"/><path d="m14.5 6.5 3 3"/>'),
-  go: icon('<path d="M20 12H4m0 0 6-6m-6 6 6 6"/>'),
-  info: icon('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/>')
+  info: icon('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/>'),
+  all: icon('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>'),
+  podcast: icon('<path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>'),
+  courses: icon('<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>'),
+  youtube: icon('<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><polygon points="10 15 15 12 10 9" fill="currentColor"/>'),
+  other: icon('<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>')
 };
 
 function injectIcons(root = document) {
@@ -248,27 +255,27 @@ function safeFilePrefix(session) {
 }
 
 function requireSavedRecord(response, expectedId) {
-  const savedId = response?.saved?.id;
-  if (!savedId || (expectedId && savedId !== expectedId)) {
-    throw new Error('لم تؤكد قاعدة البيانات حفظ الجلسة. أعد تحميل الإضافة ثم حاول مرة أخرى.');
+  if (!response?.record?.id || (expectedId && response.record.id !== expectedId)) {
+    throw new Error('لم يكتمل الحفظ بشكل صحيح.');
   }
-  return response.saved;
+  return response.record;
 }
 
-// ---------------------------------------------------------------------------
-// Toasts / modal / popover menus
-// ---------------------------------------------------------------------------
-
-function showToast(message, tone = 'success') {
+function showToast(message, tone = '') {
   const toast = document.createElement('div');
   toast.className = tone === 'error' ? 'toast is-error' : 'toast';
-  toast.append(iconNode(tone === 'error' ? 'info' : 'check'), document.createTextNode(message));
+  toast.textContent = message;
   elements.toastRoot.append(toast);
   setTimeout(() => {
-    toast.classList.add('leaving');
-    toast.addEventListener('animationend', () => toast.remove(), { once: true });
-  }, 3600);
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
 }
+
+// ---------------------------------------------------------------------------
+// Modal & Menu layer
+// ---------------------------------------------------------------------------
 
 let modalResolve = null;
 
@@ -298,6 +305,7 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     settleModal(false);
     closeMenu();
+    closeAllDropdowns();
   }
 });
 
@@ -309,12 +317,14 @@ function closeMenu() {
 function openMenu(anchor, items) {
   closeMenu();
   const menu = document.createElement('div');
-  menu.className = 'menu';
+  menu.className = 'dropdown-menu';
   menu.setAttribute('role', 'menu');
   for (const item of items) {
     if (item === '-') {
       const sep = document.createElement('div');
-      sep.className = 'menu-sep';
+      sep.style.height = '1px';
+      sep.style.background = 'var(--border-light)';
+      sep.style.margin = '4px 0';
       menu.append(sep);
       continue;
     }
@@ -339,6 +349,7 @@ function openMenu(anchor, items) {
   const left = inlineSpace >= menuRect.width + 12
     ? rect.left
     : Math.max(10, window.innerWidth - menuRect.width - 10);
+  menu.style.position = 'fixed';
   menu.style.top = `${top}px`;
   menu.style.left = `${left}px`;
 }
@@ -347,8 +358,44 @@ elements.menuLayer.addEventListener('click', (event) => {
   if (event.target === elements.menuLayer) closeMenu();
 });
 
+// Dropdowns management
+function closeAllDropdowns() {
+  if (elements.headExportMenu) elements.headExportMenu.classList.add('hidden');
+  if (elements.exportMenu) elements.exportMenu.classList.add('hidden');
+  if (elements.headImportExport) elements.headImportExport.setAttribute('aria-expanded', 'false');
+  if (elements.detailExportBtn) elements.detailExportBtn.setAttribute('aria-expanded', 'false');
+}
+
+if (elements.headImportExport) {
+  elements.headImportExport.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = elements.headExportMenu.classList.contains('hidden');
+    closeAllDropdowns();
+    if (isHidden) {
+      elements.headExportMenu.classList.remove('hidden');
+      elements.headImportExport.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+if (elements.detailExportBtn) {
+  elements.detailExportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = elements.exportMenu.classList.contains('hidden');
+    closeAllDropdowns();
+    if (isHidden) {
+      elements.exportMenu.classList.remove('hidden');
+      elements.detailExportBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+}
+
+document.addEventListener('click', () => {
+  closeAllDropdowns();
+});
+
 // ---------------------------------------------------------------------------
-// View navigation
+// View navigation & Sidebar responsiveness
 // ---------------------------------------------------------------------------
 
 const VIEWS = ['library', 'moments', 'audio', 'settings', 'backup', 'detail'];
@@ -360,7 +407,12 @@ function setView(name) {
   for (const item of document.querySelectorAll('[data-nav]')) {
     item.classList.toggle('is-active', item.dataset.nav === name);
   }
+  // Context-aware sidebar: show Quick Stats only on Library and Moments
+  if (elements.quickStatsCard) {
+    elements.quickStatsCard.style.display = (name === 'library' || name === 'moments') ? 'block' : 'none';
+  }
   closeSidebar();
+  closeAllDropdowns();
   window.scrollTo(0, 0);
 }
 
@@ -378,25 +430,27 @@ document.querySelectorAll('[data-nav]').forEach((item) => {
     event.preventDefault();
     const target = item.dataset.nav;
     if (!(await leaveDetailSafely())) return;
-    if (activeDetail) {
-      activeDetail = null;
-      elements.searchInput.value = '';
-    }
+    if (target === 'library') activeDetail = null;
     setView(target);
-    if (target === 'moments') renderMoments();
   });
 });
 
-// Mobile sidebar
 function openSidebar() {
   elements.sidebar.classList.add('is-open');
   elements.scrim.hidden = false;
+  elements.menuButton.setAttribute('aria-expanded', 'true');
 }
+
 function closeSidebar() {
   elements.sidebar.classList.remove('is-open');
   elements.scrim.hidden = true;
+  elements.menuButton.setAttribute('aria-expanded', 'false');
 }
-elements.menuButton.addEventListener('click', openSidebar);
+
+elements.menuButton.addEventListener('click', () => {
+  if (elements.sidebar.classList.contains('is-open')) closeSidebar();
+  else openSidebar();
+});
 elements.scrim.addEventListener('click', closeSidebar);
 
 const SITE_LABELS = new Map([
@@ -411,18 +465,6 @@ const SITE_LABELS = new Map([
   ['spotify.com', 'Spotify'],
   ['soundcloud.com', 'SoundCloud'],
   ['podcasts.apple.com', 'Apple Podcasts']
-]);
-
-const SITE_DOTS = new Map([
-  ['youtube.com', '#ff4d4d'],
-  ['youtu.be', '#ff4d4d'],
-  ['youtube-nocookie.com', '#ff4d4d'],
-  ['coursera.org', '#5b7ddc'],
-  ['udemy.com', '#c78aff'],
-  ['edx.org', '#7a73e8'],
-  ['khanacademy.org', '#6fd48b'],
-  ['spotify.com', '#4dd062'],
-  ['soundcloud.com', '#ff9433']
 ]);
 
 function siteLabel(session) {
@@ -499,8 +541,8 @@ async function renderDraftCard() {
     }
     const save = document.createElement('button');
     save.type = 'button';
-    save.className = 'primary-button';
-    save.textContent = 'احفظ الجلسة';
+    save.className = 'btn-cta-navy';
+    save.textContent = 'احفظ الجلسة الآن';
     save.disabled = !plusEnabled();
     save.addEventListener('click', async () => {
       save.disabled = true;
@@ -510,14 +552,14 @@ async function renderDraftCard() {
       try {
         const response = await send({ type: 'PLUS_SAVE_ACTIVE' });
         requireSavedRecord(response, active.id);
-        showSaveStatus('تم حفظ الجلسة. ستستمر في التحديث حتى تتوقف الدبلجة.', 'success');
+        showSaveStatus('تم حفظ الجلسة.', 'success');
         showToast('تم حفظ الجلسة في مكتبتك');
         await reloadAll();
       } catch (error) {
         showSaveStatus(`تعذر حفظ الجلسة: ${error.message}`, 'error');
         save.disabled = false;
         save.removeAttribute('aria-busy');
-        save.textContent = 'احفظ الجلسة';
+        save.textContent = 'احفظ الجلسة الآن';
       }
     });
     elements.draftBody.append(info, save);
@@ -534,30 +576,28 @@ async function renderDraftCard() {
       );
       const save = document.createElement('button');
       save.type = 'button';
-      save.className = 'ghost-button';
+      save.className = 'btn-utility';
       save.textContent = 'حفظ';
       save.disabled = !plusEnabled();
       save.addEventListener('click', async () => {
         save.disabled = true;
         save.setAttribute('aria-busy', 'true');
         save.textContent = 'جارٍ الحفظ…';
-        showSaveStatus('جارٍ نقل الجلسة إلى الجلسات المحفوظة…');
         try {
           const response = await send({ type: 'PLUS_SAVE_UNSAVED', draftId: draft.id });
           requireSavedRecord(response, draft.id);
-          showSaveStatus('تم حفظ الجلسة ونقلها إلى قائمة الجلسات المحفوظة.', 'success');
-          showToast('تم حفظ الجلسة في مكتبتك');
+          showToast('تم حفظ الجلسة');
           await reloadAll();
         } catch (error) {
-          showSaveStatus(`تعذر حفظ الجلسة: ${error.message}`, 'error');
+          showToast(`تعذر الحفظ: ${error.message}`, 'error');
           save.disabled = false;
           save.removeAttribute('aria-busy');
-          save.textContent = 'حفظ';
         }
       });
       const discard = document.createElement('button');
       discard.type = 'button';
-      discard.className = 'tool-button danger';
+      discard.className = 'btn-utility';
+      discard.style.color = '#C53030';
       discard.textContent = 'تجاهل';
       discard.addEventListener('click', async () => {
         await send({ type: 'PLUS_DISCARD_DRAFT', draftId: draft.id });
@@ -581,13 +621,13 @@ function showSaveStatus(message = '', tone = '') {
 }
 
 // ---------------------------------------------------------------------------
-// Categories / thumbnails
+// Categories & Clean Vector Chips
 // ---------------------------------------------------------------------------
 
 const CATEGORY_MATCHERS = [
-  { id: 'podcast', label: 'البودكاست', icon: '🎙️', re: /(^|\.)(spotify\.com|podcasts\.apple\.com|soundcloud\.com|podbean\.com|buzzsprout\.com|stitcher\.com|pocketcasts\.com|overcast\.fm|iheart\.com|audible\.com|podomatic\.com)$/i },
-  { id: 'courses', label: 'الدورات', icon: '🎓', re: /(^|\.)(coursera\.org|udemy\.com|edx\.org|khanacademy\.org|skillshare\.com|pluralsight\.com|codecademy\.com|freecodecamp\.org|datacamp\.com|brilliant\.org|alison\.com|masterclass\.com|futurelearn\.com|udacity\.com)$/i },
-  { id: 'youtube', label: 'YouTube', icon: '▶', re: /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/i }
+  { id: 'podcast', label: 'البودكاست', iconName: 'podcast', re: /(^|\.)(spotify\.com|podcasts\.apple\.com|soundcloud\.com|podbean\.com|buzzsprout\.com|stitcher\.com|pocketcasts\.com|overcast\.fm|iheart\.com|audible\.com|podomatic\.com)$/i },
+  { id: 'courses', label: 'الدورات', iconName: 'courses', re: /(^|\.)(coursera\.org|udemy\.com|edx\.org|khanacademy\.org|skillshare\.com|pluralsight\.com|codecademy\.com|freecodecamp\.org|datacamp\.com|brilliant\.org|alison\.com|masterclass\.com|futurelearn\.com|udacity\.com)$/i },
+  { id: 'youtube', label: 'YouTube', iconName: 'youtube', re: /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/i }
 ];
 
 function categorize(session) {
@@ -610,11 +650,11 @@ function categoryCounts() {
 function renderChips() {
   const counts = categoryCounts();
   const chips = [
-    { id: 'all', label: 'الكل', icon: '⊞', count: counts.get('all') || 0 },
-    { id: 'podcast', label: 'البودكاست', icon: '🎙️', count: counts.get('podcast') || 0 },
-    { id: 'courses', label: 'الدورات', icon: '🎓', count: counts.get('courses') || 0 },
-    { id: 'youtube', label: 'YouTube', icon: '▶', count: counts.get('youtube') || 0 },
-    { id: 'other', label: 'أخرى', icon: '📁', count: counts.get('other') || 0 }
+    { id: 'all', label: 'الكل', iconName: 'all', count: counts.get('all') || 0 },
+    { id: 'podcast', label: 'البودكاست', iconName: 'podcast', count: counts.get('podcast') || 0 },
+    { id: 'courses', label: 'الدورات', iconName: 'courses', count: counts.get('courses') || 0 },
+    { id: 'youtube', label: 'YouTube', iconName: 'youtube', count: counts.get('youtube') || 0 },
+    { id: 'other', label: 'أخرى', iconName: 'other', count: counts.get('other') || 0 }
   ];
 
   elements.categoryChips.replaceChildren();
@@ -627,7 +667,7 @@ function renderChips() {
 
     const iconSpan = document.createElement('span');
     iconSpan.className = 'cat-icon';
-    iconSpan.textContent = chip.icon;
+    iconSpan.innerHTML = ICONS[chip.iconName] || '';
 
     const labelSpan = document.createElement('span');
     labelSpan.textContent = chip.label;
@@ -691,7 +731,7 @@ function applyFiltersAndSort() {
 }
 
 // ---------------------------------------------------------------------------
-// Session grid
+// Compact Session Cards
 // ---------------------------------------------------------------------------
 
 function getThumbnailForSession(session) {
@@ -817,7 +857,7 @@ function sessionCard(summary, session) {
 
   progressWrap.append(progressLabels, track);
 
-  // Bottom Action Row
+  // Action Row
   const actionsRow = document.createElement('div');
   actionsRow.className = 'card-actions-row';
 
@@ -868,8 +908,6 @@ async function deleteSessionFlow(summary, session) {
     confirmLabel: 'حذف الجلسة'
   });
   if (!confirmed) return;
-  // Await any pending note write before deleting the record it targets;
-  // a failed save must block the deletion, not lose the edit.
   if (!(await flushPendingNote())) {
     showToast('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل الحذف.', 'error');
     return;
@@ -905,490 +943,318 @@ function renderList() {
 function renderMoments() {
   const moments = [];
   for (const session of sessions) {
-    const summary = sessionSummary(session);
     for (const bookmark of session.bookmarks || []) {
-      moments.push({ session, summary, bookmark });
+      moments.push({ session, bookmark });
     }
   }
   moments.sort((a, b) => (b.bookmark.createdAt || 0) - (a.bookmark.createdAt || 0));
-  elements.momentsList.replaceChildren();
-  elements.momentsEmpty.classList.toggle('hidden', moments.length > 0);
-  for (const moment of moments) {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'moment-item';
-    const stamp = document.createElement('span');
-    stamp.className = 'moment-stamp';
-    stamp.textContent = formatStamp(moment.bookmark.atMs);
-    const body = document.createElement('span');
-    body.className = 'moment-body';
-    const note = document.createElement('span');
-    note.className = 'moment-note';
-    note.dir = 'auto';
-    note.textContent = moment.bookmark.note || 'لحظة بدون ملاحظة';
-    const sessionLine = document.createElement('span');
-    sessionLine.className = 'moment-session';
-    sessionLine.dir = 'auto';
-    sessionLine.textContent = `${moment.summary.title} · ${relativeDate(moment.summary.updatedAt)}`;
-    body.append(note, sessionLine);
-    const openIcon = document.createElement('span');
-    openIcon.className = 'moment-open';
-    openIcon.append(iconNode('go'));
-    item.append(stamp, body, openIcon);
-    item.addEventListener('click', () => openDetail(moment.session.id));
-    elements.momentsList.append(item);
-  }
-  const total = moments.length;
-  elements.navMomentsCount.hidden = !total;
-  elements.navMomentsCount.textContent = String(total);
-}
 
-// ---------------------------------------------------------------------------
-// Sidebar stats / storage / plus
-// ---------------------------------------------------------------------------
-
-function renderStats() {
-  const totalDuration = sessions.reduce((sum, session) => sum + (Number(session.durationMs) || 0), 0);
-  const sites = new Set(sessions.map((session) => session.siteOrigin).filter(Boolean));
-  const moments = sessions.reduce((sum, session) => sum + (session.bookmarks || []).length, 0);
-  elements.statSessions.textContent = String(sessions.length);
-  elements.statTime.textContent = formatTotalDuration(totalDuration);
-  elements.statSites.textContent = String(sites.size);
-  elements.statMoments.textContent = String(moments);
-  elements.navMomentsCount.hidden = !moments;
-  elements.navMomentsCount.textContent = String(moments);
-}
-
-async function refreshStorageInfo() {
-  const estimate = await estimatePlusStorage();
-  const usedText = `التخزين المحلي المستخدم: ${formatBytes(estimate.usageBytes)} من ${formatBytes(estimate.quotaBytes)} · ${sessions.length} جلسة محفوظة`;
-  elements.storageInfo.textContent = usedText;
-  if (estimate.quotaBytes > 0) {
-    elements.storageValue.textContent = `${formatBytes(estimate.usageBytes)} / ${formatBytes(estimate.quotaBytes)}`;
-    elements.storageFill.style.width = `${Math.min(100, (estimate.usageBytes / estimate.quotaBytes) * 100).toFixed(1)}%`;
+  if (moments.length) {
+    elements.navMomentsCount.textContent = String(moments.length);
+    elements.navMomentsCount.hidden = false;
   } else {
-    elements.storageValue.textContent = formatBytes(estimate.usageBytes);
-    elements.storageFill.style.width = '0%';
+    elements.navMomentsCount.hidden = true;
   }
-}
 
-function renderEntitlement() {
-  const entitlement = plusSettings?.entitlement;
-  if (!entitlement) return;
-  const preview = entitlement.state === ENTITLEMENT_STATES.DEVELOPMENT_PREVIEW;
-  elements.plusState.textContent = entitlement.plusEnabled
-    ? (preview ? 'نسخة تطوير — مفعّلة على هذا الجهاز' : 'مفعّل على هذا الجهاز')
-    : 'Plus غير مفعّل على هذا الجهاز';
-  const locked = !plusEnabled();
-  elements.entitlementNotice.classList.toggle('hidden', !locked);
-  if (locked) {
-    elements.entitlementNotice.textContent = 'Plus غير مفعّل على هذا الجهاز حالياً. تصفح الجلسات متاح لكن الحفظ معطّل.';
+  elements.momentsList.replaceChildren();
+  if (!moments.length) {
+    elements.momentsEmpty.classList.remove('hidden');
+    return;
   }
-  elements.aboutPlus.textContent = `${PLUS_PRICE_LABEL}. كل بيانات Plus — النصوص والملاحظات والعلامات وعناوين المصدر — تبقى محلية على هذا الجهاز، ولا تُرسل إلى أي خدمة، ولا يُحفظ أي صوت.`;
+  elements.momentsEmpty.classList.add('hidden');
+
+  for (const { session, bookmark } of moments) {
+    const card = document.createElement('article');
+    card.className = 'panel settings-group-panel';
+
+    const head = document.createElement('div');
+    head.className = 'card-meta-row';
+
+    const title = document.createElement('h3');
+    title.className = 'card-title';
+    title.dir = 'auto';
+    title.textContent = session.title;
+    title.style.cursor = 'pointer';
+    title.addEventListener('click', () => openDetail(session.id, bookmark.timeMs));
+
+    const time = document.createElement('span');
+    time.className = 'duration-pill';
+    time.style.position = 'static';
+    time.textContent = formatStamp(bookmark.timeMs);
+
+    head.append(title, time);
+
+    const note = document.createElement('p');
+    note.className = 'panel-copy';
+    note.textContent = bookmark.note || 'علامة محفوظة بدون ملاحظة إضافية.';
+
+    card.append(head, note);
+    elements.momentsList.append(card);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Detail view
 // ---------------------------------------------------------------------------
 
-function renderTranscript(session, query = '') {
-  const allRows = toPrintRows(session);
-  const rows = searchTranscriptRows(allRows, query);
-  const view = elements.transcriptView;
-  view.replaceChildren();
-  if (!rows.length) {
-    const empty = document.createElement('p');
-    empty.className = 'muted';
-    empty.textContent = query
-      ? 'لا يوجد سطر في هذه الجلسة يطابق البحث.'
-      : 'لا توجد نصوص محفوظة في هذه الجلسة.';
-    view.append(empty);
+let noteController = null;
+
+async function flushPendingNote() {
+  if (!noteController) return true;
+  return noteController.flush();
+}
+
+async function openDetail(id, seekMs = null) {
+  if (!(await leaveDetailSafely())) return;
+  const session = await getSavedSession(id);
+  if (!session) {
+    showToast('لم يتم العثور على هذه الجلسة.', 'error');
     return;
   }
-  for (const row of rows) {
-    const container = document.createElement('div');
-    container.className = 'transcript-row';
-    container.classList.toggle('search-match', Boolean(query));
-    if (row.atMs != null) {
-      const stamp = document.createElement('span');
-      stamp.className = 'stamp';
-      stamp.textContent = formatStamp(row.atMs);
-      container.append(stamp);
+  activeDetail = session;
+  elements.detailTitle.textContent = session.title;
+  elements.detailMeta.textContent = `${siteLabel(session)} · ${formatDate(session.startedAt)} · ${formatDuration(session.durationMs)} · ${transcriptLineCount(session)} سطر ترجمة`;
+  elements.detailSearch.value = '';
+  elements.notesEditor.value = session.notes || '';
+  elements.notesStatus.textContent = '';
+
+  noteController = createNoteFlushController({
+    onSave: async (note) => {
+      await send({ type: 'PLUS_SAVE_NOTE', sessionId: session.id, note });
+      session.notes = note;
+      elements.notesStatus.textContent = 'تم حفظ الملاحظة';
+      setTimeout(() => {
+        if (elements.notesStatus.textContent === 'تم حفظ الملاحظة') elements.notesStatus.textContent = '';
+      }, 2500);
+    },
+    onError: (error) => {
+      elements.notesStatus.textContent = `فشل حفظ الملاحظة: ${error.message}`;
+      showToast(`تعذر حفظ الملاحظة: ${error.message}`, 'error');
     }
-    const en = document.createElement('p');
-    en.className = 'en';
-    en.textContent = row.source || 'لم يصل نص إنجليزي لهذا الجزء.';
-    en.classList.toggle('missing-translation', row.missingSource === true);
-    const ar = document.createElement('p');
-    ar.className = 'ar';
-    ar.textContent = row.target || 'لم تصل ترجمة عربية لهذا الجزء.';
-    ar.classList.toggle('missing-translation', row.missingTarget === true);
-    container.append(en, ar);
-    view.append(container);
+  });
+
+  renderTranscript(session);
+  renderBookmarks(session);
+  setView('detail');
+
+  if (seekMs !== null) {
+    const row = elements.transcriptView.querySelector(`[data-time="${seekMs}"]`);
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function renderTranscript(session, filterQuery = '') {
+  const rows = filterQuery
+    ? searchTranscriptRows(session, filterQuery)
+    : [
+      ...(session.sourceSegments || []).map((segment) => ({ channel: 'source', ...segment })),
+      ...(session.targetSegments || []).map((segment) => ({ channel: 'target', ...segment }))
+    ].sort((a, b) => (a.startMs || 0) - (b.startMs || 0));
+
+  elements.transcriptView.replaceChildren();
+  if (!rows.length) {
+    const empty = document.createElement('p');
+    empty.className = 'panel-empty';
+    empty.textContent = filterQuery ? 'لا توجد أسطر مطابقة للبحث في هذا النص.' : 'لا يوجد نص متاح لهذه الجلسة.';
+    elements.transcriptView.append(empty);
+    return;
+  }
+
+  for (const row of rows) {
+    const line = document.createElement('div');
+    line.className = `t-row ${row.channel === 'target' ? 'is-target' : 'is-source'}`;
+    line.dataset.time = String(row.startMs || 0);
+
+    const time = document.createElement('span');
+    time.className = 't-time';
+    time.textContent = formatStamp(row.startMs);
+
+    const text = document.createElement('span');
+    text.className = 't-text';
+    text.dir = row.channel === 'target' ? 'rtl' : 'ltr';
+    text.textContent = row.text || '';
+
+    line.append(time, text);
+    elements.transcriptView.append(line);
   }
 }
 
 function renderBookmarks(session) {
-  const list = elements.bookmarkList;
-  list.replaceChildren();
-  elements.noBookmarks.classList.toggle('hidden', session.bookmarks.length > 0);
-  for (const bookmark of session.bookmarks) {
-    const item = document.createElement('li');
+  const bookmarks = session.bookmarks || [];
+  elements.bookmarkList.replaceChildren();
+  elements.noBookmarks.classList.toggle('hidden', bookmarks.length > 0);
+
+  for (const bookmark of bookmarks) {
+    const item = document.createElement('div');
     item.className = 'bookmark-item';
-    const stamp = document.createElement('span');
-    stamp.className = 'stamp';
-    stamp.textContent = formatStamp(bookmark.atMs);
+
+    const time = document.createElement('button');
+    time.type = 'button';
+    time.className = 'btn-utility';
+    time.textContent = formatStamp(bookmark.timeMs);
+    time.addEventListener('click', () => {
+      const row = elements.transcriptView.querySelector(`[data-time="${bookmark.timeMs}"]`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
     const note = document.createElement('span');
-    note.className = 'note';
-    note.dir = 'auto';
-    note.textContent = bookmark.note || '—';
-    const tools = document.createElement('div');
-    tools.className = 'tools';
-    const edit = document.createElement('button');
-    edit.type = 'button';
-    edit.className = 'tool-button';
-    edit.textContent = 'تعديل';
-    edit.disabled = !plusEnabled();
-    edit.addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.value = bookmark.note;
-      input.setAttribute('aria-label', 'نص العلامة');
-      note.replaceWith(input);
-      input.focus();
-      const commit = async () => {
-        try {
-          // Paid mutation — routed through the service worker, which enforces
-          // entitlement centrally (UI disabled states are not trusted).
-          const response = await send({
-            type: 'PLUS_UPDATE_BOOKMARK',
-            sessionId: session.id,
-            bookmarkId: bookmark.id,
-            note: input.value
-          });
-          applyDetailRecord(response.session);
-          renderBookmarks(activeDetail);
-        } catch (error) {
-          showToast(error.message, 'error');
-        }
-      };
-      input.addEventListener('blur', commit, { once: true });
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          input.blur();
-        }
-      });
-    });
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'tool-button danger';
-    remove.textContent = 'حذف';
-    remove.addEventListener('click', async () => {
-      try {
-        const response = await send({
-          type: 'PLUS_DELETE_BOOKMARK',
-          sessionId: session.id,
-          bookmarkId: bookmark.id
-        });
-        applyDetailRecord(response.session);
-        renderBookmarks(activeDetail);
-        renderStats();
-      } catch (error) {
-        showToast(error.message, 'error');
-      }
-    });
-    tools.append(edit, remove);
-    item.append(stamp, note, tools);
-    list.append(item);
+    note.className = 'panel-copy';
+    note.textContent = bookmark.note || 'علامة زمنية';
+
+    item.append(time, note);
+    elements.bookmarkList.append(item);
   }
 }
 
-function applyDetailRecord(record) {
-  if (!record || !activeDetail || record.id !== activeDetail.id) return;
-  activeDetail = record;
-  const index = sessions.findIndex((session) => session.id === record.id);
-  if (index >= 0) sessions[index] = record;
-}
+elements.notesEditor.addEventListener('input', () => {
+  if (noteController) noteController.onInput(elements.notesEditor.value);
+});
 
-async function openDetail(id) {
-  // Interactive navigation: stop if a pending note write failed so the edit
-  // is never silently discarded.
-  if (!(await flushPendingNote())) {
-    showToast('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل فتح جلسة أخرى.', 'error');
-    return;
-  }
-  const session = sessions.find((item) => item.id === id) || await getSavedSession(id);
-  if (!session) return;
-  activeDetail = session;
-  const summary = sessionSummary(session);
-  elements.detailTitle.textContent = summary.title;
-  elements.detailMeta.textContent = [
-    summary.siteOrigin || '',
-    formatDate(summary.updatedAt),
-    summary.durationMs ? formatClock(summary.durationMs) : '',
-    `${transcriptLineCount(session)} سطر`,
-    summary.bookmarkCount ? `${summary.bookmarkCount} علامة` : ''
-  ].filter(Boolean).join(' · ');
-  elements.detailSearch.value = '';
-  renderTranscript(session, '');
-  elements.notesEditor.value = session.notes || '';
-  elements.notesEditor.readOnly = !plusEnabled();
-  elements.notesStatus.textContent = plusEnabled() ? '' : 'Plus غير مفعّل — الملاحظات للقراءة فقط';
-  renderBookmarks(session);
-  elements.openOriginal.disabled = !session.pageUrl;
-  elements.exportSrt.disabled = !hasSrtTimestamps(session);
-  setView('detail');
-  elements.printArea.replaceChildren();
-}
-
-async function closeDetail() {
-  if (!(await flushPendingNote())) {
-    showToast('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل العودة للقائمة.', 'error');
-    return;
-  }
-  activeDetail = null;
-  setView('library');
-  renderList();
-}
-
-function buildPrintArea(session) {
-  const area = elements.printArea;
-  area.replaceChildren();
-  const heading = document.createElement('h1');
-  heading.textContent = session.title || 'جلسة دبلجة';
-  const meta = document.createElement('p');
-  meta.className = 'print-meta';
-  meta.textContent = [
-    session.siteOrigin || '',
-    session.pageUrl || '',
-    formatDate(session.updatedAt),
-    session.durationMs ? formatClock(session.durationMs) : ''
-  ].filter(Boolean).join(' · ');
-  const notes = document.createElement('p');
-  notes.className = 'print-meta';
-  notes.textContent = session.notes || '';
-  const table = document.createElement('table');
-  const head = document.createElement('tr');
-  for (const label of ['English', 'العربية']) {
-    const cell = document.createElement('th');
-    cell.scope = 'col';
-    cell.textContent = label;
-    head.append(cell);
-  }
-  table.append(head);
-  for (const row of toPrintRows(session)) {
-    const tr = document.createElement('tr');
-    const en = document.createElement('td');
-    en.dir = 'ltr';
-    en.textContent = row.source;
-    const ar = document.createElement('td');
-    ar.textContent = row.target;
-    tr.append(en, ar);
-    table.append(tr);
-  }
-  area.append(heading, meta, notes, table);
-}
-
-// ---------------------------------------------------------------------------
-// Notes flush machine (single-write, ownership-captured, debounced)
-// ---------------------------------------------------------------------------
-
-async function commitNoteSave(sessionId, value) {
-  // Ownership check: only write if the same record still owns this edit.
-  if (!activeDetail || activeDetail.id !== sessionId) return true;
-  try {
-    const response = await send({
-      type: 'PLUS_UPDATE_NOTES',
-      sessionId,
-      notes: value
-    });
-    if (activeDetail && activeDetail.id === sessionId) {
-      applyDetailRecord(response.session);
-      elements.notesStatus.textContent = 'حُفظت الملاحظة';
-    }
-    return true;
-  } catch (error) {
-    elements.notesStatus.textContent = error?.message || 'تعذر حفظ الملاحظة';
-    return false;
-  }
-}
-
-const noteFlush = createNoteFlushController({ commit: commitNoteSave, debounceMs: 600 });
-const flushPendingNote = () => noteFlush.flush();
-const scheduleNoteSave = (sessionId, value) => {
-  elements.notesStatus.textContent = '…';
-  noteFlush.schedule(sessionId, value);
-};
-
-// ---------------------------------------------------------------------------
-// Settings / audio / backup
-// ---------------------------------------------------------------------------
-
-function renderProfiles(profiles) {
-  const list = elements.profileList;
-  list.replaceChildren();
-  elements.noProfiles.classList.toggle('hidden', profiles.length > 0);
-  for (const profile of profiles) {
-    const item = document.createElement('li');
-    item.className = 'profile-item';
-    const label = document.createElement('span');
-    label.className = 'profile-origin';
-    label.dir = 'ltr';
-    label.textContent = profile.origin;
-    const volumes = document.createElement('span');
-    volumes.className = 'profile-vols';
-    volumes.textContent = `EN ${Math.round((profile.originalVolume ?? 1) * 100)}% · AR ${Math.round((profile.dubbedVolume ?? 1) * 100)}%`;
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'tool-button danger';
-    remove.textContent = 'حذف';
-    remove.addEventListener('click', async () => {
-      const response = await send({ type: 'PLUS_DELETE_SITE_PROFILE', origin: profile.origin });
-      plusSettings = response.plus;
-      renderProfiles(plusSettings.siteProfiles || []);
-      showToast('تم حذف ملف الموقع');
-    });
-    item.append(label, volumes, remove);
-    list.append(item);
-  }
-}
-
-async function renderSettings() {
-  elements.autosaveToggle.checked = plusSettings?.autosave === true;
-  elements.rememberVolumesToggle.checked = plusSettings?.rememberVolumes === true;
-  renderProfiles(plusSettings?.siteProfiles || []);
-}
-
-async function reloadAll() {
-  sessions = await listSavedSessions();
-  renderChips();
-  renderSiteOptions();
-  renderList();
-  renderStats();
-  await renderDraftCard();
-  await renderSettings();
-  await refreshStorageInfo();
-  renderMoments();
-}
-
-async function persistPlusToggle(element, messageType, successMessage, statusTarget) {
-  const requested = element.checked;
-  element.disabled = true;
-  statusTarget.textContent = 'جارٍ حفظ الإعداد…';
-  statusTarget.classList.remove('hidden');
-  try {
-    const response = await send({ type: messageType, value: requested });
-    plusSettings = response.plus;
-    await renderSettings();
-    statusTarget.textContent = successMessage;
-    showToast(successMessage);
-  } catch (error) {
-    // Restore the last confirmed value rather than leaving a misleading UI.
-    await renderSettings();
-    statusTarget.textContent = `تعذر حفظ الإعداد: ${error.message}`;
-    statusTarget.classList.add('is-error');
-  } finally {
-    element.disabled = false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Event wiring
-// ---------------------------------------------------------------------------
-
-elements.searchInput.addEventListener('input', renderList);
 elements.detailSearch.addEventListener('input', () => {
   if (activeDetail) renderTranscript(activeDetail, elements.detailSearch.value.trim());
 });
 
-elements.sortDate.addEventListener('change', renderList);
-elements.filterDuration.addEventListener('change', renderList);
-elements.filterSite.addEventListener('change', renderList);
-
-elements.resetFilters.addEventListener('click', () => {
-  elements.searchInput.value = '';
-  elements.sortDate.value = 'newest';
-  elements.filterDuration.value = 'all';
-  elements.filterSite.value = 'all';
-  activeCategory = 'all';
-  renderChips();
-  renderList();
+elements.backToList.addEventListener('click', async () => {
+  if (!(await leaveDetailSafely())) return;
+  activeDetail = null;
+  setView('library');
 });
 
-elements.emptyCta.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://www.youtube.com/' });
-});
-
-elements.backToList.addEventListener('click', closeDetail);
-
-elements.notesEditor.addEventListener('input', () => {
-  if (!activeDetail || !plusEnabled()) return;
-  scheduleNoteSave(activeDetail.id, elements.notesEditor.value);
-});
-
-// All flush points route through ONE shared flush path — no duplicate
-// writes, no lost edits.
-elements.notesEditor.addEventListener('blur', () => {
-  flushPendingNote();
-});
-window.addEventListener('pagehide', () => {
-  flushPendingNote();
-});
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushPendingNote();
-});
-
-elements.openOriginal.addEventListener('click', async () => {
-  if (!activeDetail?.pageUrl) return;
-  await chrome.tabs.create({ url: activeDetail.pageUrl });
+elements.openOriginal.addEventListener('click', () => {
+  if (activeDetail?.pageUrl) chrome.tabs.create({ url: activeDetail.pageUrl });
 });
 
 elements.exportTxt.addEventListener('click', () => {
   if (!activeDetail) return;
+  closeAllDropdowns();
   download(`${safeFilePrefix(activeDetail)}.txt`, toPlainText(activeDetail));
-  showToast('تم تصدير النص');
+  showToast('تم تصدير ملف النص (.txt)');
 });
 
 elements.exportSrt.addEventListener('click', () => {
   if (!activeDetail) return;
+  closeAllDropdowns();
   download(`${safeFilePrefix(activeDetail)}.srt`, toSrt(activeDetail));
-  showToast('تم تصدير ملف SRT');
+  showToast('تم تصدير ملف الترجمة (.srt)');
 });
 
 elements.exportJson.addEventListener('click', () => {
   if (!activeDetail) return;
+  closeAllDropdowns();
   download(`${safeFilePrefix(activeDetail)}.json`, toExportJson(activeDetail), 'application/json');
-  showToast('تم تصدير ملف JSON');
+  showToast('تم تصدير ملف البيانات (.json)');
 });
 
 elements.printSession.addEventListener('click', () => {
   if (!activeDetail) return;
-  buildPrintArea(activeDetail);
+  elements.printArea.replaceChildren();
+  const printRows = toPrintRows(activeDetail);
+  const container = document.createElement('div');
+  const h1 = document.createElement('h1');
+  h1.textContent = activeDetail.title;
+  const meta = document.createElement('p');
+  meta.textContent = `${siteLabel(activeDetail)} · ${formatDate(activeDetail.startedAt)}`;
+  container.append(h1, meta);
+  for (const row of printRows) {
+    const p = document.createElement('p');
+    p.textContent = `[${formatStamp(row.startMs)}] ${row.text}`;
+    container.append(p);
+  }
+  elements.printArea.append(container);
   window.print();
 });
 
-elements.deleteSession.addEventListener('click', () => {
+elements.deleteSession.addEventListener('click', async () => {
   if (!activeDetail) return;
-  deleteSessionFlow(sessionSummary(activeDetail), activeDetail);
+  await deleteSessionFlow(sessionSummary(activeDetail), activeDetail);
 });
 
-elements.deleteAll.addEventListener('click', async () => {
-  const count = sessions.length;
-  const confirmed = await confirmModal({
-    title: 'حذف جميع الجلسات؟',
-    copy: `سيُحذف ${count === 1 ? 'جلسة واحدة محفوظة' : `${count} جلسة محفوظة`} نهائياً من هذا الجهاز مع كل النصوص والملاحظات والعلامات. لا يمكن التراجع — صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.`,
-    confirmLabel: 'حذف كل الجلسات'
-  });
-  if (!confirmed) return;
-  if (activeDetail && !(await flushPendingNote())) {
-    showToast('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل حذف كل الجلسات.', 'error');
-    return;
+// ---------------------------------------------------------------------------
+// Settings, Stats & Backup flows
+// ---------------------------------------------------------------------------
+
+function renderStats() {
+  const totalMs = sessions.reduce((sum, s) => sum + (Number(s.durationMs) || 0), 0);
+  const sites = new Set(sessions.map((s) => s.siteOrigin).filter(Boolean));
+  const moments = sessions.reduce((sum, s) => sum + ((s.bookmarks || []).length), 0);
+
+  elements.statSessions.textContent = String(sessions.length);
+  elements.statTime.textContent = formatTotalDuration(totalMs);
+  elements.statSites.textContent = String(sites.size);
+  elements.statMoments.textContent = String(moments);
+}
+
+async function renderStorage() {
+  const estimate = await estimatePlusStorage();
+  elements.storageValue.textContent = `${formatBytes(estimate.usageBytes)} مستخدمة`;
+  const pct = Math.min(100, Math.max(2, Math.round((estimate.usageBytes / (10 * 1024 * 1024 * 1024)) * 100)));
+  elements.storageFill.style.width = `${pct}%`;
+  elements.storageInfo.textContent = `المساحة المستخدمة حالياً: ${formatBytes(estimate.usageBytes)} عبر ${sessions.length} جلسة.`;
+}
+
+function renderEntitlement() {
+  const entitlement = plusSettings?.entitlement;
+  const desc = describeEntitlement(entitlement);
+  elements.plusState.textContent = desc.label || 'مفعّل على هذا الجهاز';
+  elements.entitlementNotice.classList.toggle('hidden', desc.state === ENTITLEMENT_STATES.ACTIVE);
+  if (desc.state !== ENTITLEMENT_STATES.ACTIVE) {
+    elements.entitlementNotice.textContent = desc.bannerText || 'يتطلب اشتراك Plus مفعلاً لحفظ الجلسات.';
   }
-  await clearSavedSessions();
-  activeDetail = null;
-  showToast('تم حذف جميع الجلسات');
-  await reloadAll();
-});
+}
+
+async function renderSettings() {
+  const settings = plusSettings?.settings || {};
+  elements.autosaveToggle.checked = settings.autosave !== false;
+  elements.rememberVolumesToggle.checked = settings.rememberVolumes !== false;
+
+  const profiles = plusSettings?.siteProfiles || {};
+  const entries = Object.entries(profiles);
+  elements.profileList.replaceChildren();
+  elements.noProfiles.classList.toggle('hidden', entries.length > 0);
+
+  for (const [origin, profile] of entries) {
+    const li = document.createElement('li');
+    li.className = 'switch-row';
+    li.style.padding = '8px 0';
+    li.style.borderBottom = '1px solid var(--border-light)';
+
+    const label = document.createElement('span');
+    label.className = 'switch-head';
+    label.textContent = SITE_LABELS.get(origin) || origin;
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn-utility';
+    del.style.color = '#C53030';
+    del.textContent = 'حذف';
+    del.addEventListener('click', async () => {
+      await send({ type: 'PLUS_REMOVE_SITE_PROFILE', origin });
+      showToast(`تم حذف إعدادات ${origin}`);
+      await reloadAll();
+    });
+
+    li.append(label, del);
+    elements.profileList.append(li);
+  }
+}
+
+async function persistPlusToggle(input, messageType, successMessage, statusElement) {
+  input.disabled = true;
+  statusElement.classList.remove('hidden');
+  statusElement.textContent = 'جارٍ الحفظ…';
+  try {
+    await send({ type: messageType, enabled: input.checked });
+    statusElement.textContent = successMessage;
+    showToast(successMessage);
+    setTimeout(() => statusElement.classList.add('hidden'), 2500);
+  } catch (error) {
+    input.checked = !input.checked;
+    statusElement.textContent = `فشل الحفظ: ${error.message}`;
+    showToast(`فشل الحفظ: ${error.message}`, 'error');
+  } finally {
+    input.disabled = false;
+  }
+}
 
 elements.autosaveToggle.addEventListener('change', () => persistPlusToggle(
   elements.autosaveToggle,
@@ -1409,6 +1275,7 @@ elements.rememberVolumesToggle.addEventListener('change', () => persistPlusToggl
 ));
 
 async function exportBackupFlow() {
+  closeAllDropdowns();
   const all = await listSavedSessions();
   download(`dablaja-plus-backup-${new Date().toISOString().slice(0, 10)}.json`, createBackup(all), 'application/json');
   showToast(`تم تصدير نسخة احتياطية (${all.length} جلسة)`);
@@ -1416,7 +1283,10 @@ async function exportBackupFlow() {
 
 elements.exportBackup.addEventListener('click', exportBackupFlow);
 elements.headExport.addEventListener('click', exportBackupFlow);
-elements.headImport.addEventListener('click', () => elements.importFile.click());
+elements.headImport.addEventListener('click', () => {
+  closeAllDropdowns();
+  elements.importFile.click();
+});
 
 elements.importFile.addEventListener('change', async () => {
   const file = elements.importFile.files?.[0];
@@ -1426,15 +1296,13 @@ elements.importFile.addEventListener('change', async () => {
   elements.importStatus.textContent = 'جارٍ التحقق من النسخة الاحتياطية…';
   try {
     const text = await file.text();
-    // Trust boundary: only the raw text crosses to the service worker, which
-    // parses and validates the backup itself before writing anything.
     const result = await send({ type: 'PLUS_IMPORT_BACKUP', rawBackup: text });
     const message = `تم الاستيراد: ${result.added} جلسة جديدة، ${result.updated} محدّثة`
       + `${result.superseded ? `، و${result.superseded} نسخة مكررة استُبدلت` : ''}`
       + `${result.invalidRecords ? `، وتجاهُل ${result.invalidRecords} سجل غير صالح` : ''}`
       + `${result.rejected ? `، ورفض ${result.rejected} تجاوزاً للحد الأقصى` : ''}.`;
     elements.importStatus.textContent = message;
-    showToast('تم استيراد النسخة الاحتياطية');
+    showToast('تم استيراد النسخة الاحتياطية بنجاح');
     await reloadAll();
   } catch (error) {
     elements.importStatus.textContent = `فشل الاستيراد: ${error.message}`;
@@ -1442,16 +1310,69 @@ elements.importFile.addEventListener('change', async () => {
   }
 });
 
+elements.deleteAll.addEventListener('click', async () => {
+  const confirmed = await confirmModal({
+    title: 'مسح كافة البيانات نهائياً؟',
+    copy: 'سيُحذف كل شيء من مكتبة dablaja Plus بما في ذلك جميع الجلسات والنصوص والملاحظات المحفوظة. لن تتمكن من استرجاعها إلا في حال وجود ملف نسخة احتياطية.',
+    confirmLabel: 'حذف كل الجلسات'
+  });
+  if (!confirmed) return;
+  if (activeDetail && !(await flushPendingNote())) {
+    showToast('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل حذف كل الجلسات.', 'error');
+    return;
+  }
+  await clearSavedSessions();
+  activeDetail = null;
+  showToast('تم مسح جميع الجلسات المحفوظة');
+  await reloadAll();
+});
+
+if (elements.emptyCta) {
+  elements.emptyCta.addEventListener('click', () => {
+    showToast('افتح أي صفحة فيديو واضغط أيقونة دبلجة لبدء جلسة جديدة');
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Search & Filter listeners
+// ---------------------------------------------------------------------------
+
+elements.searchInput.addEventListener('input', renderList);
+elements.sortDate.addEventListener('change', renderList);
+elements.filterDuration.addEventListener('change', renderList);
+elements.filterSite.addEventListener('change', renderList);
+elements.resetFilters.addEventListener('click', () => {
+  elements.searchInput.value = '';
+  activeCategory = 'all';
+  elements.sortDate.value = 'newest';
+  elements.filterDuration.value = 'all';
+  elements.filterSite.value = 'all';
+  renderChips();
+  renderList();
+});
+
+// ---------------------------------------------------------------------------
+// Reload & Init
+// ---------------------------------------------------------------------------
+
+async function reloadAll() {
+  sessions = await listSavedSessions();
+  renderChips();
+  renderSiteOptions();
+  renderList();
+  renderMoments();
+  renderStats();
+  await renderStorage();
+  await renderDraftCard();
+  await renderSettings();
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'PLUS_DRAFT_CHANGED') {
     renderDraftCard().catch(() => undefined);
     renderStats();
   }
 });
-
-// ---------------------------------------------------------------------------
-// Init
-// ---------------------------------------------------------------------------
 
 injectIcons();
 reloadAll().catch(() => undefined);

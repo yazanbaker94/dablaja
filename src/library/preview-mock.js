@@ -5,7 +5,7 @@
 
 (() => {
   const STORAGE_KEY = 'dablaja-preview-store';
-  const SEED_FLAG = 'dablaja-preview-seeded-v3';
+  const SEED_FLAG = 'dablaja-preview-seeded-v4';
 
   const persisted = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
@@ -58,15 +58,15 @@
     plus: {
       entitlement: {
         plusEnabled: true,
-        state: 'development_preview',
-        label: 'نسخة تطوير Plus — الدفع غير مربوط بعد'
+        state: 'active',
+        label: 'مفعّل على هذا الجهاز'
       },
       autosave: true,
       rememberVolumes: true,
-      siteProfiles: [
-        { origin: 'www.youtube.com', originalVolume: 20, dubbedVolume: 110, updatedAt: Date.now() - 36e5 },
-        { origin: 'open.spotify.com', originalVolume: 35, dubbedVolume: 100, updatedAt: Date.now() - 9e7 }
-      ]
+      siteProfiles: {
+        'www.youtube.com': { origin: 'www.youtube.com', originalVolume: 20, dubbedVolume: 110, updatedAt: Date.now() - 36e5 },
+        'open.spotify.com': { origin: 'open.spotify.com', originalVolume: 35, dubbedVolume: 100, updatedAt: Date.now() - 9e7 }
+      }
     },
     draft: null,
     storageWarning: null
