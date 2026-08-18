@@ -5,7 +5,7 @@
 
 (() => {
   const STORAGE_KEY = 'dablaja-preview-store';
-  const SEED_FLAG = 'dablaja-preview-seeded-v4';
+  const SEED_FLAG = 'dablaja-preview-seeded-v6';
 
   const persisted = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
@@ -61,8 +61,10 @@
         state: 'active',
         label: 'مفعّل على هذا الجهاز'
       },
-      autosave: true,
-      rememberVolumes: true,
+      settings: {
+        autosave: true,
+        rememberVolumes: true
+      },
       siteProfiles: {
         'www.youtube.com': { origin: 'www.youtube.com', originalVolume: 20, dubbedVolume: 110, updatedAt: Date.now() - 36e5 },
         'open.spotify.com': { origin: 'open.spotify.com', originalVolume: 35, dubbedVolume: 100, updatedAt: Date.now() - 9e7 }
@@ -77,6 +79,18 @@
       lastError: null,
       sendMessage: (message) => {
         if (message && message.type === 'PLUS_GET_STATUS') return Promise.resolve({ ...status });
+        if (message && message.type === 'PLUS_SET_AUTOSAVE') {
+          status.plus.settings.autosave = message.value;
+          return Promise.resolve({ ok: true });
+        }
+        if (message && message.type === 'PLUS_SET_REMEMBER_VOLUMES') {
+          status.plus.settings.rememberVolumes = message.value;
+          return Promise.resolve({ ok: true });
+        }
+        if (message && message.type === 'PLUS_DELETE_SITE_PROFILE') {
+          delete status.plus.siteProfiles[message.origin];
+          return Promise.resolve({ ok: true });
+        }
         return Promise.resolve({ ok: true });
       },
       onMessage: { addListener() {}, removeListener() {} },
@@ -91,7 +105,12 @@
   };
 
   // ----- Demo data (mirrors the reference design: same shows/sites mix) -----
-  const seg = (atMs, durMs, text) => ({ atMs, durMs, text });
+  const seg = (startMs, durMs, text) => ({
+    id: 'seg_' + Math.random().toString(36).slice(2, 9),
+    startMs,
+    endMs: startMs + durMs,
+    text
+  });
   const mk = (over) => Object.assign({
     id: 'plussession_demo' + Math.random().toString(36).slice(2, 9),
     schemaVersion: 1,
