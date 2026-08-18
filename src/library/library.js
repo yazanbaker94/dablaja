@@ -1016,7 +1016,7 @@ function renderMoments() {
 
   for (const { session, bookmark } of moments) {
     const card = document.createElement('article');
-    card.className = 'panel settings-group-panel';
+    card.className = 'panel settings-group-panel moment-card';
 
     const head = document.createElement('div');
     head.className = 'card-meta-row';
@@ -1039,7 +1039,61 @@ function renderMoments() {
     note.className = 'panel-copy';
     note.textContent = bookmark.note || 'علامة محفوظة بدون ملاحظة إضافية.';
 
-    card.append(head, note);
+    // Moment Actions Row
+    const actions = document.createElement('div');
+    actions.className = 'moment-actions-row';
+
+    // 1. Play Video at Timestamp
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'btn-continue-play';
+    playBtn.style.padding = '6px 14px';
+    playBtn.style.fontSize = '12px';
+    playBtn.innerHTML = `<span>▶</span> <span>تشغيل عند ${formatStamp(bookmark.atMs)}</span>`;
+    playBtn.addEventListener('click', () => {
+      if (session.pageUrl) {
+        let targetUrl = session.pageUrl;
+        const atSeconds = Math.floor((bookmark.atMs || 0) / 1000);
+        if (targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
+          targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
+        }
+        chrome.tabs.create({ url: targetUrl });
+      } else {
+        openDetail(session.id, bookmark.atMs);
+      }
+    });
+
+    // 2. View Transcript & Translation
+    const viewBtn = document.createElement('button');
+    viewBtn.type = 'button';
+    viewBtn.className = 'btn-ghost-s';
+    viewBtn.style.padding = '6px 12px';
+    viewBtn.innerHTML = `<span>📄</span> <span>عرض النص والترجمة</span>`;
+    viewBtn.addEventListener('click', () => openDetail(session.id, bookmark.atMs));
+
+    // 3. Delete Bookmark
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-ghost-danger-s';
+    delBtn.style.padding = '6px 10px';
+    delBtn.title = 'حذف هذه العلامة';
+    delBtn.innerHTML = `<span>🗑️</span> <span>حذف</span>`;
+    delBtn.addEventListener('click', async () => {
+      try {
+        await send({
+          type: 'PLUS_DELETE_BOOKMARK',
+          sessionId: session.id,
+          bookmarkId: bookmark.id
+        });
+        showToast('تم حذف العلامة');
+        await reloadAll();
+      } catch (err) {
+        showToast(`تعذر حذف العلامة: ${err.message}`, 'error');
+      }
+    });
+
+    actions.append(playBtn, viewBtn, delBtn);
+    card.append(head, note, actions);
     elements.momentsList.append(card);
   }
 }
@@ -1095,8 +1149,23 @@ async function openDetail(id, seekMs = null) {
     setView('detail');
 
     if (seekMs !== null) {
-      const row = elements.transcriptView.querySelector(`[data-time="${seekMs}"]`);
-      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        const rows = Array.from(elements.transcriptView.querySelectorAll('.t-row'));
+        if (rows.length) {
+          let closest = rows[0];
+          let minDiff = Math.abs(Number(closest.dataset.time || 0) - seekMs);
+          for (const r of rows) {
+            const diff = Math.abs(Number(r.dataset.time || 0) - seekMs);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closest = r;
+            }
+          }
+          closest.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          closest.classList.add('is-highlighted');
+          setTimeout(() => closest.classList.remove('is-highlighted'), 3000);
+        }
+      }, 100);
     }
   } catch (error) {
     console.error('[dablaja] openDetail failed:', error);

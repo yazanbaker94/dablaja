@@ -1561,6 +1561,20 @@ img {
   border: 1px solid var(--border-light);
   color: var(--ink-body);
 }
+.t-row.is-highlighted {
+  background: rgba(0, 168, 150, 0.25) !important;
+  border-right: 4px solid var(--teal-primary) !important;
+  box-shadow: 0 0 0 2px rgba(44, 207, 199, 0.4);
+  transition: all 0.3s ease;
+}
+
+.moment-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
 
 .t-time {
   font-size: 0.78rem;
