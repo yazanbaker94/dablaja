@@ -1716,3 +1716,163 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================ Print & PDF Stylesheet ============================ */
+@media print {
+  /* Hide all interactive shell components, navigation, sidebars, buttons, and popups */
+  header.top-nav,
+  aside.sidebar,
+  .detail-top-nav,
+  .detail-head,
+  .detail-layout,
+  .toast-shelf,
+  .modal-backdrop,
+  .menu-layer,
+  .skip-link,
+  .category-tabs-row,
+  .filters-bar,
+  .scrim,
+  .banner,
+  .draft-panel,
+  .library-header,
+  .search-container,
+  .session-cards-grid,
+  .hero-mascot-banner,
+  .library-footer-note,
+  footer {
+    display: none !important;
+  }
+
+  body, html {
+    background: #FFF !important;
+    color: #0F172A !important;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Cairo', sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    font-size: 11pt !important;
+  }
+
+  .app-root, .app-layout, .main-content, .view, .view.is-active {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .print-area {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10mm 12mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-area[hidden] {
+    display: block !important;
+  }
+
+  .print-header {
+    border-bottom: 2px solid #00A896;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .print-brand {
+    font-size: 14pt;
+    font-weight: 800;
+    color: #00A896;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+  }
+
+  .print-title {
+    font-size: 18pt;
+    font-weight: 800;
+    color: #0B1B38;
+    margin: 0 0 6px;
+    line-height: 1.3;
+  }
+
+  .print-meta {
+    font-size: 9pt;
+    color: #64748B;
+    margin: 0;
+  }
+
+  .print-notes {
+    background: #F8FAFC;
+    border-right: 4px solid #00A896;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    border-radius: 4px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-notes h3 {
+    margin: 0 0 4px;
+    font-size: 10.5pt;
+    color: #0B1B38;
+    font-weight: 700;
+  }
+
+  .print-notes p {
+    margin: 0;
+    font-size: 10pt;
+    color: #334155;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+
+  .print-transcript {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .print-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #E2E8F0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-stamp {
+    font-family: monospace, 'Courier New';
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #008080;
+    background: #E8F5F5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .print-text {
+    flex: 1;
+  }
+
+  .print-ar {
+    margin: 0 0 2px;
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #0B1B38;
+    line-height: 1.5;
+  }
+
+  .print-en {
+    margin: 0;
+    font-size: 9.5pt;
+    color: #64748B;
+    line-height: 1.4;
+  }
+}
+

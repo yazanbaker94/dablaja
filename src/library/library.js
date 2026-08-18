@@ -1210,19 +1210,76 @@ elements.exportJson.addEventListener('click', () => {
 
 elements.printSession.addEventListener('click', () => {
   if (!activeDetail) return;
+  closeAllDropdowns();
   elements.printArea.replaceChildren();
+
   const printRows = toPrintRows(activeDetail);
   const container = document.createElement('div');
+  container.className = 'print-document';
+
+  const head = document.createElement('header');
+  head.className = 'print-header';
+
+  const brand = document.createElement('div');
+  brand.className = 'print-brand';
+  brand.textContent = 'dablaja Plus دبلجة';
+
   const h1 = document.createElement('h1');
+  h1.className = 'print-title';
   h1.textContent = activeDetail.title;
+
   const meta = document.createElement('p');
-  meta.textContent = `${siteLabel(activeDetail)} · ${formatDate(activeDetail.startedAt)}`;
-  container.append(h1, meta);
-  for (const row of printRows) {
-    const p = document.createElement('p');
-    p.textContent = `[${formatStamp(row.startMs)}] ${row.text}`;
-    container.append(p);
+  meta.className = 'print-meta';
+  meta.textContent = `${siteLabel(activeDetail)} · ${formatDate(activeDetail.startedAt)} · ${formatDuration(activeDetail.durationMs)}${activeDetail.pageUrl ? ' · ' + activeDetail.pageUrl : ''}`;
+
+  head.append(brand, h1, meta);
+  container.append(head);
+
+  if (activeDetail.notes) {
+    const notesBox = document.createElement('div');
+    notesBox.className = 'print-notes';
+    const notesTitle = document.createElement('h3');
+    notesTitle.textContent = 'الملاحظات:';
+    const notesBody = document.createElement('p');
+    notesBody.textContent = activeDetail.notes;
+    notesBox.append(notesTitle, notesBody);
+    container.append(notesBox);
   }
+
+  const table = document.createElement('div');
+  table.className = 'print-transcript';
+
+  for (const row of printRows) {
+    const item = document.createElement('div');
+    item.className = 'print-row';
+
+    const stamp = document.createElement('span');
+    stamp.className = 'print-stamp';
+    stamp.textContent = formatStamp(row.atMs);
+
+    const body = document.createElement('div');
+    body.className = 'print-text';
+
+    if (row.target) {
+      const ar = document.createElement('p');
+      ar.className = 'print-ar';
+      ar.dir = 'rtl';
+      ar.textContent = row.target;
+      body.append(ar);
+    }
+    if (row.source) {
+      const en = document.createElement('p');
+      en.className = 'print-en';
+      en.dir = 'ltr';
+      en.textContent = row.source;
+      body.append(en);
+    }
+
+    item.append(stamp, body);
+    table.append(item);
+  }
+
+  container.append(table);
   elements.printArea.append(container);
   window.print();
 });
