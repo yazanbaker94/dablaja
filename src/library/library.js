@@ -742,8 +742,35 @@ function applyFiltersAndSort() {
 // Compact Session Cards
 // ---------------------------------------------------------------------------
 
+function extractYouTubeThumbnail(pageUrl) {
+  if (!pageUrl) return null;
+  try {
+    const url = new URL(pageUrl);
+    if (url.hostname.includes('youtube.com')) {
+      const v = url.searchParams.get('v');
+      if (v && /^[a-zA-Z0-9_-]{6,15}$/.test(v)) {
+        return `https://i.ytimg.com/vi/${v}/hqdefault.jpg`;
+      }
+      const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{6,15})/);
+      if (shortsMatch) {
+        return `https://i.ytimg.com/vi/${shortsMatch[1]}/hqdefault.jpg`;
+      }
+    }
+    if (url.hostname === 'youtu.be') {
+      const id = url.pathname.slice(1).split('?')[0];
+      if (id && /^[a-zA-Z0-9_-]{6,15}$/.test(id)) {
+        return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 function getThumbnailForSession(session) {
   if (session.thumbnailUrl) return session.thumbnailUrl;
+  const ytThumb = extractYouTubeThumbnail(session.pageUrl);
+  if (ytThumb) return ytThumb;
+
   const title = (session.title || '').toLowerCase();
   const origin = (session.siteOrigin || '').toLowerCase();
 
@@ -770,6 +797,10 @@ function sessionCard(summary, session) {
   img.src = getThumbnailForSession(session);
   img.alt = summary.title;
   img.loading = 'lazy';
+  img.onerror = () => {
+    img.onerror = null;
+    img.src = 'assets/thumbnail-fallback.png';
+  };
   media.append(img);
 
   const label = siteLabel(summary);
