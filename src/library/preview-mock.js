@@ -177,7 +177,7 @@
     })
   ];
 
-  function seedAndReload() {
+  function autoSeed() {
     const request = indexedDB.open('dablaja-plus', 1);
     request.onupgradeneeded = () => {
       const store = request.result.createObjectStore('sessions', { keyPath: 'id' });
@@ -187,13 +187,21 @@
       const db = request.result;
       const tx = db.transaction('sessions', 'readwrite');
       const store = tx.objectStore('sessions');
-      store.clear();
-      for (const record of sessions) store.put(record);
-      tx.oncomplete = () => { localStorage.setItem(SEED_FLAG, '1'); location.reload(); };
-      tx.onerror = () => { localStorage.setItem(SEED_FLAG, '1'); };
+      const countReq = store.count();
+      countReq.onsuccess = () => {
+        if (countReq.result === 0) {
+          for (const record of sessions) store.put(record);
+          tx.oncomplete = () => {
+            if (typeof window.reloadAll === 'function') {
+              window.reloadAll();
+            } else {
+              location.reload();
+            }
+          };
+        }
+      };
     };
-    request.onerror = () => { localStorage.setItem(SEED_FLAG, '1'); };
   }
 
-  if (!localStorage.getItem(SEED_FLAG)) seedAndReload();
+  autoSeed();
 })();

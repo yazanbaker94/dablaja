@@ -1377,4 +1377,6 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 injectIcons();
+window.reloadAll = reloadAll;
+window.openDetail = openDetail;
 reloadAll().catch(() => undefined);
