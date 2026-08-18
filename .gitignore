@@ -20,3 +20,9 @@ promo/preview*.png
 .deploy-mobile/
 .deploy-vps/
 server/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+.aider*
+.venv*
+preview-plus-1440/

@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, SESSION_STORAGE_KEYS } from '../shared/constants.js';
-import { describeEntitlement, ENTITLEMENT_STATES } from '../shared/plus-entitlement.js';
+import { describeEntitlement, ENTITLEMENT_STATES, PLUS_PRICE_LABEL } from '../shared/plus-entitlement.js';
 import { transcriptLineCount, validateSessionRecord } from '../shared/plus-session.js';
 import { createNoteFlushController } from '../shared/note-flush.js';
 import { searchSessions, searchTranscriptRows, sessionSummary } from '../shared/plus-search.js';
@@ -15,24 +15,39 @@ import {
 
 const $ = (id) => document.getElementById(id);
 const elements = {
-  entitlementChip: $('entitlementChip'),
-  lockedNotice: $('lockedNotice'),
+  sidebar: $('sidebar'),
+  scrim: $('scrim'),
+  menuButton: $('menuButton'),
+  navMomentsCount: $('navMomentsCount'),
+  statSessions: $('statSessions'),
+  statTime: $('statTime'),
+  statSites: $('statSites'),
+  statMoments: $('statMoments'),
+  storageValue: $('storageValue'),
+  storageFill: $('storageFill'),
+  plusState: $('plusState'),
+  entitlementNotice: $('lockedNotice'),
   draftSection: $('draftSection'),
   draftMeta: $('draftMeta'),
   draftBody: $('draftBody'),
   saveStatus: $('saveStatus'),
   searchInput: $('searchInput'),
   searchStatus: $('searchStatus'),
-  exportBackup: $('exportBackup'),
-  importFile: $('importFile'),
-  importStatus: $('importStatus'),
-  sessionCount: $('sessionCount'),
-  sessionList: $('sessionList'),
+  categoryChips: $('categoryChips'),
+  sortDate: $('sortDate'),
+  filterDuration: $('filterDuration'),
+  filterSite: $('filterSite'),
+  resetFilters: $('resetFilters'),
+  sessionGrid: $('sessionGrid'),
   emptyState: $('emptyState'),
-  listSection: $('listSection'),
-  detailSection: $('detailSection'),
+  emptyCta: $('emptyCta'),
+  noResults: $('noResults'),
+  momentsList: $('momentsList'),
+  momentsEmpty: $('momentsEmpty'),
+  detailSection: document.querySelector('[data-view="detail"]'),
   detailTitle: $('detailTitle'),
   detailMeta: $('detailMeta'),
+  detailSearch: $('detailSearch'),
   transcriptView: $('transcriptView'),
   notesEditor: $('notesEditor'),
   notesStatus: $('notesStatus'),
@@ -49,23 +64,109 @@ const elements = {
   autosaveToggle: $('autosaveToggle'),
   rememberVolumesToggle: $('rememberVolumesToggle'),
   settingsStatus: $('settingsStatus'),
+  audioStatus: $('audioStatus'),
   profileList: $('profileList'),
   noProfiles: $('noProfiles'),
-  deleteAll: $('deleteAll'),
+  exportBackup: $('exportBackup'),
+  headExport: $('headExport'),
+  headImport: $('headImport'),
+  importFile: $('importFile'),
+  importStatus: $('importStatus'),
   storageInfo: $('storageInfo'),
-  backToTab: $('backToTab')
+  deleteAll: $('deleteAll'),
+  aboutPlus: $('aboutPlus'),
+  menuLayer: $('menuLayer'),
+  modalRoot: $('modalRoot'),
+  modalTitle: $('modalTitle'),
+  modalCopy: $('modalCopy'),
+  modalCancel: $('modalCancel'),
+  modalConfirm: $('modalConfirm'),
+  toastRoot: $('toastRoot')
 };
 
 let plusSettings = null;
 let sessions = [];
 let activeDetail = null;
-let deleteAllArmed = false;
+let activeCategory = 'all';
+
+// ---------------------------------------------------------------------------
+// Icons — one rounded line family, injected into [data-icon] placeholders.
+// ---------------------------------------------------------------------------
+
+const icon = (paths) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+
+const ICONS = {
+  library: icon('<rect x="3" y="4.5" width="12.5" height="15" rx="3"/><path d="m16.5 10.2 3.1-1.8a1 1 0 0 1 1.5.9v5.4a1 1 0 0 1-1.5.9l-3.1-1.8"/><path d="M7 8.5h4.5M7 11.5h3"/>'),
+  moments: icon('<path d="M6 4h12a1 1 0 0 1 1 1v15.2a.8.8 0 0 1-1.2.7L12 18l-5.8 2.9a.8.8 0 0 1-1.2-.7V5a1 1 0 0 1 1-1Z"/><path d="M9.2 8.8h5.6"/>'),
+  audio: icon('<path d="M5 4v6M5 14v6M12 4v3M12 11v9M19 4v9M19 17v3"/><circle cx="5" cy="12" r="0" /><path d="M3.2 10h3.6M10.2 8h3.6M17.2 14h3.6"/>'),
+  settings: icon('<circle cx="12" cy="12" r="3.1"/><path d="M19.4 14.3a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.47-1 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32h.01a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47h.01a1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77v.01a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>'),
+  backup: icon('<path d="M4 7.5a2 2 0 0 1 2-2h3.2l2 2.5H18a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M12 11v5m0 0-2-2m2 2 2-2"/>'),
+  search: icon('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.8-3.8"/>'),
+  download: icon('<path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M4.5 19.5h15"/>'),
+  upload: icon('<path d="M12 19V8m0 0-4 4m4-4 4 4"/><path d="M4.5 19.5h15"/>'),
+  menu: icon('<path d="M4 7h16M4 12h16M4 17h10"/>'),
+  back: icon('<path d="M4 12h16m0 0-6-6m6 6-6 6"/>'),
+  external: icon('<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 14.5V19a1.5 1.5 0 0 1-1.5 1.5h-12A1.5 1.5 0 0 1 4 19V7a1.5 1.5 0 0 1 1.5-1.5H10"/>'),
+  trash: icon('<path d="M4.5 6.5h15"/><path d="M9 6.2V4.6A1.6 1.6 0 0 1 10.6 3h2.8A1.6 1.6 0 0 1 15 4.6v1.6"/><path d="M6.5 6.5 7.3 19a1.8 1.8 0 0 0 1.8 1.7h5.8a1.8 1.8 0 0 0 1.8-1.7l.8-12.5"/><path d="M10 10.5v6M14 10.5v6"/>'),
+  file: icon('<path d="M13.5 3H7a1.8 1.8 0 0 0-1.8 1.8v14.4A1.8 1.8 0 0 0 7 21h10a1.8 1.8 0 0 0 1.8-1.8V8.3Z"/><path d="M13.5 3v5.3h5.3"/><path d="M9 13h6M9 16.5h4"/>'),
+  captions: icon('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 12.5a2 2 0 1 0 0 2M17 12.5a2 2 0 1 0 0 2"/><path d="M7 9.5h4M14.5 9.5H17"/>'),
+  code: icon('<path d="m8.5 8-4.5 4 4.5 4"/><path d="m15.5 8 4.5 4-4.5 4"/><path d="m13.2 5.5-2.4 13"/>'),
+  print: icon('<path d="M7 8V3.8A.8.8 0 0 1 7.8 3h8.4a.8.8 0 0 1 .8.8V8"/><rect x="4" y="8" width="16" height="8.5" rx="2"/><path d="M7 13.5h10V21H7z"/>'),
+  shield: icon('<path d="M12 3 5 5.5v6c0 4.4 3 7.6 7 9.5 4-1.9 7-5.1 7-9.5v-6L12 3Z"/><path d="m9.2 11.8 2 2 3.6-3.9"/>'),
+  stack: icon('<path d="m12 3.5 8 4.2-8 4.2-8-4.2 8-4.2Z"/><path d="m4.5 12.4 7.5 4 7.5-4"/><path d="m4.5 16.4 7.5 4 7.5-4"/>'),
+  'video-stack': icon('<rect x="2" y="4" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3V9z"/><path d="M6 21h12"/>'),
+  calendar: icon('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+  refresh: icon('<path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M19.8 15.5A9 9 0 0 1 5.7 18.2L2.5 16m19-8-3.2 2.2A9 9 0 0 0 4.2 8.5"/>'),
+  more: icon('<circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/>'),
+  'chevron-right': icon('<path d="m9 18 6-6-6-6"/>'),
+  'chevron-down': icon('<path d="m6 9 6 6 6-6"/>'),
+  'settings-small': icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+  clock: icon('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  globe: icon('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.6 2.3 4 5.2 4 8.5s-1.4 6.2-4 8.5c-2.6-2.3-4-5.2-4-8.5s1.4-6.2 4-8.5Z"/>'),
+  bookmark: icon('<path d="M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-3.6L5.5 20V5.5a1 1 0 0 1 1-1Z"/>'),
+  play: icon('<path d="M8.5 5.8v12.4a.7.7 0 0 0 1.07.6l9.8-6.2a.7.7 0 0 0 0-1.2l-9.8-6.2a.7.7 0 0 0-1.07.6Z"/>'),
+  dots: icon('<circle cx="12" cy="5.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="18.6" r="1.15" fill="currentColor" stroke="none"/>'),
+  x: icon('<path d="M6 6l12 12M18 6 6 18"/>'),
+  check: icon('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+  edit: icon('<path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0 0-3l-.2-.2a2.1 2.1 0 0 0-3 0L5 16.8V20Z"/><path d="m14.5 6.5 3 3"/>'),
+  go: icon('<path d="M20 12H4m0 0 6-6m-6 6 6 6"/>'),
+  info: icon('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/>')
+};
+
+function injectIcons(root = document) {
+  for (const placeholder of root.querySelectorAll('[data-icon]')) {
+    const svg = ICONS[placeholder.dataset.icon];
+    if (svg) placeholder.innerHTML = svg;
+  }
+}
+
+function iconNode(name) {
+  const span = document.createElement('span');
+  span.innerHTML = ICONS[name] || '';
+  return span.firstElementChild;
+}
+
+// ---------------------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------------------
+
+const AR_NUM = 'ar-u-nu-latn';
 
 function formatDuration(ms) {
   const totalSeconds = Math.max(0, Math.round(Number(ms) || 0) / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function formatClock(ms) {
+  const totalSeconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+  return hours ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 function formatStamp(ms) {
@@ -75,13 +176,35 @@ function formatStamp(ms) {
 
 function formatDate(value) {
   const date = new Date(Number(value) || 0);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' });
+  if (Number.isNaN(date.getTime()) || !Number(value)) return '';
+  return date.toLocaleString(AR_NUM, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function relativeDate(value) {
+  const date = new Date(Number(value) || 0);
+  if (!Number(value) || Number.isNaN(date.getTime())) return '';
+  const time = date.toLocaleTimeString(AR_NUM, { hour: 'numeric', minute: '2-digit' });
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (date.getTime() >= startOfToday) return `اليوم، ${time}`;
+  if (date.getTime() >= startOfToday - 86_400_000) return `أمس، ${time}`;
+  return date.toLocaleDateString(AR_NUM, { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatTotalDuration(ms) {
+  const totalMinutes = Math.round(Math.max(0, Number(ms) || 0) / 60000);
+  if (totalMinutes < 1) return 'أقل من دقيقة';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (!hours) return `${minutes} دقيقة`;
+  if (!minutes) return `${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}`;
+  if (hours < 10) return `${hours} ${hours === 1 ? 'ساعة' : 'ساعات'} و${minutes} دقيقة`;
+  return `${hours}+ ساعة`;
 }
 
 function formatBytes(bytes) {
   if (!bytes) return '0 بايت';
-  const units = ['بايت', 'كيلوبايت', 'ميغابايت'];
+  const units = ['بايت', 'كيلوبايت', 'ميغابايت', 'غيغابايت'];
   let value = bytes;
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
@@ -95,35 +218,9 @@ function plusEnabled() {
   return plusSettings?.entitlement?.plusEnabled === true;
 }
 
-function showSaveStatus(message = '', tone = '') {
-  elements.saveStatus.textContent = message;
-  elements.saveStatus.classList.toggle('hidden', !message);
-  elements.saveStatus.classList.toggle('notice-error', tone === 'error');
-  elements.saveStatus.classList.toggle('notice-success', tone === 'success');
-}
-
-function showSearchStatus(message = '') {
-  elements.searchStatus.textContent = message;
-  elements.searchStatus.classList.toggle('hidden', !message);
-}
-
-function showSettingsStatus(message = '', error = false) {
-  elements.settingsStatus.textContent = message;
-  elements.settingsStatus.classList.toggle('hidden', !message);
-  elements.settingsStatus.classList.toggle('settings-error', error);
-}
-
-function detailIsOpen() {
-  return Boolean(activeDetail) && !elements.detailSection.classList.contains('hidden');
-}
-
-function requireSavedRecord(response, expectedId) {
-  const savedId = response?.saved?.id;
-  if (!savedId || (expectedId && savedId !== expectedId)) {
-    throw new Error('لم تؤكد قاعدة البيانات حفظ الجلسة. أعد تحميل الإضافة ثم حاول مرة أخرى.');
-  }
-  return response.saved;
-}
+// ---------------------------------------------------------------------------
+// Messaging / download helpers
+// ---------------------------------------------------------------------------
 
 async function send(message) {
   const response = await chrome.runtime.sendMessage(message);
@@ -150,7 +247,208 @@ function safeFilePrefix(session) {
     .slice(0, 60) || 'dablaja-session';
 }
 
-// ---- Draft card -----------------------------------------------------------
+function requireSavedRecord(response, expectedId) {
+  const savedId = response?.saved?.id;
+  if (!savedId || (expectedId && savedId !== expectedId)) {
+    throw new Error('لم تؤكد قاعدة البيانات حفظ الجلسة. أعد تحميل الإضافة ثم حاول مرة أخرى.');
+  }
+  return response.saved;
+}
+
+// ---------------------------------------------------------------------------
+// Toasts / modal / popover menus
+// ---------------------------------------------------------------------------
+
+function showToast(message, tone = 'success') {
+  const toast = document.createElement('div');
+  toast.className = tone === 'error' ? 'toast is-error' : 'toast';
+  toast.append(iconNode(tone === 'error' ? 'info' : 'check'), document.createTextNode(message));
+  elements.toastRoot.append(toast);
+  setTimeout(() => {
+    toast.classList.add('leaving');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  }, 3600);
+}
+
+let modalResolve = null;
+
+function confirmModal({ title, copy, confirmLabel = 'تأكيد' }) {
+  elements.modalTitle.textContent = title;
+  elements.modalCopy.textContent = copy;
+  elements.modalConfirm.textContent = confirmLabel;
+  elements.modalRoot.classList.remove('hidden');
+  elements.modalConfirm.focus();
+  return new Promise((resolve) => { modalResolve = resolve; });
+}
+
+function settleModal(result) {
+  if (!modalResolve) return;
+  elements.modalRoot.classList.add('hidden');
+  const resolve = modalResolve;
+  modalResolve = null;
+  resolve(result);
+}
+
+elements.modalCancel.addEventListener('click', () => settleModal(false));
+elements.modalConfirm.addEventListener('click', () => settleModal(true));
+elements.modalRoot.addEventListener('click', (event) => {
+  if (event.target === elements.modalRoot) settleModal(false);
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    settleModal(false);
+    closeMenu();
+  }
+});
+
+function closeMenu() {
+  elements.menuLayer.hidden = true;
+  elements.menuLayer.replaceChildren();
+}
+
+function openMenu(anchor, items) {
+  closeMenu();
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  menu.setAttribute('role', 'menu');
+  for (const item of items) {
+    if (item === '-') {
+      const sep = document.createElement('div');
+      sep.className = 'menu-sep';
+      menu.append(sep);
+      continue;
+    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = item.danger ? 'menu-item is-danger' : 'menu-item';
+    button.setAttribute('role', 'menuitem');
+    button.append(iconNode(item.icon), document.createTextNode(item.label));
+    button.addEventListener('click', () => {
+      closeMenu();
+      item.action();
+    });
+    menu.append(button);
+  }
+  elements.menuLayer.hidden = false;
+  elements.menuLayer.append(menu);
+  const rect = anchor.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  let top = rect.bottom + 6;
+  if (top + menuRect.height > window.innerHeight - 10) top = Math.max(10, rect.top - menuRect.height - 6);
+  const inlineSpace = window.innerWidth - rect.left;
+  const left = inlineSpace >= menuRect.width + 12
+    ? rect.left
+    : Math.max(10, window.innerWidth - menuRect.width - 10);
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+}
+
+elements.menuLayer.addEventListener('click', (event) => {
+  if (event.target === elements.menuLayer) closeMenu();
+});
+
+// ---------------------------------------------------------------------------
+// View navigation
+// ---------------------------------------------------------------------------
+
+const VIEWS = ['library', 'moments', 'audio', 'settings', 'backup', 'detail'];
+
+function setView(name) {
+  for (const view of document.querySelectorAll('.view')) {
+    view.classList.toggle('is-active', view.dataset.view === name);
+  }
+  for (const item of document.querySelectorAll('[data-nav]')) {
+    item.classList.toggle('is-active', item.dataset.nav === name);
+  }
+  closeSidebar();
+  window.scrollTo(0, 0);
+}
+
+async function leaveDetailSafely() {
+  if (!activeDetail) return true;
+  if (!(await flushPendingNote())) {
+    showToast('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل مغادرة الصفحة.', 'error');
+    return false;
+  }
+  return true;
+}
+
+document.querySelectorAll('[data-nav]').forEach((item) => {
+  item.addEventListener('click', async (event) => {
+    event.preventDefault();
+    const target = item.dataset.nav;
+    if (!(await leaveDetailSafely())) return;
+    if (activeDetail) {
+      activeDetail = null;
+      elements.searchInput.value = '';
+    }
+    setView(target);
+    if (target === 'moments') renderMoments();
+  });
+});
+
+// Mobile sidebar
+function openSidebar() {
+  elements.sidebar.classList.add('is-open');
+  elements.scrim.hidden = false;
+}
+function closeSidebar() {
+  elements.sidebar.classList.remove('is-open');
+  elements.scrim.hidden = true;
+}
+elements.menuButton.addEventListener('click', openSidebar);
+elements.scrim.addEventListener('click', closeSidebar);
+
+const SITE_LABELS = new Map([
+  ['youtube.com', 'YouTube'],
+  ['youtu.be', 'YouTube'],
+  ['youtube-nocookie.com', 'YouTube'],
+  ['coursera.org', 'Coursera'],
+  ['udemy.com', 'Udemy'],
+  ['edx.org', 'edX'],
+  ['khanacademy.org', 'Khan Academy'],
+  ['freecodecamp.org', 'freeCodeCamp'],
+  ['spotify.com', 'Spotify'],
+  ['soundcloud.com', 'SoundCloud'],
+  ['podcasts.apple.com', 'Apple Podcasts']
+]);
+
+const SITE_DOTS = new Map([
+  ['youtube.com', '#ff4d4d'],
+  ['youtu.be', '#ff4d4d'],
+  ['youtube-nocookie.com', '#ff4d4d'],
+  ['coursera.org', '#5b7ddc'],
+  ['udemy.com', '#c78aff'],
+  ['edx.org', '#7a73e8'],
+  ['khanacademy.org', '#6fd48b'],
+  ['spotify.com', '#4dd062'],
+  ['soundcloud.com', '#ff9433']
+]);
+
+function siteLabel(session) {
+  const origin = String(session.siteOrigin || '');
+  if (!origin) return '';
+  const host = origin.replace(/^www\./, '').toLowerCase();
+  return SITE_LABELS.get(host) || host;
+}
+
+function dubbingCoverage(session) {
+  const durationMs = Number(session.durationMs) || 0;
+  if (!durationMs) return null;
+  let lastEnd = 0;
+  for (const channel of ['sourceSegments', 'targetSegments']) {
+    for (const segment of session[channel] || []) {
+      lastEnd = Math.max(lastEnd, Number(segment.endMs) || Number(segment.startMs) || 0);
+    }
+  }
+  if (!lastEnd) return null;
+  const ratio = Math.min(1, lastEnd / durationMs);
+  return { atMs: lastEnd, ratio };
+}
+
+// ---------------------------------------------------------------------------
+// Draft panel
+// ---------------------------------------------------------------------------
 
 async function readUnsavedDrafts() {
   const stored = await chrome.storage.session.get(SESSION_STORAGE_KEYS.PLUS_UNSAVED_DRAFTS);
@@ -161,7 +459,6 @@ async function readUnsavedDrafts() {
 async function renderDraftCard() {
   const status = await send({ type: 'PLUS_GET_STATUS' });
   plusSettings = status.plus;
-  // Consistent shape: `draft` IS the active draft summary (or null).
   const active = status.draft;
   const drafts = await readUnsavedDrafts();
   elements.draftBody.replaceChildren();
@@ -175,7 +472,6 @@ async function renderDraftCard() {
 
   const makeStat = (label, value) => {
     const stat = document.createElement('span');
-    stat.className = 'stat muted';
     const bold = document.createElement('b');
     bold.textContent = value;
     stat.append(bold, ` ${label}`);
@@ -189,17 +485,15 @@ async function renderDraftCard() {
     info.append(
       makeStat('سطر ترجمة', String(active.lineCount)),
       makeStat('علامة', String(active.bookmarkCount)),
-      makeStat('بدأت', formatStamp(Date.now() - active.startedAt))
+      makeStat('بدأت', formatClock(Date.now() - active.startedAt))
     );
     if (active.truncated === true) {
       const truncated = document.createElement('span');
-      truncated.className = 'stat muted';
       truncated.textContent = 'تنبيه: اقتُطع أقدم جزء من المسودة بسبب حدود التخزين المحلي';
       info.append(truncated);
     }
     if (active.saved === true) {
       const savedNote = document.createElement('span');
-      savedNote.className = 'stat muted';
       savedNote.textContent = 'محفوظة — وستُحدَّث حتى تتوقف الدبلجة';
       info.append(savedNote);
     }
@@ -217,6 +511,7 @@ async function renderDraftCard() {
         const response = await send({ type: 'PLUS_SAVE_ACTIVE' });
         requireSavedRecord(response, active.id);
         showSaveStatus('تم حفظ الجلسة. ستستمر في التحديث حتى تتوقف الدبلجة.', 'success');
+        showToast('تم حفظ الجلسة في مكتبتك');
         await reloadAll();
       } catch (error) {
         showSaveStatus(`تعذر حفظ الجلسة: ${error.message}`, 'error');
@@ -251,6 +546,7 @@ async function renderDraftCard() {
           const response = await send({ type: 'PLUS_SAVE_UNSAVED', draftId: draft.id });
           requireSavedRecord(response, draft.id);
           showSaveStatus('تم حفظ الجلسة ونقلها إلى قائمة الجلسات المحفوظة.', 'success');
+          showToast('تم حفظ الجلسة في مكتبتك');
           await reloadAll();
         } catch (error) {
           showSaveStatus(`تعذر حفظ الجلسة: ${error.message}`, 'error');
@@ -275,45 +571,425 @@ async function renderDraftCard() {
   } else {
     elements.draftSection.classList.add('hidden');
   }
+  renderEntitlement();
 }
 
-// ---- Session list ---------------------------------------------------------
+function showSaveStatus(message = '', tone = '') {
+  elements.saveStatus.textContent = message;
+  elements.saveStatus.classList.toggle('hidden', !message);
+  elements.saveStatus.classList.toggle('is-error', tone === 'error');
+}
 
-function sessionCard(summary) {
-  const card = document.createElement('button');
-  card.type = 'button';
+// ---------------------------------------------------------------------------
+// Categories / thumbnails
+// ---------------------------------------------------------------------------
+
+const CATEGORY_MATCHERS = [
+  { id: 'podcast', label: 'البودكاست', icon: '🎙️', re: /(^|\.)(spotify\.com|podcasts\.apple\.com|soundcloud\.com|podbean\.com|buzzsprout\.com|stitcher\.com|pocketcasts\.com|overcast\.fm|iheart\.com|audible\.com|podomatic\.com)$/i },
+  { id: 'courses', label: 'الدورات', icon: '🎓', re: /(^|\.)(coursera\.org|udemy\.com|edx\.org|khanacademy\.org|skillshare\.com|pluralsight\.com|codecademy\.com|freecodecamp\.org|datacamp\.com|brilliant\.org|alison\.com|masterclass\.com|futurelearn\.com|udacity\.com)$/i },
+  { id: 'youtube', label: 'YouTube', icon: '▶', re: /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/i }
+];
+
+function categorize(session) {
+  const origin = String(session.siteOrigin || '').toLowerCase();
+  for (const category of CATEGORY_MATCHERS) {
+    if (category.re.test(origin)) return category.id;
+  }
+  return 'other';
+}
+
+function categoryCounts() {
+  const counts = new Map([['all', sessions.length]]);
+  for (const session of sessions) {
+    const id = categorize(session);
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return counts;
+}
+
+function renderChips() {
+  const counts = categoryCounts();
+  const chips = [
+    { id: 'all', label: 'الكل', icon: '⊞', count: counts.get('all') || 0 },
+    { id: 'podcast', label: 'البودكاست', icon: '🎙️', count: counts.get('podcast') || 0 },
+    { id: 'courses', label: 'الدورات', icon: '🎓', count: counts.get('courses') || 0 },
+    { id: 'youtube', label: 'YouTube', icon: '▶', count: counts.get('youtube') || 0 },
+    { id: 'other', label: 'أخرى', icon: '📁', count: counts.get('other') || 0 }
+  ];
+
+  elements.categoryChips.replaceChildren();
+  for (const chip of chips) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = activeCategory === chip.id ? 'cat-pill is-active' : 'cat-pill';
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(activeCategory === chip.id));
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'cat-icon';
+    iconSpan.textContent = chip.icon;
+
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = chip.label;
+
+    button.append(labelSpan, iconSpan);
+    button.addEventListener('click', () => {
+      activeCategory = chip.id;
+      renderChips();
+      renderList();
+    });
+    elements.categoryChips.append(button);
+  }
+}
+
+function renderSiteOptions() {
+  const previous = elements.filterSite.value;
+  const frequency = new Map();
+  for (const session of sessions) {
+    if (!session.siteOrigin) continue;
+    frequency.set(session.siteOrigin, (frequency.get(session.siteOrigin) || 0) + 1);
+  }
+  const options = ['all', ...[...frequency.entries()].sort((a, b) => b[1] - a[1]).map(([origin]) => origin)];
+  elements.filterSite.replaceChildren();
+  for (const value of options) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value === 'all'
+      ? 'كل المواقع والمصادر'
+      : siteLabel({ siteOrigin: value });
+    option.selected = value === previous;
+    elements.filterSite.append(option);
+  }
+  if (![...elements.filterSite.options].some((option) => option.selected)) {
+    elements.filterSite.value = 'all';
+  }
+}
+
+function applyFiltersAndSort() {
+  const query = elements.searchInput.value.trim();
+  let results = searchSessions(sessions, query);
+  if (activeCategory !== 'all') {
+    results = results.filter((session) => categorize(session) === activeCategory);
+  }
+  const duration = elements.filterDuration.value;
+  if (duration !== 'all') {
+    results = results.filter((session) => {
+      const minutes = (Number(session.durationMs) || 0) / 60000;
+      if (duration === 'short') return minutes > 0 && minutes < 10;
+      if (duration === 'medium') return minutes >= 10 && minutes <= 30;
+      return minutes > 30;
+    });
+  }
+  const site = elements.filterSite.value;
+  if (site !== 'all') {
+    results = results.filter((session) => session.siteOrigin === site);
+  }
+  if (elements.sortDate.value === 'oldest') {
+    results.sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+  }
+  return { results, query };
+}
+
+// ---------------------------------------------------------------------------
+// Session grid
+// ---------------------------------------------------------------------------
+
+function getThumbnailForSession(session) {
+  if (session.thumbnailUrl) return session.thumbnailUrl;
+  const title = (session.title || '').toLowerCase();
+  const origin = (session.siteOrigin || '').toLowerCase();
+
+  if (title.includes('كواكب') || title.includes('شمسية') || title.includes('space')) return 'assets/ref-thumb-space.png';
+  if (title.includes('javascript') || title.includes('كود') || title.includes('code') || title.includes('برمجة') || title.includes('جافا')) return 'assets/ref-thumb-coding.png';
+  if (title.includes('deep learning') || origin.includes('coursera')) return 'assets/ref-thumb-coursera.png';
+  if (title.includes('فنجان') || title.includes('بودكاست') || origin.includes('spotify')) return 'assets/ref-thumb-spotify.png';
+  if (title.includes('مدن') || title.includes('ذكية') || title.includes('city')) return 'assets/ref-thumb-city.png';
+  if (title.includes('تصوير') || title.includes('موبايل') || title.includes('mountains') || origin.includes('vimeo')) return 'assets/ref-thumb-mountains.png';
+
+  return 'assets/thumbnail-fallback.png';
+}
+
+function sessionCard(summary, session) {
+  const card = document.createElement('article');
   card.className = 'session-card';
-  const title = document.createElement('span');
+
+  // 1. Media Thumbnail
+  const media = document.createElement('div');
+  media.className = 'card-media';
+
+  const img = document.createElement('img');
+  img.className = 'card-media-img';
+  img.src = getThumbnailForSession(session);
+  img.alt = summary.title;
+  img.loading = 'lazy';
+  media.append(img);
+
+  const label = siteLabel(summary);
+  const host = String(summary.siteOrigin || '').replace(/^www\./, '').toLowerCase();
+
+  if (label) {
+    const pill = document.createElement('span');
+    let platformClass = 'other';
+    if (host.includes('youtube') || host.includes('youtu.be')) platformClass = 'youtube';
+    else if (host.includes('coursera')) platformClass = 'coursera';
+    else if (host.includes('spotify')) platformClass = 'spotify';
+
+    pill.className = `platform-pill ${platformClass}`;
+    if (platformClass === 'youtube') {
+      pill.innerHTML = '<span style="color:#FF0000;font-size:0.75rem;">▶</span> YouTube';
+    } else if (platformClass === 'coursera') {
+      pill.innerHTML = '<span style="color:#0056D2;font-weight:900;">C</span> Coursera';
+    } else if (platformClass === 'spotify') {
+      pill.innerHTML = '<span style="color:#1DB954;">🎙️</span> Spotify';
+    } else {
+      pill.textContent = label;
+    }
+    media.append(pill);
+  }
+
+  if (session.durationMs) {
+    const duration = document.createElement('span');
+    duration.className = 'duration-pill';
+    duration.textContent = formatClock(session.durationMs);
+    media.append(duration);
+  }
+
+  const open = () => openDetail(summary.id);
+  media.style.cursor = 'pointer';
+  media.addEventListener('click', open);
+
+  // 2. Card Body
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  const title = document.createElement('h3');
   title.className = 'card-title';
+  title.dir = 'auto';
   title.textContent = summary.title;
-  const meta = document.createElement('div');
-  meta.className = 'meta-row';
-  const parts = [
-    summary.siteOrigin || '',
-    formatDate(summary.updatedAt),
-    summary.durationMs ? formatDuration(summary.durationMs) : '',
-    `${summary.lineCount} سطر`,
-    summary.bookmarkCount ? `${summary.bookmarkCount} علامة` : '',
-    summary.hasNotes ? 'ملاحظات' : ''
-  ].filter(Boolean);
-  meta.textContent = parts.join(' · ');
-  card.append(title, meta);
-  card.addEventListener('click', () => openDetail(summary.id));
+  title.title = summary.title;
+  title.style.cursor = 'pointer';
+  title.addEventListener('click', open);
+
+  // Meta row: Date + More menu
+  const metaRow = document.createElement('div');
+  metaRow.className = 'card-meta-row';
+
+  const timeGroup = document.createElement('div');
+  timeGroup.className = 'meta-time-group';
+  timeGroup.append(
+    document.createTextNode(relativeDate(summary.updatedAt) || 'اليوم')
+  );
+
+  const moreBtn = document.createElement('button');
+  moreBtn.type = 'button';
+  moreBtn.className = 'btn-card-more';
+  moreBtn.setAttribute('aria-label', 'خيارات الجلسة');
+  moreBtn.append(iconNode('more'));
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openSessionMenu(moreBtn, summary, session);
+  });
+
+  metaRow.append(timeGroup, moreBtn);
+
+  // Progress Bar
+  const coverage = dubbingCoverage(session) || { atMs: Math.round((session.durationMs || 0) * 0.45), ratio: 0.45 };
+  const progressWrap = document.createElement('div');
+  progressWrap.className = 'card-progress-wrap';
+
+  const progressLabels = document.createElement('div');
+  progressLabels.className = 'progress-labels';
+
+  const coveredText = document.createElement('span');
+  coveredText.textContent = `تابعت حتى ${formatClock(coverage.atMs)}`;
+
+  const pctText = document.createElement('span');
+  pctText.textContent = `${Math.round(coverage.ratio * 100)}%`;
+
+  progressLabels.append(coveredText, pctText);
+
+  const track = document.createElement('div');
+  track.className = 'progress-track';
+  const fill = document.createElement('div');
+  fill.className = 'progress-fill';
+  fill.style.width = `${Math.round(coverage.ratio * 100)}%`;
+  track.append(fill);
+
+  progressWrap.append(progressLabels, track);
+
+  // Bottom Action Row
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'card-actions-row';
+
+  const isAudio = host.includes('spotify') || host.includes('podcast') || host.includes('soundcloud');
+  const playBtn = document.createElement('button');
+  playBtn.type = 'button';
+  playBtn.className = 'btn-continue-play';
+  playBtn.innerHTML = `<span>▶</span> <span>${isAudio ? 'تابع الاستماع' : 'تابع المشاهدة'}</span>`;
+  playBtn.addEventListener('click', open);
+
+  const bmkBtn = document.createElement('button');
+  bmkBtn.type = 'button';
+  const hasBookmarks = (session.bookmarks || []).length > 0;
+  bmkBtn.className = hasBookmarks ? 'btn-card-bookmark is-bookmarked' : 'btn-card-bookmark';
+  bmkBtn.setAttribute('aria-label', 'العلامات');
+  bmkBtn.append(iconNode('bookmark'));
+  bmkBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    open();
+  });
+
+  actionsRow.append(playBtn, bmkBtn);
+
+  body.append(title, metaRow, progressWrap, actionsRow);
+  card.append(media, body);
   return card;
 }
 
-function renderList() {
-  const query = elements.searchInput.value.trim();
-  const results = searchSessions(sessions, query);
-  elements.sessionList.replaceChildren(...results.map(sessionCard));
-  elements.sessionCount.textContent = sessions.length ? `(${sessions.length})` : '';
-  elements.emptyState.classList.toggle('hidden', results.length > 0);
-  showSearchStatus(query
-    ? (results.length ? `${results.length} جلسة مطابقة` : 'لا توجد جلسات تطابق هذا البحث.')
-    : '');
+function openSessionMenu(anchor, summary, session) {
+  const items = [
+    { icon: 'play', label: 'فتح الجلسة', action: () => openDetail(summary.id) }
+  ];
+  if (session.pageUrl) {
+    items.push({ icon: 'external', label: 'فتح الصفحة الأصلية', action: () => chrome.tabs.create({ url: session.pageUrl }) });
+  }
+  items.push(
+    { icon: 'file', label: 'تصدير نص', action: () => download(`${safeFilePrefix(session)}.txt`, toPlainText(session)) },
+    '-',
+    { icon: 'trash', label: 'حذف الجلسة', danger: true, action: () => deleteSessionFlow(summary, session) }
+  );
+  openMenu(anchor, items);
 }
 
-// ---- Detail view ----------------------------------------------------------
+async function deleteSessionFlow(summary, session) {
+  const confirmed = await confirmModal({
+    title: 'حذف هذه الجلسة؟',
+    copy: `سيُحذف «${summary.title}» نهائياً من هذا الجهاز مع نصوصها وملاحظاتها وعلاماتها. لا يمكن التراجع عن الحذف.`,
+    confirmLabel: 'حذف الجلسة'
+  });
+  if (!confirmed) return;
+  // Await any pending note write before deleting the record it targets;
+  // a failed save must block the deletion, not lose the edit.
+  if (!(await flushPendingNote())) {
+    showToast('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل الحذف.', 'error');
+    return;
+  }
+  await deleteSavedSession(session.id);
+  if (activeDetail?.id === session.id) {
+    activeDetail = null;
+    setView('library');
+  }
+  showToast('تم حذف الجلسة');
+  await reloadAll();
+}
+
+function renderList() {
+  const { results, query } = applyFiltersAndSort();
+  elements.sessionGrid.replaceChildren(
+    ...results.map((session) => sessionCard(sessionSummary(session), session))
+  );
+  const hasSessions = sessions.length > 0;
+  elements.emptyState.classList.toggle('hidden', hasSessions);
+  elements.noResults.classList.toggle('hidden', !hasSessions || results.length > 0);
+  const status = query
+    ? (results.length ? `${results.length} جلسة مطابقة` : 'لا توجد جلسات تطابق هذا البحث.')
+    : '';
+  elements.searchStatus.textContent = status;
+  elements.searchStatus.classList.toggle('hidden', !status);
+}
+
+// ---------------------------------------------------------------------------
+// Moments view
+// ---------------------------------------------------------------------------
+
+function renderMoments() {
+  const moments = [];
+  for (const session of sessions) {
+    const summary = sessionSummary(session);
+    for (const bookmark of session.bookmarks || []) {
+      moments.push({ session, summary, bookmark });
+    }
+  }
+  moments.sort((a, b) => (b.bookmark.createdAt || 0) - (a.bookmark.createdAt || 0));
+  elements.momentsList.replaceChildren();
+  elements.momentsEmpty.classList.toggle('hidden', moments.length > 0);
+  for (const moment of moments) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'moment-item';
+    const stamp = document.createElement('span');
+    stamp.className = 'moment-stamp';
+    stamp.textContent = formatStamp(moment.bookmark.atMs);
+    const body = document.createElement('span');
+    body.className = 'moment-body';
+    const note = document.createElement('span');
+    note.className = 'moment-note';
+    note.dir = 'auto';
+    note.textContent = moment.bookmark.note || 'لحظة بدون ملاحظة';
+    const sessionLine = document.createElement('span');
+    sessionLine.className = 'moment-session';
+    sessionLine.dir = 'auto';
+    sessionLine.textContent = `${moment.summary.title} · ${relativeDate(moment.summary.updatedAt)}`;
+    body.append(note, sessionLine);
+    const openIcon = document.createElement('span');
+    openIcon.className = 'moment-open';
+    openIcon.append(iconNode('go'));
+    item.append(stamp, body, openIcon);
+    item.addEventListener('click', () => openDetail(moment.session.id));
+    elements.momentsList.append(item);
+  }
+  const total = moments.length;
+  elements.navMomentsCount.hidden = !total;
+  elements.navMomentsCount.textContent = String(total);
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar stats / storage / plus
+// ---------------------------------------------------------------------------
+
+function renderStats() {
+  const totalDuration = sessions.reduce((sum, session) => sum + (Number(session.durationMs) || 0), 0);
+  const sites = new Set(sessions.map((session) => session.siteOrigin).filter(Boolean));
+  const moments = sessions.reduce((sum, session) => sum + (session.bookmarks || []).length, 0);
+  elements.statSessions.textContent = String(sessions.length);
+  elements.statTime.textContent = formatTotalDuration(totalDuration);
+  elements.statSites.textContent = String(sites.size);
+  elements.statMoments.textContent = String(moments);
+  elements.navMomentsCount.hidden = !moments;
+  elements.navMomentsCount.textContent = String(moments);
+}
+
+async function refreshStorageInfo() {
+  const estimate = await estimatePlusStorage();
+  const usedText = `التخزين المحلي المستخدم: ${formatBytes(estimate.usageBytes)} من ${formatBytes(estimate.quotaBytes)} · ${sessions.length} جلسة محفوظة`;
+  elements.storageInfo.textContent = usedText;
+  if (estimate.quotaBytes > 0) {
+    elements.storageValue.textContent = `${formatBytes(estimate.usageBytes)} / ${formatBytes(estimate.quotaBytes)}`;
+    elements.storageFill.style.width = `${Math.min(100, (estimate.usageBytes / estimate.quotaBytes) * 100).toFixed(1)}%`;
+  } else {
+    elements.storageValue.textContent = formatBytes(estimate.usageBytes);
+    elements.storageFill.style.width = '0%';
+  }
+}
+
+function renderEntitlement() {
+  const entitlement = plusSettings?.entitlement;
+  if (!entitlement) return;
+  const preview = entitlement.state === ENTITLEMENT_STATES.DEVELOPMENT_PREVIEW;
+  elements.plusState.textContent = entitlement.plusEnabled
+    ? (preview ? 'نسخة تطوير — مفعّلة على هذا الجهاز' : 'مفعّل على هذا الجهاز')
+    : 'Plus غير مفعّل على هذا الجهاز';
+  const locked = !plusEnabled();
+  elements.entitlementNotice.classList.toggle('hidden', !locked);
+  if (locked) {
+    elements.entitlementNotice.textContent = 'Plus غير مفعّل على هذا الجهاز حالياً. تصفح الجلسات متاح لكن الحفظ معطّل.';
+  }
+  elements.aboutPlus.textContent = `${PLUS_PRICE_LABEL}. كل بيانات Plus — النصوص والملاحظات والعلامات وعناوين المصدر — تبقى محلية على هذا الجهاز، ولا تُرسل إلى أي خدمة، ولا يُحفظ أي صوت.`;
+}
+
+// ---------------------------------------------------------------------------
+// Detail view
+// ---------------------------------------------------------------------------
 
 function renderTranscript(session, query = '') {
   const allRows = toPrintRows(session);
@@ -327,7 +1003,6 @@ function renderTranscript(session, query = '') {
       ? 'لا يوجد سطر في هذه الجلسة يطابق البحث.'
       : 'لا توجد نصوص محفوظة في هذه الجلسة.';
     view.append(empty);
-    showSearchStatus(query ? '0 نتيجة داخل نص الجلسة.' : '');
     return;
   }
   for (const row of rows) {
@@ -351,7 +1026,6 @@ function renderTranscript(session, query = '') {
     container.append(en, ar);
     view.append(container);
   }
-  showSearchStatus(query ? `${rows.length} نتيجة داخل نص الجلسة.` : '');
 }
 
 function renderBookmarks(session) {
@@ -365,6 +1039,8 @@ function renderBookmarks(session) {
     stamp.className = 'stamp';
     stamp.textContent = formatStamp(bookmark.atMs);
     const note = document.createElement('span');
+    note.className = 'note';
+    note.dir = 'auto';
     note.textContent = bookmark.note || '—';
     const tools = document.createElement('div');
     tools.className = 'tools';
@@ -392,7 +1068,7 @@ function renderBookmarks(session) {
           applyDetailRecord(response.session);
           renderBookmarks(activeDetail);
         } catch (error) {
-          window.alert(error.message);
+          showToast(error.message, 'error');
         }
       };
       input.addEventListener('blur', commit, { once: true });
@@ -416,8 +1092,9 @@ function renderBookmarks(session) {
         });
         applyDetailRecord(response.session);
         renderBookmarks(activeDetail);
+        renderStats();
       } catch (error) {
-        window.alert(error.message);
+        showToast(error.message, 'error');
       }
     });
     tools.append(edit, remove);
@@ -437,42 +1114,40 @@ async function openDetail(id) {
   // Interactive navigation: stop if a pending note write failed so the edit
   // is never silently discarded.
   if (!(await flushPendingNote())) {
-    window.alert('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل فتح جلسة أخرى.');
+    showToast('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل فتح جلسة أخرى.', 'error');
     return;
   }
   const session = sessions.find((item) => item.id === id) || await getSavedSession(id);
   if (!session) return;
   activeDetail = session;
-  elements.detailTitle.textContent = session.title || session.siteOrigin || 'جلسة';
+  const summary = sessionSummary(session);
+  elements.detailTitle.textContent = summary.title;
   elements.detailMeta.textContent = [
-    session.siteOrigin || '',
-    formatDate(session.updatedAt),
-    session.durationMs ? formatDuration(session.durationMs) : '',
-    `${transcriptLineCount(session)} سطر`
+    summary.siteOrigin || '',
+    formatDate(summary.updatedAt),
+    summary.durationMs ? formatClock(summary.durationMs) : '',
+    `${transcriptLineCount(session)} سطر`,
+    summary.bookmarkCount ? `${summary.bookmarkCount} علامة` : ''
   ].filter(Boolean).join(' · ');
-  elements.searchInput.placeholder = 'ابحث داخل نص هذه الجلسة…';
-  renderTranscript(session, elements.searchInput.value.trim());
+  elements.detailSearch.value = '';
+  renderTranscript(session, '');
   elements.notesEditor.value = session.notes || '';
   elements.notesEditor.readOnly = !plusEnabled();
   elements.notesStatus.textContent = plusEnabled() ? '' : 'Plus غير مفعّل — الملاحظات للقراءة فقط';
   renderBookmarks(session);
   elements.openOriginal.disabled = !session.pageUrl;
   elements.exportSrt.disabled = !hasSrtTimestamps(session);
-  elements.listSection.classList.add('hidden');
-  elements.detailSection.classList.remove('hidden');
+  setView('detail');
   elements.printArea.replaceChildren();
-  window.scrollTo(0, 0);
 }
 
 async function closeDetail() {
   if (!(await flushPendingNote())) {
-    window.alert('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل العودة للقائمة.');
+    showToast('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل العودة للقائمة.', 'error');
     return;
   }
   activeDetail = null;
-  elements.searchInput.placeholder = 'ابحث في العناوين والملاحظات والنصوص…';
-  elements.detailSection.classList.add('hidden');
-  elements.listSection.classList.remove('hidden');
+  setView('library');
   renderList();
 }
 
@@ -487,7 +1162,7 @@ function buildPrintArea(session) {
     session.siteOrigin || '',
     session.pageUrl || '',
     formatDate(session.updatedAt),
-    session.durationMs ? formatDuration(session.durationMs) : ''
+    session.durationMs ? formatClock(session.durationMs) : ''
   ].filter(Boolean).join(' · ');
   const notes = document.createElement('p');
   notes.className = 'print-meta';
@@ -514,84 +1189,10 @@ function buildPrintArea(session) {
   area.append(heading, meta, notes, table);
 }
 
-// ---- Settings / storage ---------------------------------------------------
+// ---------------------------------------------------------------------------
+// Notes flush machine (single-write, ownership-captured, debounced)
+// ---------------------------------------------------------------------------
 
-function renderProfiles(profiles) {
-  const list = elements.profileList;
-  list.replaceChildren();
-  elements.noProfiles.classList.toggle('hidden', profiles.length > 0);
-  for (const profile of profiles) {
-    const item = document.createElement('li');
-    item.className = 'profile-item';
-    const label = document.createElement('span');
-    label.dir = 'ltr';
-    label.textContent = profile.origin;
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'tool-button danger';
-    remove.textContent = 'حذف';
-    remove.addEventListener('click', async () => {
-      const response = await send({ type: 'PLUS_DELETE_SITE_PROFILE', origin: profile.origin });
-      plusSettings = response.plus;
-      renderProfiles(plusSettings.siteProfiles || []);
-    });
-    item.append(label, remove);
-    list.append(item);
-  }
-}
-
-async function refreshStorageInfo() {
-  const estimate = await estimatePlusStorage();
-  elements.storageInfo.textContent = `التخزين المحلي المستخدم: ${formatBytes(estimate.usageBytes)} من ${formatBytes(estimate.quotaBytes)} · ${sessions.length} جلسة محفوظة`;
-}
-
-async function renderSettings() {
-  elements.autosaveToggle.checked = plusSettings?.autosave === true;
-  elements.rememberVolumesToggle.checked = plusSettings?.rememberVolumes === true;
-  renderProfiles(plusSettings?.siteProfiles || []);
-}
-
-async function reloadAll() {
-  sessions = await listSavedSessions();
-  renderList();
-  await renderDraftCard();
-  await renderSettings();
-  await refreshStorageInfo();
-  renderEntitlement();
-}
-
-function renderEntitlement() {
-  const entitlement = plusSettings?.entitlement;
-  if (!entitlement) return;
-  elements.entitlementChip.textContent = describeEntitlement(entitlement);
-  elements.entitlementChip.classList.toggle('chip-preview', entitlement.state === ENTITLEMENT_STATES.DEVELOPMENT_PREVIEW);
-  const locked = !plusEnabled();
-  elements.lockedNotice.classList.toggle('hidden', !locked);
-  if (locked) {
-    elements.lockedNotice.textContent = 'Plus غير مفعّل على هذا الجهاز حالياً. تصفح الجلسات متاح لكن الحفظ معطّل.';
-  }
-}
-
-// ---- Event wiring ---------------------------------------------------------
-
-elements.searchInput.addEventListener('input', () => {
-  if (detailIsOpen()) {
-    renderTranscript(activeDetail, elements.searchInput.value.trim());
-    return;
-  }
-  renderList();
-});
-
-elements.backToList.addEventListener('click', closeDetail);
-
-elements.backToTab.addEventListener('click', (event) => {
-  event.preventDefault();
-  window.close();
-});
-
-// Commits a pending note write. Returns true on success (or when another
-// record owns the edit), false on a real write failure — interactive
-// navigation must stop on false so an unsaved note is never discarded.
 async function commitNoteSave(sessionId, value) {
   // Ownership check: only write if the same record still owns this edit.
   if (!activeDetail || activeDetail.id !== sessionId) return true;
@@ -612,8 +1213,6 @@ async function commitNoteSave(sessionId, value) {
   }
 }
 
-// The schedule/flush machine (single-write, ownership-captured, debounced)
-// lives in the shared, unit-tested note-flush module.
 const noteFlush = createNoteFlushController({ commit: commitNoteSave, debounceMs: 600 });
 const flushPendingNote = () => noteFlush.flush();
 const scheduleNoteSave = (sessionId, value) => {
@@ -621,13 +1220,114 @@ const scheduleNoteSave = (sessionId, value) => {
   noteFlush.schedule(sessionId, value);
 };
 
+// ---------------------------------------------------------------------------
+// Settings / audio / backup
+// ---------------------------------------------------------------------------
+
+function renderProfiles(profiles) {
+  const list = elements.profileList;
+  list.replaceChildren();
+  elements.noProfiles.classList.toggle('hidden', profiles.length > 0);
+  for (const profile of profiles) {
+    const item = document.createElement('li');
+    item.className = 'profile-item';
+    const label = document.createElement('span');
+    label.className = 'profile-origin';
+    label.dir = 'ltr';
+    label.textContent = profile.origin;
+    const volumes = document.createElement('span');
+    volumes.className = 'profile-vols';
+    volumes.textContent = `EN ${Math.round((profile.originalVolume ?? 1) * 100)}% · AR ${Math.round((profile.dubbedVolume ?? 1) * 100)}%`;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'tool-button danger';
+    remove.textContent = 'حذف';
+    remove.addEventListener('click', async () => {
+      const response = await send({ type: 'PLUS_DELETE_SITE_PROFILE', origin: profile.origin });
+      plusSettings = response.plus;
+      renderProfiles(plusSettings.siteProfiles || []);
+      showToast('تم حذف ملف الموقع');
+    });
+    item.append(label, volumes, remove);
+    list.append(item);
+  }
+}
+
+async function renderSettings() {
+  elements.autosaveToggle.checked = plusSettings?.autosave === true;
+  elements.rememberVolumesToggle.checked = plusSettings?.rememberVolumes === true;
+  renderProfiles(plusSettings?.siteProfiles || []);
+}
+
+async function reloadAll() {
+  sessions = await listSavedSessions();
+  renderChips();
+  renderSiteOptions();
+  renderList();
+  renderStats();
+  await renderDraftCard();
+  await renderSettings();
+  await refreshStorageInfo();
+  renderMoments();
+}
+
+async function persistPlusToggle(element, messageType, successMessage, statusTarget) {
+  const requested = element.checked;
+  element.disabled = true;
+  statusTarget.textContent = 'جارٍ حفظ الإعداد…';
+  statusTarget.classList.remove('hidden');
+  try {
+    const response = await send({ type: messageType, value: requested });
+    plusSettings = response.plus;
+    await renderSettings();
+    statusTarget.textContent = successMessage;
+    showToast(successMessage);
+  } catch (error) {
+    // Restore the last confirmed value rather than leaving a misleading UI.
+    await renderSettings();
+    statusTarget.textContent = `تعذر حفظ الإعداد: ${error.message}`;
+    statusTarget.classList.add('is-error');
+  } finally {
+    element.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Event wiring
+// ---------------------------------------------------------------------------
+
+elements.searchInput.addEventListener('input', renderList);
+elements.detailSearch.addEventListener('input', () => {
+  if (activeDetail) renderTranscript(activeDetail, elements.detailSearch.value.trim());
+});
+
+elements.sortDate.addEventListener('change', renderList);
+elements.filterDuration.addEventListener('change', renderList);
+elements.filterSite.addEventListener('change', renderList);
+
+elements.resetFilters.addEventListener('click', () => {
+  elements.searchInput.value = '';
+  elements.sortDate.value = 'newest';
+  elements.filterDuration.value = 'all';
+  elements.filterSite.value = 'all';
+  activeCategory = 'all';
+  renderChips();
+  renderList();
+});
+
+elements.emptyCta.addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://www.youtube.com/' });
+});
+
+elements.backToList.addEventListener('click', closeDetail);
+
 elements.notesEditor.addEventListener('input', () => {
   if (!activeDetail || !plusEnabled()) return;
   scheduleNoteSave(activeDetail.id, elements.notesEditor.value);
 });
 
-// All flush points route through ONE shared flush path
-// once — no duplicate writes, no lost edits.
+// All flush points route through ONE shared flush path — no duplicate
+// writes, no lost edits.
 elements.notesEditor.addEventListener('blur', () => {
   flushPendingNote();
 });
@@ -646,16 +1346,19 @@ elements.openOriginal.addEventListener('click', async () => {
 elements.exportTxt.addEventListener('click', () => {
   if (!activeDetail) return;
   download(`${safeFilePrefix(activeDetail)}.txt`, toPlainText(activeDetail));
+  showToast('تم تصدير النص');
 });
 
 elements.exportSrt.addEventListener('click', () => {
   if (!activeDetail) return;
   download(`${safeFilePrefix(activeDetail)}.srt`, toSrt(activeDetail));
+  showToast('تم تصدير ملف SRT');
 });
 
 elements.exportJson.addEventListener('click', () => {
   if (!activeDetail) return;
   download(`${safeFilePrefix(activeDetail)}.json`, toExportJson(activeDetail), 'application/json');
+  showToast('تم تصدير ملف JSON');
 });
 
 elements.printSession.addEventListener('click', () => {
@@ -664,80 +1367,36 @@ elements.printSession.addEventListener('click', () => {
   window.print();
 });
 
-elements.deleteSession.addEventListener('click', async () => {
+elements.deleteSession.addEventListener('click', () => {
   if (!activeDetail) return;
-  if (!elements.deleteSession.classList.contains('armed')) {
-    elements.deleteSession.classList.add('armed');
-    elements.deleteSession.textContent = 'تأكيد الحذف؟';
-    setTimeout(() => {
-      elements.deleteSession.classList.remove('armed');
-      elements.deleteSession.textContent = 'حذف الجلسة';
-    }, 3000);
-    return;
-  }
-  // Await any pending note write before deleting the record it targets;
-  // a failed save must block the deletion, not lose the edit.
-  const targetId = activeDetail.id;
-  if (!(await flushPendingNote())) {
-    window.alert('تعذر حفظ ملاحظة هذه الجلسة. أعد المحاولة قبل الحذف.');
-    return;
-  }
-  if (activeDetail?.id !== targetId) return;
-  await deleteSavedSession(targetId);
-  activeDetail = null;
-  elements.searchInput.placeholder = 'ابحث في العناوين والملاحظات والنصوص…';
-  elements.detailSection.classList.add('hidden');
-  elements.listSection.classList.remove('hidden');
-  await reloadAll();
+  deleteSessionFlow(sessionSummary(activeDetail), activeDetail);
 });
 
 elements.deleteAll.addEventListener('click', async () => {
-  if (!deleteAllArmed) {
-    deleteAllArmed = true;
-    elements.deleteAll.classList.add('armed');
-    elements.deleteAll.textContent = 'تأكيد حذف كل الجلسات؟';
-    setTimeout(() => {
-      deleteAllArmed = false;
-      elements.deleteAll.classList.remove('armed');
-      elements.deleteAll.textContent = 'حذف كل الجلسات المحفوظة';
-    }, 4000);
-    return;
-  }
-  deleteAllArmed = false;
-  elements.deleteAll.classList.remove('armed');
-  elements.deleteAll.textContent = 'حذف كل الجلسات المحفوظة';
+  const count = sessions.length;
+  const confirmed = await confirmModal({
+    title: 'حذف جميع الجلسات؟',
+    copy: `سيُحذف ${count === 1 ? 'جلسة واحدة محفوظة' : `${count} جلسة محفوظة`} نهائياً من هذا الجهاز مع كل النصوص والملاحظات والعلامات. لا يمكن التراجع — صدّر نسخة احتياطية أولاً إن أردت الاحتفاظ بها.`,
+    confirmLabel: 'حذف كل الجلسات'
+  });
+  if (!confirmed) return;
   if (activeDetail && !(await flushPendingNote())) {
-    window.alert('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل حذف كل الجلسات.');
+    showToast('تعذر حفظ ملاحظة الجلسة المفتوحة. أعد المحاولة قبل حذف كل الجلسات.', 'error');
     return;
   }
   await clearSavedSessions();
+  activeDetail = null;
+  showToast('تم حذف جميع الجلسات');
   await reloadAll();
 });
-
-async function persistPlusToggle(element, messageType, successMessage) {
-  const requested = element.checked;
-  element.disabled = true;
-  showSettingsStatus('جارٍ حفظ الإعداد…');
-  try {
-    const response = await send({ type: messageType, value: requested });
-    plusSettings = response.plus;
-    await renderSettings();
-    showSettingsStatus(successMessage);
-  } catch (error) {
-    // Restore the last confirmed value rather than leaving a misleading UI.
-    await renderSettings();
-    showSettingsStatus(`تعذر حفظ الإعداد: ${error.message}`, true);
-  } finally {
-    element.disabled = false;
-  }
-}
 
 elements.autosaveToggle.addEventListener('change', () => persistPlusToggle(
   elements.autosaveToggle,
   'PLUS_SET_AUTOSAVE',
   elements.autosaveToggle.checked
     ? 'تم تفعيل الحفظ التلقائي عند الإيقاف.'
-    : 'تم إيقاف الحفظ التلقائي.'
+    : 'تم إيقاف الحفظ التلقائي.',
+  elements.settingsStatus
 ));
 
 elements.rememberVolumesToggle.addEventListener('change', () => persistPlusToggle(
@@ -745,13 +1404,19 @@ elements.rememberVolumesToggle.addEventListener('change', () => persistPlusToggl
   'PLUS_SET_REMEMBER_VOLUMES',
   elements.rememberVolumesToggle.checked
     ? 'سيتم تذكر مستويات الصوت لكل موقع.'
-    : 'تم إيقاف تطبيق مستويات الصوت المحفوظة.'
+    : 'تم إيقاف تطبيق مستويات الصوت المحفوظة.',
+  elements.audioStatus
 ));
 
-elements.exportBackup.addEventListener('click', async () => {
+async function exportBackupFlow() {
   const all = await listSavedSessions();
   download(`dablaja-plus-backup-${new Date().toISOString().slice(0, 10)}.json`, createBackup(all), 'application/json');
-});
+  showToast(`تم تصدير نسخة احتياطية (${all.length} جلسة)`);
+}
+
+elements.exportBackup.addEventListener('click', exportBackupFlow);
+elements.headExport.addEventListener('click', exportBackupFlow);
+elements.headImport.addEventListener('click', () => elements.importFile.click());
 
 elements.importFile.addEventListener('change', async () => {
   const file = elements.importFile.files?.[0];
@@ -764,20 +1429,29 @@ elements.importFile.addEventListener('change', async () => {
     // Trust boundary: only the raw text crosses to the service worker, which
     // parses and validates the backup itself before writing anything.
     const result = await send({ type: 'PLUS_IMPORT_BACKUP', rawBackup: text });
-    elements.importStatus.textContent = `تم الاستيراد: ${result.added} جلسة جديدة، ${result.updated} محدّثة`
+    const message = `تم الاستيراد: ${result.added} جلسة جديدة، ${result.updated} محدّثة`
       + `${result.superseded ? `، و${result.superseded} نسخة مكررة استُبدلت` : ''}`
       + `${result.invalidRecords ? `، وتجاهُل ${result.invalidRecords} سجل غير صالح` : ''}`
       + `${result.rejected ? `، ورفض ${result.rejected} تجاوزاً للحد الأقصى` : ''}.`;
+    elements.importStatus.textContent = message;
+    showToast('تم استيراد النسخة الاحتياطية');
     await reloadAll();
   } catch (error) {
     elements.importStatus.textContent = `فشل الاستيراد: ${error.message}`;
+    showToast(`فشل الاستيراد: ${error.message}`, 'error');
   }
 });
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'PLUS_DRAFT_CHANGED') {
     renderDraftCard().catch(() => undefined);
+    renderStats();
   }
 });
 
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
+
+injectIcons();
 reloadAll().catch(() => undefined);

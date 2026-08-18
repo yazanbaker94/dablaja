@@ -115,7 +115,7 @@ export function classifyConnectionFailure({ code = 0, reason = '', message = '' 
     return { kind: 'invalid_key', transient: false };
   }
   if (code >= 400 && code < 500) return { kind: 'api_error', transient: false };
-  if (code === 1000 && !text) return { kind: 'normal', transient: false };
+  if (code === 1000) return { kind: 'normal', transient: false };
   if ([1001, 1006, 1011, 1012, 1013].includes(code) || (code === 0 && /network|timeout|connection/.test(text))) {
     return { kind: 'network', transient: true };
   }

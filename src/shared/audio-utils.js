@@ -1,3 +1,13 @@
+/**
+ * Clamps a numeric sample value to the range [-1, 1].
+ *
+ * Values less than -1 are returned as -1, values greater than 1 are
+ * returned as 1, and values already within the range are returned
+ * unchanged.
+ *
+ * @param {number} value - The sample value to clamp.
+ * @returns {number} The clamped value, guaranteed to be within [-1, 1].
+ */
 export function clampSample(value) {
   return Math.max(-1, Math.min(1, value));
 }

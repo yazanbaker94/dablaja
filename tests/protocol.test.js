@@ -80,6 +80,10 @@ test('parser accepts snake_case server messages', () => {
 });
 
 test('connection failures distinguish permanent and transient cases', () => {
+  assert.deepEqual(classifyConnectionFailure({ code: 1000, reason: '' }), { kind: 'normal', transient: false });
+  assert.deepEqual(classifyConnectionFailure({ code: 1000, reason: 'client stop' }), { kind: 'normal', transient: false });
+  assert.deepEqual(classifyConnectionFailure({ code: 1000, reason: 'normal closure' }), { kind: 'normal', transient: false });
+  assert.deepEqual(classifyConnectionFailure({ code: 1006, reason: 'abnormal closure' }), { kind: 'network', transient: true });
   assert.deepEqual(classifyConnectionFailure({ code: 1008, reason: 'API key invalid' }), { kind: 'invalid_key', transient: false });
   assert.equal(classifyConnectionFailure({ code: 1008, reason: 'API_KEY_INVALID' }).kind, 'invalid_key');
   assert.deepEqual(classifyConnectionFailure({ code: 1013, reason: 'try later' }), { kind: 'network', transient: true });
@@ -87,3 +91,4 @@ test('connection failures distinguish permanent and transient cases', () => {
   assert.equal(classifyConnectionFailure({ reason: 'model not found 404' }).kind, 'model_unavailable');
   assert.deepEqual(classifyConnectionFailure({ code: 400, reason: 'bad request' }), { kind: 'api_error', transient: false });
 });
+
