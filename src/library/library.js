@@ -842,6 +842,9 @@ function sessionCard(summary, session) {
 
   // Progress Bar
   const coverage = dubbingCoverage(session) || { atMs: Math.round((session.durationMs || 0) * 0.45), ratio: 0.45 };
+  const progressWrap = document.createElement('div');
+  progressWrap.className = 'card-progress-wrap';
+
   const progressLabels = document.createElement('div');
   progressLabels.className = 'progress-labels';
 
@@ -1028,17 +1031,22 @@ async function openDetail(id, seekMs = null) {
     elements.notesStatus.textContent = '';
 
     noteController = createNoteFlushController({
-      onSave: async (note) => {
-        await send({ type: 'PLUS_UPDATE_NOTES', sessionId: session.id, notes: note });
-        session.notes = note;
-        elements.notesStatus.textContent = 'تم حفظ الملاحظة';
-        setTimeout(() => {
-          if (elements.notesStatus.textContent === 'تم حفظ الملاحظة') elements.notesStatus.textContent = '';
-        }, 2500);
-      },
-      onError: (error) => {
-        elements.notesStatus.textContent = `فشل حفظ الملاحظة: ${error.message}`;
-        showToast(`تعذر حفظ الملاحظة: ${error.message}`, 'error');
+      commit: async (sessionId, note) => {
+        try {
+          await send({ type: 'PLUS_UPDATE_NOTES', sessionId, notes: note });
+          if (activeDetail && activeDetail.id === sessionId) {
+            activeDetail.notes = note;
+          }
+          elements.notesStatus.textContent = 'تم حفظ الملاحظة';
+          setTimeout(() => {
+            if (elements.notesStatus.textContent === 'تم حفظ الملاحظة') elements.notesStatus.textContent = '';
+          }, 2500);
+          return true;
+        } catch (error) {
+          elements.notesStatus.textContent = `فشل حفظ الملاحظة: ${error.message}`;
+          showToast(`تعذر حفظ الملاحظة: ${error.message}`, 'error');
+          return false;
+        }
       }
     });
 
@@ -1120,7 +1128,9 @@ function renderBookmarks(session) {
 }
 
 elements.notesEditor.addEventListener('input', () => {
-  if (noteController) noteController.onInput(elements.notesEditor.value);
+  if (noteController && activeDetail) {
+    noteController.schedule(activeDetail.id, elements.notesEditor.value);
+  }
 });
 
 elements.detailSearch.addEventListener('input', () => {
