@@ -3,8 +3,8 @@
 
 The opt-in live E2E suite uses the reserved event-id prefixes below and always
 adds exactly one 60-second YouTube usage sample per accepted usage event.  This
-tool is dry-run by default.  Use ``--apply`` only after taking a database
-backup; every mutation is performed in one immediate transaction.
+tool is dry-run by default. Applying requires ``--backup``; it creates and
+integrity-checks a SQLite online backup before one immediate cleanup transaction.
 """
 
 from __future__ import annotations
@@ -24,10 +24,22 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("database", type=Path)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--backup", type=Path)
     args = parser.parse_args()
     database = args.database.resolve()
     if not database.is_file():
         print("DB=missing")
+        return 1
+
+    if args.apply and args.backup is None:
+        parser.error("--apply requires --backup")
+
+    backup = args.backup.resolve() if args.backup else None
+    if backup and backup.exists():
+        print("backup=already-exists")
+        return 1
+    if backup and not backup.parent.is_dir():
+        print("backup-parent=missing")
         return 1
 
     connection = sqlite3.connect(str(database), timeout=30)
@@ -50,6 +62,13 @@ def main() -> int:
         print(f"mode={'apply' if args.apply else 'dry-run'}")
         if not args.apply:
             return 0
+
+        with sqlite3.connect(str(backup)) as backup_connection:
+            connection.backup(backup_connection)
+            check = backup_connection.execute("PRAGMA quick_check").fetchone()
+            if check is None or str(check[0]).lower() != "ok":
+                raise RuntimeError("backup integrity check failed")
+        print(f"backup={backup}")
 
         connection.execute("BEGIN IMMEDIATE")
         for day, count in usage_by_day.items():

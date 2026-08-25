@@ -8,6 +8,27 @@ case "$candidate" in
 esac
 test -f "$candidate"
 
+# This deploys the complete root Caddyfile, not the site-block reference in
+# server/Caddyfile.audiofetcher.production. Fail closed before a partial file
+# can remove the VPS imports or unrelated sites.
+grep -Fq 'import /etc/caddy/sites/*.caddy' "$candidate"
+grep -Fq 'import rook-origin' "$candidate"
+grep -Fq 'audiofetcher.com {' "$candidate"
+grep -Fq 'reverse_proxy 127.0.0.1:8080' "$candidate"
+grep -Fq 'https://www.youtube-nocookie.com' "$candidate"
+
+# The shared root config imports the rook-origin snippet, whose matcher uses a
+# secret supplied to the running Caddy service. Validate with the same trusted
+# environment file without printing its contents; otherwise an otherwise valid
+# candidate fails closed because the placeholder expands to an empty value.
+env_file="/etc/rook/caddy.env"
+test -r "$env_file"
+set -a
+# shellcheck disable=SC1091
+. "$env_file"
+set +a
+test -n "${ROOK_ORIGIN_TOKEN:-}"
+
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup="/opt/ytmp3-backups/Caddyfile-dablaja-$stamp"
 cp -a /etc/caddy/Caddyfile "$backup"

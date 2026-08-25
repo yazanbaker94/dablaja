@@ -7,7 +7,7 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 303/303 Node tests on the current worktree |
+| `npm test` | PASS — 308/308 Node tests on the current worktree |
 | `python -m unittest server/test_dablaja.py` | PASS — 115/115 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
 | Element-binding checker | PASS — library, popup, stats, side-panel, and diagnostics bindings; duplicate IDs and unwired static controls are rejected |
@@ -19,10 +19,13 @@
 | `git diff --check` | PASS; line-ending notices only |
 | Official Gemini documentation recheck | PASS on 25 August 2026 — model `gemini-3.5-live-translate-preview`, 16kHz PCM input, 24kHz PCM output, 100ms chunks, Arabic `ar`, input/output transcription, and current pricing/data-use copy match Google documentation |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
-| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), updated privacy (`a4dbedcf…ab11e`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
+| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing HTML (`37d94e78…35483`), landing CSS (`ec85b982…ee8bf`), updated privacy (`a4dbedcf…ab11e`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
 | VPS database audit | PASS — exact allowlisted diagnostic/form schemas (obsolete empty `error_message`/`user_agent` columns removed), hashed credentials, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
 | VPS response headers | PASS — feedback, uninstall, admin, success, licensing, usage, diagnostics, checkout, and webhook routes are `no-store`/`no-referrer`; form/success pages have route-scoped no-script CSP; public aggregate stats retain their intended 60-second cache policy |
 | VPS runtime | PASS — service and Caddy active, health/statistics/privacy probes successful, Stripe SDK 15.5.0, and a dedicated rate-limit secret is configured |
+| Live landing browser QA | PASS — desktop and mobile rendered without material horizontal overflow; mobile navigation and install anchors work; the embedded Gemini tutorial loads from `youtube-nocookie.com`, locks root/body scrolling, closes to `about:blank`, and reopens; the full demo pauses and resets to 0 on close-button and outside-click paths, then replays; no landing console warnings/errors |
+| Live Caddy tutorial policy | PASS — full-root candidate preserved shared imports, validated with the service environment, reloaded successfully, and now permits only Cloudflare plus the two required YouTube frame origins; live root SHA-256 `8c4dc520…c6637` |
+| Live E2E cleanup | PASS — current production-ingestion run created one reserved usage row and one reserved diagnostic row; apply mode created and integrity-checked an online SQLite backup before transactional removal; post-cleanup dry-run found zero synthetic rows and public stats returned 60 sessions |
 | Stripe product/price | PASS — live Dablaja account, active lifetime product, active $10 USD price, and exact server IDs all match |
 | Stripe webhook | PASS — production endpoint active for six required events; secret stored on VPS without output; signed probe 200; invalid signature 400 |
 | Development ZIP inspection | PASS — 57 allowlisted files, manifest at root, checkout validator present, and no test/preview/mock/map/secret/dev path or secret pattern |

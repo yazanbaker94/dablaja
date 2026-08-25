@@ -41,9 +41,12 @@ live Stripe Checkout probes remain skipped unless their explicit environment
 flags are set for a controlled acceptance run.
 
 The live-ingestion mode uses reserved `e2e…` event IDs. After the assertions,
-take a VPS database backup, run `scripts/cleanup-dablaja-e2e.py` first without
-`--apply`, then with `--apply`, and rerun `scripts/verify-dablaja-db.py`. This
-keeps public community statistics free of synthetic acceptance traffic.
+run `scripts/cleanup-dablaja-e2e.py` first without `--apply`, then rerun it with
+`--apply --backup /opt/ytmp3-backups/<unique-name>.db`, and finally rerun
+`scripts/verify-dablaja-db.py`. Apply mode refuses to start without a new backup
+path, creates an online SQLite backup, checks its integrity, and only then
+removes the reserved rows in one transaction. This keeps public community
+statistics free of synthetic acceptance traffic.
 
 The live-Checkout mode writes a reserved `e2e-checkout-…` installation ID and
 opens Checkout without payment. After the assertion, take a VPS database

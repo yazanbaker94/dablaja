@@ -1,3 +1,6 @@
+# Reviewed audiofetcher.com site block. This is not the complete VPS root
+# Caddyfile; build a guarded candidate from the live root with
+# scripts/build-dablaja-caddy-candidate.py before deployment.
 audiofetcher.com {
 	encode zstd gzip
 	header {
@@ -7,7 +10,7 @@ audiofetcher.com {
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com; connect-src 'self' https://ytmp3-payments-prod.yazanbaker.workers.dev https://challenges.cloudflare.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; media-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com; connect-src 'self' https://ytmp3-payments-prod.yazanbaker.workers.dev https://challenges.cloudflare.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.youtube.com; worker-src 'self' blob:; media-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 		-Server
 	}
 	@instagrab_private path /instagrab/admin*

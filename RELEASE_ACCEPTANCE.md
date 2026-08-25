@@ -19,7 +19,7 @@ approval.
 
 ## Current automated evidence
 
-- `npm run verify`: PASS on 25 August 2026 (299 Node tests and 115 Python tests
+- `npm run verify`: PASS on 25 August 2026 (308 Node tests and 115 Python tests
   on the current reviewed worktree; rerun against the final candidate before
   approval).
 - Static syntax/security checks, ESLint, element bindings, and manifest

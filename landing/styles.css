@@ -184,6 +184,7 @@ button { font: inherit; }
 .demo-close { width: 40px; height: 40px; flex: none; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; color: #fff; background: rgba(255,255,255,.08); cursor: pointer; font-size: 1.7rem; line-height: 1; }
 .demo-close:hover, .demo-close:focus-visible { background: rgba(255,255,255,.16); }
 .demo-full-video { display: block; width: 100%; max-height: calc(100vh - 150px); border-radius: 15px; background: #000; }
+html:has(.demo-dialog[open]), html:has(.studio-dialog[open]), html:has(.tutorial-dialog[open]),
 body:has(.demo-dialog[open]), body:has(.studio-dialog[open]), body:has(.tutorial-dialog[open]) { overflow: hidden; }
 
 .studio-dialog { width: min(720px, calc(100vw - 30px)); max-width: none; padding: 0; border: 0; border-radius: 24px; color: var(--ink); background: var(--paper); box-shadow: 0 30px 90px rgba(7,29,56,.34); }
