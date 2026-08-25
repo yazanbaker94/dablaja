@@ -1,0 +1,43 @@
+audiofetcher.com {
+	encode zstd gzip
+	header {
+		Cache-Control "no-cache"
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com; connect-src 'self' https://ytmp3-payments-prod.yazanbaker.workers.dev https://challenges.cloudflare.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; media-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+		-Server
+	}
+	@instagrab_private path /instagrab/admin*
+	header @instagrab_private {
+		>Cache-Control "no-store"
+		>Referrer-Policy "no-referrer"
+	}
+	@dablaja_forms path /dablaja/admin* /dablaja/feedback* /dablaja/uninstall*
+	header @dablaja_forms {
+		>Cache-Control "no-store, private, max-age=0"
+		>Pragma "no-cache"
+		>Referrer-Policy "no-referrer"
+		>Content-Security-Policy "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	}
+	@dablaja_success path /dablaja/success*
+	header @dablaja_success {
+		>Cache-Control "no-store, private, max-age=0"
+		>Pragma "no-cache"
+		>Referrer-Policy "no-referrer"
+		>Content-Security-Policy "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+	}
+	@dablaja_private_api path /dablaja/api/errors /dablaja/api/usage /dablaja/api/license-status /dablaja/api/recover-license /dablaja/api/rotate-recovery /dablaja/api/license-token /dablaja/api/checkout /dablaja/webhook
+	header @dablaja_private_api {
+		>Cache-Control "no-store, private, max-age=0"
+		>Pragma "no-cache"
+		>Referrer-Policy "no-referrer"
+	}
+	@dablaja_public_stats path /dablaja/api/stats
+	header @dablaja_public_stats {
+		>Cache-Control "public, max-age=60, stale-while-revalidate=300"
+	}
+	reverse_proxy 127.0.0.1:8080
+}

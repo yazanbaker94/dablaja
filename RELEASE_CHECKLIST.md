@@ -50,6 +50,8 @@ not equivalent to a passed release requirement.
 - [ ] Production CORS contains only the fixed Web Store extension origin; development origins are disabled.
 - [x] Admin authentication uses the HttpOnly/Secure/SameSite cookie flow and no token appears in URLs or markup.
 - [x] Live privacy policy and terms match the reviewed local documents by SHA-256.
+- [x] Sensitive Dablaja forms and private API routes return `no-store` and `no-referrer`; form and success pages use route-scoped no-script CSP.
+- [x] The live read-only data audit confirms allowlisted aggregate rows, no forbidden identity/content fields, and the documented 8/45/180-day retention boundaries.
 
 ## Store submission
 

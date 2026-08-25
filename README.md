@@ -94,6 +94,9 @@ python3 scripts/verify-signing-key.py --env-file /etc/dablaja.env
 - Core audio and transcripts go directly to Google; they never pass through the developer server.
 - With separate opt-in consent, the extension sends only dubbed duration, a coarse platform category (`youtube`, `x`, `twitch`, `other`), and allowlisted technical error diagnostics (`event_id`, bounded `error_code`, `status`, `site_host`, `extension_version`, `reconnect_count`) to `audiofetcher.com`. Diagnostics do not include the stable licensing installation ID. Never arbitrary error messages, stack traces, URLs, titles, audio, transcripts, or keys. Declining does not affect dubbing.
 - Feedback and uninstall forms are user-submitted and hosted on `audiofetcher.com`.
+  They receive only the submitted reason/message, optional email, source label,
+  and a one-time deduplication ID; form records are removed within 180 days and
+  no browser user agent or stable installation ID is retained.
 - No runtime dependency, remote code, `eval`, or inline script.
 - Logs intentionally exclude keys, URLs, audio, and transcripts.
 
