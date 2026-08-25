@@ -91,6 +91,26 @@ try {
     check('popup: no analytics/local-saving consent popups',
       !disclosure.analyticsPopup && !disclosure.localSavingPopup, JSON.stringify(disclosure));
 
+    // Keyboard-accessible upgrade dialog: labelled copy, focus containment,
+    // Escape dismissal, and focus restoration to its opener.
+    await page.click('#topUpgradeBadge');
+    const popupDialogOpen = await page.evaluate(() => {
+      const dialog = document.querySelector('#upgradeModal');
+      return !dialog.classList.contains('hidden')
+        && dialog.getAttribute('aria-describedby') === 'upgradeModalBody'
+        && document.activeElement?.id === 'upgradeCheckoutBtn';
+    });
+    check('popup: upgrade dialog opens labelled with initial focus', popupDialogOpen);
+    await page.focus('#dismissUpgradeBtn');
+    await page.keyboard.press('Tab');
+    const popupTrap = await page.evaluate(() => document.activeElement?.id === 'modalCloseX');
+    check('popup: upgrade dialog traps Tab focus', popupTrap);
+    await page.keyboard.press('Escape');
+    const popupDialogClosed = await page.evaluate(() =>
+      document.querySelector('#upgradeModal').classList.contains('hidden')
+      && document.activeElement?.id === 'topUpgradeBadge');
+    check('popup: Escape closes upgrade dialog and restores focus', popupDialogClosed);
+
     // A well-formed key saves directly; the disclosure remains visible and
     // audio is not transmitted until the separate Start action.
     await page.click('#openKey');
@@ -146,6 +166,31 @@ try {
     check('library: all 3 settings toggles exist', Object.values(toggles).every(Boolean), JSON.stringify(toggles));
     const autosaveGone = await page.evaluate(() => !document.querySelector('#autosaveToggle'));
     check('library: no duplicate autosave toggle (local-saving switch owns persistence)', autosaveGone);
+    const promotionCount = await page.evaluate(() => ({
+      banners: document.querySelectorAll('#freeTierUpgradeBanner').length,
+      staleCard: Boolean(document.querySelector('#plusCard, #plusState'))
+    }));
+    check('library: one free-tier promotion and no contradictory Plus sidebar card',
+      promotionCount.banners === 1 && !promotionCount.staleCard, JSON.stringify(promotionCount));
+
+    // License activation dialog follows the same keyboard and focus rules.
+    await page.click('#openActivationBtn');
+    const activationOpen = await page.evaluate(() => {
+      const dialog = document.querySelector('#activationModal');
+      return !dialog.classList.contains('hidden')
+        && dialog.getAttribute('aria-describedby') === 'activationCopy'
+        && document.activeElement?.id === 'activationInput';
+    });
+    check('library: activation dialog opens labelled with input focus', activationOpen);
+    await page.focus('#activationCancel');
+    await page.keyboard.press('Tab');
+    const activationTrap = await page.evaluate(() => document.activeElement?.id === 'modalUpgradeCheckoutBtn');
+    check('library: activation dialog traps Tab focus', activationTrap);
+    await page.keyboard.press('Escape');
+    const activationClosed = await page.evaluate(() =>
+      document.querySelector('#activationModal').classList.contains('hidden')
+      && document.activeElement?.id === 'openActivationBtn');
+    check('library: Escape closes activation dialog and restores focus', activationClosed);
 
     // Opt in to stats sharing via the exact settings toggle, confirm it, then
     // restore the privacy-default off state.

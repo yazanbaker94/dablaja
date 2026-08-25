@@ -1,5 +1,5 @@
 import { SESSION_STORAGE_KEYS } from '../shared/constants.js';
-import { describeEntitlement, RECOVERY_CODE_PATTERN } from '../shared/plus-entitlement.js';
+import { RECOVERY_CODE_PATTERN } from '../shared/plus-entitlement.js';
 import { transcriptLineCount, validateSessionRecord } from '../shared/plus-session.js';
 import { createNoteFlushController } from '../shared/note-flush.js';
 import { searchSessions, searchTranscriptRows, sessionSummary } from '../shared/plus-search.js';
@@ -29,8 +29,6 @@ const elements = {
   storageCard: $('storageCard'),
   storageValue: $('storageValue'),
   storageFill: $('storageFill'),
-  plusCard: $('plusCard'),
-  plusState: $('plusState'),
   entitlementNotice: $('lockedNotice'),
   freeTierUpgradeBanner: $('freeTierUpgradeBanner'),
   upgradeTopBtn: $('upgradeTopBtn'),
@@ -309,8 +307,33 @@ async function openPageUrl(url, failureMessage = 'تعذر فتح الصفحة. 
 // ---------------------------------------------------------------------------
 
 let modalResolve = null;
+let modalReturnFocus = null;
+let activationModalReturnFocus = null;
+let activationPending = false;
+
+function focusableModalControls(root) {
+  if (!root) return [];
+  return [...root.querySelectorAll('button:not([disabled]), input:not([disabled]), a[href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((node) => !node.closest('.hidden'));
+}
+
+function trapModalFocus(root, event) {
+  if (!root || event.key !== 'Tab' || root.classList.contains('hidden')) return;
+  const controls = focusableModalControls(root);
+  if (controls.length === 0) return;
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 function confirmModal({ title, copy, confirmLabel = 'تأكيد' }) {
+  modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   elements.modalTitle.textContent = title;
   elements.modalCopy.textContent = copy;
   elements.modalConfirm.textContent = confirmLabel;
@@ -325,6 +348,8 @@ function settleModal(result) {
   const resolve = modalResolve;
   modalResolve = null;
   resolve(result);
+  modalReturnFocus?.focus?.();
+  modalReturnFocus = null;
 }
 
 elements.modalCancel.addEventListener('click', () => settleModal(false));
@@ -333,8 +358,11 @@ elements.modalRoot.addEventListener('click', (event) => {
   if (event.target === elements.modalRoot) settleModal(false);
 });
 window.addEventListener('keydown', (event) => {
+  trapModalFocus(elements.modalRoot, event);
+  trapModalFocus(elements.activationModal, event);
   if (event.key === 'Escape') {
-    settleModal(false);
+    if (!elements.modalRoot.classList.contains('hidden')) settleModal(false);
+    else if (!elements.activationModal?.classList.contains('hidden')) closeActivationModal();
     closeMenu();
     closeAllDropdowns();
   }
@@ -626,8 +654,13 @@ async function renderDraftCard() {
     elements.freeTierUpgradeBanner.classList.toggle('hidden', isActive);
   }
 
-  elements.entitlementNotice.classList.add('hidden');
-  elements.plusState.textContent = isActive ? 'مفعّل على هذا الجهاز' : describeEntitlement(entitlement) || 'غير مفعّل';
+  const licenseProblem = entitlement?.state === 'revoked'
+    ? 'تم إلغاء ترخيص Plus على هذا الجهاز. افتح «خلاصة الإعدادات» لتفعيل ترخيص صالح أو التواصل مع الدعم.'
+    : entitlement?.state === 'expired'
+      ? 'انتهت صلاحية التحقق المحلي من Plus. اتصل بالإنترنت وافتح «خلاصة الإعدادات» لتجديد التحقق.'
+      : '';
+  elements.entitlementNotice.textContent = licenseProblem;
+  elements.entitlementNotice.classList.toggle('hidden', !licenseProblem);
 }
 
 function showSaveStatus(message = '', tone = '') {
@@ -1561,8 +1594,8 @@ async function renderSettings() {
     if (elements.topPlusBadge) {
       elements.topPlusBadge.innerHTML = '<span>Plus</span><span class="diamond-icon" aria-hidden="true">💎</span>';
       elements.topPlusBadge.title = 'Plus مدى الحياة مفعّل';
+      elements.topPlusBadge.setAttribute('aria-label', 'Plus مدى الحياة مفعّل — عرض التفاصيل');
     }
-    if (elements.plusState) elements.plusState.textContent = 'مفعّل على هذا الجهاز';
     if (elements.aboutPlusTag) elements.aboutPlusTag.textContent = 'ترخيص مدى الحياة مفعل';
     if (elements.plusUpgradeBlock) elements.plusUpgradeBlock.classList.add('hidden');
     if (elements.plusActiveActions) elements.plusActiveActions.classList.remove('hidden');
@@ -1570,8 +1603,8 @@ async function renderSettings() {
     if (elements.topPlusBadge) {
       elements.topPlusBadge.innerHTML = '<span>الخطة المجانية</span><span class="diamond-icon" aria-hidden="true">✨</span>';
       elements.topPlusBadge.title = 'النسخة المجانية — انقر للترقية إلى Plus (10$)';
+      elements.topPlusBadge.setAttribute('aria-label', 'الخطة المجانية — عرض خيارات Plus');
     }
-    if (elements.plusState) elements.plusState.innerHTML = `مجاني: جلسة واحدة · <bdi>${profiles.length}/1</bdi> موقع`;
     if (elements.aboutPlusTag) elements.aboutPlusTag.innerHTML = 'النسخة المجانية — جلسة محفوظة واحدة';
     if (elements.plusUpgradeBlock) elements.plusUpgradeBlock.classList.remove('hidden');
     if (elements.plusActiveActions) elements.plusActiveActions.classList.add('hidden');
@@ -1775,15 +1808,9 @@ async function reloadAll() {
   await renderSettings();
 }
 
-chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type === 'PLUS_DRAFT_CHANGED') {
-    renderDraftCard().catch(() => undefined);
-    renderStats();
-  }
-});
-
 function openActivationModal() {
   if (elements.activationModal) {
+    activationModalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     elements.activationModal.classList.remove('hidden');
     elements.activationStatus?.classList.add('hidden');
     if (elements.activationInput) {
@@ -1794,7 +1821,16 @@ function openActivationModal() {
 }
 
 function closeActivationModal() {
+  if (activationPending) return false;
   elements.activationModal?.classList.add('hidden');
+  if (elements.activationInput) elements.activationInput.value = '';
+  if (elements.activationStatus) {
+    elements.activationStatus.textContent = '';
+    elements.activationStatus.classList.add('hidden');
+  }
+  activationModalReturnFocus?.focus?.();
+  activationModalReturnFocus = null;
+  return true;
 }
 
 if (elements.openActivationBtn) {
@@ -1802,6 +1838,11 @@ if (elements.openActivationBtn) {
 }
 if (elements.activationCancel) {
   elements.activationCancel.addEventListener('click', closeActivationModal);
+}
+if (elements.activationModal) {
+  elements.activationModal.addEventListener('click', (event) => {
+    if (event.target === elements.activationModal) closeActivationModal();
+  });
 }
 let checkoutPending = false;
 async function triggerCheckout(buttonEl) {
@@ -1837,15 +1878,19 @@ if (elements.libUpgradeBtn) {
   });
 }
 if (elements.topPlusBadge) {
-  elements.topPlusBadge.addEventListener('click', (e) => {
+  elements.topPlusBadge.addEventListener('click', async (e) => {
     if (!plusEnabled()) {
       triggerCheckout(e.currentTarget);
+      return;
     }
+    if (!(await leaveDetailSafely())) return;
+    setView('settings');
   });
 }
 
 if (elements.activationSubmit) {
   elements.activationSubmit.addEventListener('click', async () => {
+    if (activationPending) return;
     const code = elements.activationInput?.value.trim().toUpperCase();
     if (!code) {
       elements.activationStatus.textContent = 'الرجاء إدخال رمز الاسترداد.';
@@ -1859,7 +1904,10 @@ if (elements.activationSubmit) {
       elements.activationStatus.style.color = '#C53030';
       return;
     }
+    activationPending = true;
     elements.activationSubmit.disabled = true;
+    if (elements.activationCancel) elements.activationCancel.disabled = true;
+    if (elements.modalUpgradeCheckoutBtn) elements.modalUpgradeCheckoutBtn.disabled = true;
     elements.activationStatus.textContent = 'جارٍ التحقق من الرمز…';
     elements.activationStatus.style.color = '#16324f';
     elements.activationStatus.classList.remove('hidden');
@@ -1878,7 +1926,10 @@ if (elements.activationSubmit) {
       elements.activationStatus.textContent = err.message || 'رمز الاسترداد غير صحيح.';
       elements.activationStatus.style.color = '#C53030';
     } finally {
+      activationPending = false;
       elements.activationSubmit.disabled = false;
+      if (elements.activationCancel) elements.activationCancel.disabled = false;
+      if (elements.modalUpgradeCheckoutBtn) elements.modalUpgradeCheckoutBtn.disabled = false;
     }
   });
 }
@@ -1909,11 +1960,33 @@ if (window.location.hash === '#activate') {
   openActivationModal();
 }
 
-// Listen for automatic license activation from the service worker polling
+// Keep every open library surface synchronized with worker-side draft,
+// storage, checkout, renewal and revocation events.
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
-    showToast('تم تفعيل dablaja Plus مدى الحياة بنجاح! 🎉');
-    reloadAll().catch(() => undefined);
+  switch (message?.type) {
+    case 'PLUS_DRAFT_CHANGED':
+      renderDraftCard().catch(() => undefined);
+      renderStats();
+      break;
+    case 'PLUS_STORAGE_WARNING':
+      showToast(message.message || 'تعذر حفظ مسودة الجلسة مؤقتاً على هذا الجهاز.', 'error');
+      renderDraftCard().catch(() => undefined);
+      break;
+    case 'PLUS_LICENSE_ACTIVATED':
+      closeActivationModal();
+      showToast('تم تفعيل dablaja Plus مدى الحياة بنجاح! 🎉');
+      reloadAll().catch(() => undefined);
+      break;
+    case 'PLUS_LICENSE_REVOKED':
+      showToast('تم إلغاء ترخيص Plus. عادت حدود الخطة المجانية إلى هذا الجهاز.', 'error');
+      reloadAll().catch(() => undefined);
+      break;
+    case 'PLUS_POLL_TIMEOUT':
+    case 'PLUS_POLL_FAILED':
+      showToast(message.error || 'تعذر تأكيد الدفع. افتح تفاصيل Plus للمحاولة مجدداً.', 'error');
+      break;
+    default:
+      break;
   }
 });
 

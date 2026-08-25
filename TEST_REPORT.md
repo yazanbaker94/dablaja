@@ -7,10 +7,10 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 289/289 Node tests on the current worktree |
+| `npm test` | PASS — 299/299 Node tests on the current worktree |
 | `python -m unittest server/test_dablaja.py` | PASS — 115/115 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
-| Element-binding checker | PASS — library, popup, and stats bindings |
+| Element-binding checker | PASS — library, popup, stats, side-panel, and diagnostics bindings; duplicate IDs and unwired static controls are rejected |
 | ESLint | PASS |
 | Manifest validation (development) | PASS |
 | `npm run smoke` | PASS — isolated unpacked Edge/Chromium profile; popup, static Gemini disclosure/key flow, analytics default-off/opt-in, local-saving default-on, volumes/site profile, library, stats, side panel, diagnostics, and console checks |
@@ -18,7 +18,7 @@
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
 | `git diff --check` | PASS; line-ending notices only |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
-| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), privacy (`18817211…5f6ad`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
+| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), privacy (`4db1fdc0…3998d`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
 | VPS database audit | PASS — exact allowlisted diagnostic/form schemas (obsolete empty `error_message`/`user_agent` columns removed), hashed credentials, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
 | VPS response headers | PASS — feedback, uninstall, admin, success, licensing, usage, diagnostics, checkout, and webhook routes are `no-store`/`no-referrer`; form/success pages have route-scoped no-script CSP; public aggregate stats retain their intended 60-second cache policy |
 | VPS runtime | PASS — service and Caddy active, health/statistics/privacy probes successful, Stripe SDK 15.5.0, and a dedicated rate-limit secret is configured |
@@ -84,6 +84,15 @@
   library without also invoking Checkout; navigation failures on stats,
   library, popup, and side-panel surfaces are surfaced instead of becoming
   unhandled or silent promise failures.
+- Starting dubbing dispatches the worker start command before requesting the
+  persistent captions side panel, so Chrome cannot close the popup before the
+  start request is sent. If panel opening fails, the popup surfaces an
+  actionable fallback. Side-panel start errors and worker storage/licensing
+  events are rendered instead of being silently dropped.
+- The library now has one compact tier indicator and one upgrade explanation;
+  the contradictory duplicate Plus sidebar card was removed. Popup and library
+  dialogs expose labelled descriptions, restore focus, close by backdrop or
+  Escape when safe, and keep keyboard focus inside the active dialog.
 - The isolated browser smoke loads the real service worker and extension pages,
   verifies the static Gemini disclosure, persists a fake test key locally,
   keeps analytics off until explicitly enabled, persists local/profile settings,

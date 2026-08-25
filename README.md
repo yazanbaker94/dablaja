@@ -27,7 +27,7 @@ Manifest V3 Chrome extension that captures **audio only** from the active tab af
 2. Open the extension popup.
 3. Paste your own Gemini API key into the masked field, read the disclosure beside it, and save. **Never paste the key into chat, a terminal command, or a bug report.**
 4. Click **ابدأ الدبلجة**. Tab capture begins only from this click.
-5. Click **فتح الترجمة الثنائية** for persistent source/Arabic captions.
+5. Chrome opens Dablaja's persistent side panel automatically for source/Arabic captions. If Chrome blocks the automatic opening, use Chrome's side-panel menu and choose Dablaja.
 6. Adjust original and dubbed volume independently.
 7. Click **إيقاف الدبلجة** when finished. Delete the key from the popup if you no longer want it stored locally.
 
@@ -88,7 +88,7 @@ python3 scripts/verify-signing-key.py --env-file /etc/dablaja.env
 ## Security model and important BYOK trade-off
 
 - The key is stored only in `chrome.storage.local`, never sync storage, and is revealed only when the user explicitly presses the show/change control.
-- Audio is never stored. Captions exist in extension-page memory; while local saving is enabled, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session before finalization or an explicit save.
+- Audio is never stored. Captions exist in extension-page memory; while local saving is enabled, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session before automatic finalization or a manual save.
 - Saved transcripts, titles, and URLs remain local on this device.
 - No ads, content scripts, or browsing-history collection.
 - Core audio and transcripts go directly to Google; they never pass through the developer server.

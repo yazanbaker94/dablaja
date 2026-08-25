@@ -75,6 +75,28 @@ test('emptyCta placeholder button and sample generator are completely removed', 
   assert.ok(!libJs.includes('emptyCta'), 'library.js must not contain emptyCta');
 });
 
+test('library exposes one clear free-tier promotion and no contradictory sidebar Plus card', async () => {
+  const [libHtml, prevHtml, libJs, libCss] = await Promise.all([
+    readFile(path.join(root, 'src/library/library.html'), 'utf8'),
+    readFile(path.join(root, 'src/library/preview.html'), 'utf8'),
+    readFile(path.join(root, 'src/library/library.js'), 'utf8'),
+    readFile(path.join(root, 'src/library/library.css'), 'utf8')
+  ]);
+
+  for (const html of [libHtml, prevHtml]) {
+    assert.match(html, /<button class="plus-badge-btn" id="topPlusBadge"/,
+      'compact plan badge must be a keyboard-accessible button');
+    assert.equal((html.match(/id="freeTierUpgradeBanner"/g) || []).length, 1,
+      'there must be exactly one free-tier promotion banner');
+    assert.ok(!html.includes('id="plusCard"'), 'redundant sidebar plan card must stay removed');
+    assert.ok(!html.includes('id="plusState"'), 'contradictory sidebar plan state must stay removed');
+  }
+  assert.ok(!libJs.includes('elements.plusState'), 'removed plan state must have no stale JS handler');
+  assert.ok(!libCss.includes('.plus-status-card'), 'removed plan card must have no stale CSS');
+  assert.match(libJs, /if \(!plusEnabled\(\)\)[\s\S]*?triggerCheckout\(e\.currentTarget\)[\s\S]*?return;[\s\S]*?setView\('settings'\)/,
+    'the tier badge must upgrade free users and open settings for entitled users');
+});
+
 test('audio settings and site profiles are connected to extension sound settings', async () => {
   const [libHtml, prevHtml, libJs, libCss, swJs] = await Promise.all([
     readFile(path.join(root, 'src/library/library.html'), 'utf8'),

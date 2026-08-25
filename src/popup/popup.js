@@ -72,6 +72,22 @@ let busy = false;
 let keyEdited = false;
 let upgradeModalReturnFocus = null;
 
+function trapUpgradeModalFocus(event) {
+  if (!elements.upgradeModal || event.key !== 'Tab' || elements.upgradeModal.classList.contains('hidden')) return;
+  const controls = [...elements.upgradeModal.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+    .filter((node) => !node.closest('.hidden'));
+  if (controls.length === 0) return;
+  const first = controls[0];
+  const last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function language() {
   return settings?.uiLanguage === 'en' ? 'en' : 'ar';
 }
@@ -121,10 +137,19 @@ async function getActiveWebTab() {
   return tab;
 }
 
-async function captureActiveTab() {
+async function activeTabStartOptions() {
   const tab = await getActiveWebTab();
-  const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
-  return { tabId: tab.id, tabUrl: tab.url || '', tabTitle: tab.title || '', streamId };
+  return { tabId: tab.id, tabUrl: tab.url || '', tabTitle: tab.title || '' };
+}
+
+async function openCaptionPanel(tabId) {
+  try {
+    if (!chrome.sidePanel?.open) return false;
+    await chrome.sidePanel.open({ tabId });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function setBusy(value) {
@@ -424,6 +449,7 @@ if (elements.upgradeModal) {
     if (event.target === elements.upgradeModal) hideUpgradeModal();
   });
   document.addEventListener('keydown', (event) => {
+    trapUpgradeModalFocus(event);
     if (event.key === 'Escape' && !elements.upgradeModal.classList.contains('hidden')) {
       hideUpgradeModal();
     }
@@ -447,10 +473,20 @@ elements.startStop.addEventListener('click', async () => {
         triggerPlusSavedAnimation();
       }
     } else {
-      const response = await request({ type: 'START_SESSION', ...(await captureActiveTab()) });
+      const capture = await activeTabStartOptions();
+      // Dispatch START first so opening Chrome's side panel cannot close the
+      // popup before the worker receives the command. Start and panel opening
+      // then proceed together under the same explicit click gesture.
+      const startRequest = request({ type: 'START_SESSION', ...capture });
+      const captionPanelOpen = openCaptionPanel(capture.tabId);
+      const [response, panelOpened] = await Promise.all([startRequest, captionPanelOpen]);
       if (response?.state) currentState = response.state;
       if (response?.state && !ACTIVE_STATUSES.has(response.state.status) && response.state.message) {
         showActionError(response.state.message);
+      } else if (!panelOpened) {
+        showActionError(language() === 'en'
+          ? 'Dubbing started, but Chrome could not open captions. Open the Dablaja side panel from Chrome.'
+          : 'بدأت الدبلجة، لكن تعذر فتح النصوص تلقائياً. افتح لوحة Dablaja الجانبية من Chrome.');
       }
     }
   } catch (error) {
@@ -568,7 +604,25 @@ chrome.runtime.onMessage.addListener((message) => {
   }
   if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
     plus = message.plus;
+    showActionError();
     render();
+  }
+  if (message?.type === 'PLUS_LICENSE_REVOKED') {
+    plus = message.plus;
+    showActionError(language() === 'en'
+      ? 'Your Plus license was revoked. Free-plan limits now apply.'
+      : 'تم إلغاء ترخيص Plus. عادت حدود الخطة المجانية.');
+    render();
+  }
+  if (message?.type === 'PLUS_POLL_TIMEOUT' || message?.type === 'PLUS_POLL_FAILED') {
+    showActionError(message.error || (language() === 'en'
+      ? 'Could not confirm payment. Open Plus and try again.'
+      : 'تعذر تأكيد الدفع. افتح Plus وحاول مجدداً.'));
+  }
+  if (message?.type === 'PLUS_STORAGE_WARNING') {
+    showActionError(message.message || (language() === 'en'
+      ? 'Could not preserve the local session draft.'
+      : 'تعذر حفظ مسودة الجلسة مؤقتاً على هذا الجهاز.'));
   }
 });
 

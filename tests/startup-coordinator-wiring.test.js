@@ -33,3 +33,20 @@ test('startup coordinator is importable and exposes the production path used by 
   assert.equal(typeof c.reconcileLicenseWithServer, 'function');
   assert.equal(typeof c.ensureRefreshAlarm, 'function');
 });
+
+test('every UI message waits for the shared worker initialization barrier', async () => {
+  const sw = await readFile(path.join(root, 'src/service-worker.js'), 'utf8');
+  const handler = sw.slice(
+    sw.indexOf('async function handleUiMessage(message)'),
+    sw.indexOf('let checkoutInFlight')
+  );
+  assert.match(
+    handler,
+    /async function handleUiMessage\(message\) \{\s*[\s\S]*?await initialStateReady;/,
+    'payment, Plus and ordinary messages must not race storage/draft restoration'
+  );
+  assert.ok(
+    handler.indexOf('await initialStateReady;') < handler.indexOf('WORKER_HANDLED_PLUS_TYPES.has'),
+    'initialization barrier must precede the early PLUS_ routing branch'
+  );
+});

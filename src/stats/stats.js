@@ -61,6 +61,19 @@ try { currentRange = sessionStorage.getItem(RANGE_KEY) || 'week'; } catch {}
 let currentStats = null;
 let statsPlusEnabled = false;
 
+function renderPlusStatus(plus) {
+  statsPlusEnabled = plus?.entitlement?.plusEnabled === true;
+  if (statsPlusEnabled) {
+    if (elements.statsPlusTitle) elements.statsPlusTitle.textContent = 'أنت مشترك في dablaja Plus';
+    if (elements.statsPlusDesc) elements.statsPlusDesc.textContent = 'ترخيص مدى الحياة مفعّل على هذا الجهاز. شكراً لدعمك!';
+    if (elements.statsUpgradeBtn) elements.statsUpgradeBtn.innerHTML = '<span>فتح مكتبة Plus 💎</span>';
+    return;
+  }
+  if (elements.statsPlusTitle) elements.statsPlusTitle.textContent = 'ترقية إلى Plus';
+  if (elements.statsPlusDesc) elements.statsPlusDesc.textContent = 'احفظ حتى 500 جلسة بالنص الأصلي والترجمة العربية، وحتى 100 علامة لكل جلسة، ومستويات صوت لكل موقع.';
+  if (elements.statsUpgradeBtn) elements.statsUpgradeBtn.innerHTML = '<span>ترقية الآن (<bdi>10$</bdi>)</span>';
+}
+
 const WEEKDAY = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -488,20 +501,27 @@ elements.statsUpgradeBtn?.addEventListener('click', async () => {
 async function checkPlusStatus() {
   try {
     const res = await request({ type: 'GET_STATE' });
-    if (res?.plus?.entitlement?.plusEnabled === true) {
-      statsPlusEnabled = true;
-      if (elements.statsPlusTitle) elements.statsPlusTitle.textContent = 'أنت مشترك في dablaja Plus';
-      if (elements.statsPlusDesc) elements.statsPlusDesc.textContent = 'ترخيص مدى الحياة مفعّل على هذا الجهاز. شكراً لدعمك!';
-      if (elements.statsUpgradeBtn) {
-        elements.statsUpgradeBtn.innerHTML = '<span>فتح مكتبة Plus 💎</span>';
-      }
-    }
+    renderPlusStatus(res?.plus);
   } catch {
-    statsPlusEnabled = false;
+    renderPlusStatus(null);
   }
 }
 
 checkPlusStatus();
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
+    renderPlusStatus(message.plus);
+    showTransientMessage('تم تفعيل dablaja Plus مدى الحياة.');
+  }
+  if (message?.type === 'PLUS_LICENSE_REVOKED') {
+    renderPlusStatus(message.plus);
+    showTransientMessage('تم إلغاء ترخيص Plus. عادت حدود الخطة المجانية.');
+  }
+  if (message?.type === 'PLUS_POLL_TIMEOUT' || message?.type === 'PLUS_POLL_FAILED') {
+    showTransientMessage(message.error || 'تعذر تأكيد الدفع. حاول مجدداً من Plus.');
+  }
+});
 
 elements.clearStats.addEventListener('click', async () => {
   elements.clearStats.disabled = true;

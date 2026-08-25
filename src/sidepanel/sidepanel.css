@@ -25,6 +25,8 @@ h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
 .status-pill { flex: none; padding: 5px 8px; border-radius: 999px; color: #68766f; background: #e9eee9; font-size: 9px; }
 .status-pill.active { color: var(--green-dark); background: #dcefe4; }
 .status-pill.error { color: #a53d35; background: #f9e4e0; }
+.panel-message { margin: -4px 0 12px; padding: 9px 11px; border: 1px solid #efd1cc; border-radius: 10px; color: #8c332d; background: #fff5f3; font-size: 10px; line-height: 1.6; }
+.panel-message.reconnecting { border-color: #d8e4de; color: var(--green-dark); background: #f3faf6; }
 
 .empty-state { display: grid; justify-items: center; margin: 18vh auto 0; max-width: 300px; padding: 26px 20px; text-align: center; border: 1px solid var(--line); border-radius: 19px; background: #fffefa; box-shadow: 0 8px 26px #3551480b; }
 .empty-wave { display: flex; align-items: center; justify-content: center; gap: 3px; width: 78px; height: 78px; margin-bottom: 15px; border-radius: 50%; background: #edf3ed; }

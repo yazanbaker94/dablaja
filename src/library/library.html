@@ -15,13 +15,13 @@
       <header class="top-nav" aria-label="الشريط العلوي">
         <div class="top-nav-inner">
           <div class="top-nav-start">
-            <a class="brand-link" href="#" aria-label="dablaja الرئيسية">
+            <button class="brand-link" type="button" data-nav="library" aria-label="العودة إلى جلساتي">
               <img class="brand-logo" src="assets/dablaja-logo.png" width="130" height="42" alt="Dablaja دبلجة">
-            </a>
-            <div class="plus-badge-btn" id="topPlusBadge" role="status" aria-label="نسخة Plus مدى الحياة">
+            </button>
+            <button class="plus-badge-btn" id="topPlusBadge" type="button" aria-label="عرض تفاصيل الخطة">
               <span>Plus</span>
               <span class="diamond-icon" aria-hidden="true">💎</span>
-            </div>
+            </button>
           </div>
           <div class="top-nav-end">
             <button class="menu-toggle-btn" id="menuButton" type="button" aria-label="القائمة الجانبية" aria-controls="sidebar" aria-expanded="false">
@@ -484,19 +484,6 @@
             </button>
           </div>
 
-          <!-- Plus Status Widget (حالتك Plus) -->
-          <div class="sidebar-card plus-status-card" id="plusCard">
-            <div class="plus-status-head">
-              <span class="diamond-icon-large" aria-hidden="true">💎</span>
-              <span class="plus-title-bold">Plus مدى الحياة</span>
-            </div>
-            <div class="plus-active-row">
-              <span class="active-check-circle" aria-hidden="true">✓</span>
-              <span class="active-text" id="plusState">مفعّل على هذا الجهاز</span>
-            </div>
-            <button class="btn-manage-sub" type="button" data-nav="settings">تفاصيل Plus</button>
-          </div>
-
           <!-- Quiet Help & Support Links -->
           <div class="sidebar-footer-links">
             <a class="footer-help-link" href="https://audiofetcher.com/dablaja/" target="_blank" rel="noopener">
@@ -522,7 +509,7 @@
       <!-- Modals and Layer Root -->
       <div class="menu-layer" id="menuLayer" hidden></div>
 
-      <div class="modal-backdrop hidden" id="modalRoot" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-backdrop hidden" id="modalRoot" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalCopy">
         <div class="modal-card">
           <h2 class="modal-title" id="modalTitle">تأكيد الإجراء</h2>
           <p class="modal-copy" id="modalCopy">هل أنت متأكد؟</p>
@@ -533,11 +520,11 @@
         </div>
       </div>
 
-      <div class="modal-backdrop hidden" id="activationModal" role="dialog" aria-modal="true" aria-labelledby="activationTitle">
+      <div class="modal-backdrop hidden" id="activationModal" role="dialog" aria-modal="true" aria-labelledby="activationTitle" aria-describedby="activationCopy">
         <div class="modal-card modal-upgrade-card">
           <div class="modal-top-tag">💎 <span>dablaja Plus · 10$ مدى الحياة</span></div>
           <h2 class="modal-title" id="activationTitle">الترقية إلى dablaja Plus</h2>
-          <p class="modal-copy">النسخة المجانية تحفظ جلسة واحدة محلياً. افتح Plus لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وحتى 50 ملف موقع. النص الأصلي والترجمة العربية فقط — الصوت لا يُحفظ.</p>
+          <p class="modal-copy" id="activationCopy">النسخة المجانية تحفظ جلسة واحدة محلياً. افتح Plus لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وحتى 50 ملف موقع. النص الأصلي والترجمة العربية فقط — الصوت لا يُحفظ.</p>
 
           <ul class="modal-features-list">
             <li><span class="feat-check">✓</span> <span>حفظ حتى 500 جلسة مع النص الأصلي والترجمة العربية</span></li>

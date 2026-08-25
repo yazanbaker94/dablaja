@@ -35,7 +35,7 @@ Understand English videos live in Arabic with dubbed audio and bilingual caption
 
 1. افتح تبويباً آمناً (HTTPS) يحتوي على كلام إنجليزي.
 2. افتح الإضافة وأدخل مفتاح Gemini ووافق على الإفصاح.
-3. اضغط «ابدأ الدبلجة» ثم افتح لوحة الترجمة الثنائية.
+3. اضغط «ابدأ الدبلجة»؛ وستفتح لوحة الترجمة الثنائية تلقائياً بجانب الفيديو. إذا منع Chrome الفتح التلقائي، اختر Dablaja من قائمة اللوحة الجانبية.
 4. اضبط الصوتين، واضغط إيقاف عند الانتهاء.
 
 ## Full description (English fallback)
@@ -65,7 +65,7 @@ Translate the user-selected current tab's live spoken audio into Arabic audio an
 - **Authentication information:** User-provided Gemini API key, stored locally and sent only to Google for API authentication.
 - **Website content:** Audio from the current user-selected tab and resulting transcripts, processed only for live dubbing/captions. Audio is never stored.
 - **Personal communications / user-generated content:** May be incidentally present in user-selected tab audio; the extension does not inspect, retain, or send it anywhere except Google Gemini for the feature.
-- **Browsing activity:** With separate opt-in consent, a coarse category (`YouTube`, `X`, `Twitch`, or `other`) is transmitted after a session for aggregate statistics. Browsing history is never stored or transmitted. A page URL/title is stored only locally inside an explicitly saved session in IndexedDB on the user's device.
+- **Browsing activity:** With separate opt-in consent, a coarse category (`YouTube`, `X`, `Twitch`, or `other`) is transmitted after a session for aggregate statistics. Browsing history is never stored or transmitted. When local saving is enabled, a page URL/title may exist only on the user's device inside the bounded temporary draft and the locally saved session; it is never sent to AudioFetcher.
 - **Data sale/ads/credit:** None.
 - **Licensing & Payment Data:** Payment cards are processed directly by Stripe; Dablaja never receives or stores card numbers. AudioFetcher retains only random installation identifier (`install_id`), hashed installation credential (`credential_hash`), stable internal license identifier (`license_id`), Stripe reference identifiers, product/price IDs, amount/currency/status, bindings, timestamps, revocation state, and hashed recovery code (`code_hash`).
 - **Human access:** Authorized support may view opt-in technical diagnostics and forms to fix failures or respond to feedback; no audio, transcripts, key, URL, or title is available.

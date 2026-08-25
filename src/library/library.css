@@ -1078,53 +1078,6 @@ img {
   color: var(--teal-dark);
 }
 
-/* Plus Card */
-.plus-status-card {
-  background: #FFF;
-  border: 1px solid var(--border-light);
-}
-
-.plus-status-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-.plus-title-bold {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--navy-dark);
-}
-
-.plus-active-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  color: var(--ink-muted);
-  margin-bottom: 12px;
-}
-.active-check-circle {
-  color: var(--teal-primary);
-  font-weight: 800;
-}
-
-.btn-manage-sub {
-  width: 100%;
-  height: 34px;
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--navy-dark);
-  background: var(--bg-card);
-  transition: all var(--transition-fast);
-}
-.btn-manage-sub:hover {
-  background: var(--bg-page);
-  border-color: var(--teal-primary);
-}
-
 /* Sidebar Footer Links */
 .sidebar-footer-links {
   display: flex;

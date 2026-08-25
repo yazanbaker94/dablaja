@@ -63,7 +63,7 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 4 | Disclosure and optional sharing | Google audio disclosure is visible beside key entry; audio begins only after Start. The separate anonymous-statistics toggle is off by default, can be enabled/disabled later, and never blocks dubbing. |
 | 5 | Invalid key | Actionable Arabic error; capture/audio restored; no reconnect loop. |
 | 6 | Valid start | Ready → connecting → listening/translating. |
-| 7 | Captions | Source and Arabic text update in side panel; no storage entries contain text. |
+| 7 | Captions | Start requests the side panel under the same click gesture; source and Arabic text update there; when local saving is disabled, no storage entries contain text. |
 | 8 | Audio output | Human confirms Arabic voice, original quieter, controls work, delay acceptable, no severe crackling/overlap. |
 | 9 | Pause/resume | Source silence/pause stops indefinite sends; playback resumes after source audio returns. |
 | 10 | Stop/restart ×3 | Tracks/socket/context/worklets/timers close; normal tab audio restored; repeatable. |
@@ -75,10 +75,10 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 16 | Non-YouTube page | At least one second ordinary audible HTTPS source. |
 | 17 | Console inspection | Worker/offscreen/panel show no repeated exceptions and no sensitive output. |
 | 18 | Sustained run | Target 15–20 minutes; bounded buffer, reconnection near connection limit, no obvious growth/leak. |
-| 19 | Plus save flow | Side-panel «احفظ الجلسة» during a live session stores the bounded bilingual draft in IndexedDB; while local saving is enabled, source title/origin/URL may already exist only in the temporary local draft. |
+| 19 | Plus save flow | Side-panel «احفظ الجلسة» during a live session stores the bounded bilingual draft in IndexedDB, continues updating the same record, and stop produces exactly one finalized session; while local saving is enabled, source title/origin/URL may already exist only in the temporary local draft. |
 | 20 | Plus library UI | Search filters cards; detail shows bilingual timeline; notes save; bookmarks add/edit/delete; exports (TXT/SRT/JSON/print) download; delete + delete-all with confirmation. |
 | 21 | Plus backup | Full backup export downloads; importing a tampered or wrong-kind file is rejected with an Arabic error; valid import merges without losing existing sessions. |
-| 22 | Plus drafts | Stop without saving keeps the draft card (≤3); starting a new session preserves the previous draft; discarding removes it. |
+| 22 | Draft recovery | Stop automatically finalizes the first free session or an entitled Plus session. Simulated IndexedDB/storage failure keeps one deduplicated recoverable draft (≤3), retry saves it once, and discarding removes it. |
 | 23 | Plus entitlement | Free-plan state is locked; a verified license enables Plus; expired/revoked/mismatched licenses lock paid mutations and show actionable status. |
 | 24 | Site volume profiles | Opt-in toggle; volumes applied on next session start for the same hostname; profile deletable; off by default. |
 

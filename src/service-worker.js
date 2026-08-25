@@ -723,6 +723,10 @@ async function testStoredKey() {
 const WORKER_HANDLED_PLUS_TYPES = new Set(['PLUS_START_CHECKOUT', 'PLUS_RECOVER_LICENSE', 'PLUS_ROTATE_RECOVERY', 'PLUS_POLL_LICENSE', 'PLUS_SET_LOCAL_SAVING', 'PLUS_GET_LOCAL_SAVING']);
 
 async function handleUiMessage(message) {
+  // Every UI route shares the same restored settings/draft/session baseline.
+  // Without this barrier, a fast popup click during an MV3 worker wake could
+  // race draft restoration or overwrite freshly loaded state.
+  await initialStateReady;
   if (WORKER_HANDLED_PLUS_TYPES.has(message.type)) {
     switch (message.type) {
       case 'PLUS_RECOVER_LICENSE': {
@@ -747,7 +751,6 @@ async function handleUiMessage(message) {
   }
   switch (message.type) {
     case 'GET_STATE':
-      await initialStateReady;
       return {
         ok: true,
         // Same enriched shape as STATE_CHANGED broadcasts: consumers read
@@ -757,7 +760,6 @@ async function handleUiMessage(message) {
         plus: await getPlusSettings()
       };
     case 'GET_STATS':
-      await initialStateReady;
       return { ok: true, stats: normalizeUsageStats(usageStats) };
     case 'CLEAR_STATS':
       usageStats = normalizeUsageStats(EMPTY_USAGE_STATS);

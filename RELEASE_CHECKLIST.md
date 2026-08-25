@@ -29,7 +29,7 @@ not equivalent to a passed release requirement.
 - [ ] Popup RTL layout, disclosure, key save/change/delete, and masking verified.
 - [ ] Invalid/revoked key produces an actionable error without leaking the key.
 - [ ] Start reaches connecting/listening/translating on an ordinary audible tab.
-- [ ] Source and Arabic captions update in the side panel.
+- [ ] Start opens the side panel automatically and source/Arabic captions update there; the fallback message is actionable if Chrome blocks opening.
 - [ ] Original and dubbed volume controls both work and persist correctly.
 - [ ] Pause/resume does not send silence forever or corrupt the session.
 - [ ] Stop/restart repeated at least three times with full cleanup.

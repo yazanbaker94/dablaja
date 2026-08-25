@@ -2,6 +2,7 @@ import { ACTIVE_STATUSES, STATUS, STORAGE_KEYS } from '../shared/constants.js';
 import { mergeCaptionText, shouldFinalizeCaption } from '../shared/caption-utils.js';
 
 const panelStatus = document.querySelector('#panelStatus');
+const panelMessage = document.querySelector('#panelMessage');
 const emptyState = document.querySelector('#emptyState');
 const captions = document.querySelector('#captions');
 const sourceFeed = document.querySelector('#sourceFeed');
@@ -63,6 +64,15 @@ function renderState(state) {
   };
   panelStatus.textContent = names[state.status] || 'متوقف';
   panelStatus.className = `status-pill${active ? ' active' : ''}${state.status === STATUS.ERROR ? ' error' : ''}`;
+  const showMessage = Boolean(state.message) && [
+    STATUS.ERROR,
+    STATUS.RATE_LIMITED,
+    STATUS.RECONNECTING,
+    STATUS.STOPPED
+  ].includes(state.status);
+  panelMessage.textContent = showMessage ? String(state.message) : '';
+  panelMessage.classList.toggle('hidden', !showMessage);
+  panelMessage.classList.toggle('reconnecting', showMessage && state.status === STATUS.RECONNECTING);
   renderStats(state);
 }
 
@@ -149,6 +159,17 @@ chrome.runtime.onMessage.addListener((message) => {
   }
   if (message?.type === 'UI_LANGUAGE_CHANGED') applyLanguage(message.language);
   if (message?.type === 'PLUS_DRAFT_CHANGED') updatePlusToolbar();
+  if (message?.type === 'PLUS_STORAGE_WARNING') {
+    flashPlusStatus(message.message || plusTr('storageWarning'));
+  }
+  if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
+    flashPlusStatus(uiLanguage === 'en' ? 'Plus activated.' : 'تم تفعيل Plus.');
+    updatePlusToolbar();
+  }
+  if (message?.type === 'PLUS_LICENSE_REVOKED') {
+    flashPlusStatus(uiLanguage === 'en' ? 'Plus was revoked; free limits now apply.' : 'تم إلغاء Plus؛ عادت حدود الخطة المجانية.');
+    updatePlusToolbar();
+  }
 });
 
 // ---- Dablaja Plus toolbar --------------------------------------------------
