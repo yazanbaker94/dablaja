@@ -6,7 +6,7 @@ export function buildWebSocketUrl(apiKey) {
   return url.toString();
 }
 
-export function buildSetupMessage(resumptionHandle = null) {
+export function buildSetupMessage() {
   // Primary: official nested shape per current docs (inside generationConfig)
   const setup = {
     model: `models/${MODEL}`,
@@ -21,13 +21,12 @@ export function buildSetupMessage(resumptionHandle = null) {
     },
     contextWindowCompression: {
       slidingWindow: {}
-    },
-    sessionResumption: resumptionHandle ? { handle: resumptionHandle } : {}
+    }
   };
   return { setup };
 }
 
-export function buildLegacySetupMessage(resumptionHandle = null) {
+export function buildLegacySetupMessage() {
   // Legacy fallback: transcription fields at setup root (observed to work with WSS 1007)
   const setup = {
     model: `models/${MODEL}`,
@@ -42,8 +41,7 @@ export function buildLegacySetupMessage(resumptionHandle = null) {
     outputAudioTranscription: {},
     contextWindowCompression: {
       slidingWindow: {}
-    },
-    sessionResumption: resumptionHandle ? { handle: resumptionHandle } : {}
+    }
   };
   return { setup };
 }
@@ -102,7 +100,6 @@ export function parseServerMessage(raw) {
 
   const inputTranscript = pick(serverContent, 'inputTranscription', 'input_transcription');
   const outputTranscript = pick(serverContent, 'outputTranscription', 'output_transcription');
-  const resumption = pick(message, 'sessionResumptionUpdate', 'session_resumption_update');
   const goAway = pick(message, 'goAway', 'go_away');
 
   return {
@@ -116,9 +113,6 @@ export function parseServerMessage(raw) {
     targetFinished: Boolean(outputTranscript?.finished),
     targetSpeaker: pick(outputTranscript, 'speakerLabel', 'speaker_label') ?? '',
     targetLanguage: pick(outputTranscript, 'languageCode', 'language_code') ?? '',
-    resumptionHandle: resumption?.resumable
-      ? (pick(resumption, 'newHandle', 'new_handle') ?? null)
-      : null,
     goAwayTimeLeft: pick(goAway, 'timeLeft', 'time_left') ?? null,
     interrupted: Boolean(serverContent?.interrupted),
     generationComplete: Boolean(pick(serverContent, 'generationComplete', 'generation_complete'))

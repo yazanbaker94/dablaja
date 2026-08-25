@@ -274,8 +274,6 @@ function handleServerObject(object) {
     });
     flushPendingInput();
   }
-  if (parsed.resumptionHandle) session.resumptionHandle = parsed.resumptionHandle;
-
   if (parsed.sourceText || parsed.sourceFinished) {
     notify({
       type: 'CAPTION',
@@ -342,7 +340,10 @@ function connectSocket() {
   if (session.setupRetryUsed == null) session.setupRetryUsed = false;
   socket.onopen = () => {
     if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
-    const msg = socketOwner.setupPrimary ? buildSetupMessage(socketOwner.resumptionHandle) : buildLegacySetupMessage(socketOwner.resumptionHandle);
+    // Start every connection as a fresh translation session. Deliberately do
+    // not configure Gemini session resumption: Google documents that generated
+    // resumption handles can retain live conversation state for up to 24 hours.
+    const msg = socketOwner.setupPrimary ? buildSetupMessage() : buildLegacySetupMessage();
     socket.send(JSON.stringify(msg));
     // Record which shape was sent for diagnostics (no key/WSS URL logged)
     socketOwner.lastSetupShape = socketOwner.setupPrimary ? 'primary_nested' : 'legacy_root';
@@ -448,7 +449,6 @@ async function startSession(message) {
       errorWatchdog: null,
       setupRetryTimer: null,
       reconnectAttempt: 0,
-      resumptionHandle: null,
       pendingInput: new BoundedQueue(8),
       preRoll: new BoundedQueue(3),
       streamEnded: false,

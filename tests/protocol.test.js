@@ -11,7 +11,7 @@ import {
 } from '../src/shared/protocol.js';
 
 test('setup message uses the verified Live Translate model and Arabic config', () => {
-  const { setup } = buildSetupMessage('resume-token');
+  const { setup } = buildSetupMessage();
   assert.equal(setup.model, 'models/gemini-3.5-live-translate-preview');
   assert.equal(setup.generationConfig.translationConfig.targetLanguageCode, 'ar');
   assert.deepEqual(setup.generationConfig.responseModalities, ['AUDIO']);
@@ -20,15 +20,16 @@ test('setup message uses the verified Live Translate model and Arabic config', (
   assert.deepEqual(setup.generationConfig.outputAudioTranscription, {});
   assert.equal(setup.inputAudioTranscription, undefined);
   assert.equal(setup.outputAudioTranscription, undefined);
-  assert.deepEqual(setup.sessionResumption, { handle: 'resume-token' });
+  assert.equal(setup.sessionResumption, undefined);
   assert.ok(setup.contextWindowCompression.slidingWindow);
 });
 
 test('legacy fallback has root transcription', async () => {
   const { buildLegacySetupMessage } = await import('../src/shared/protocol.js');
-  const { setup: legacy } = buildLegacySetupMessage('resume-token');
+  const { setup: legacy } = buildLegacySetupMessage();
   assert.deepEqual(legacy.inputAudioTranscription, {});
   assert.deepEqual(legacy.outputAudioTranscription, {});
+  assert.equal(legacy.sessionResumption, undefined);
 });
 
 test('WebSocket URL is scoped to the official endpoint and includes provided key', () => {
@@ -62,8 +63,7 @@ test('parser accepts camelCase server messages', () => {
       inputTranscription: { text: 'hello', languageCode: 'en', finished: true, speakerLabel: 'spk_1' },
       outputTranscription: { text: 'مرحبا', languageCode: 'ar', finished: true },
       modelTurn: { parts: [{ inlineData: { data: 'AAAA', mimeType: 'audio/pcm;rate=24000' } }] }
-    },
-    sessionResumptionUpdate: { resumable: true, newHandle: 'handle' }
+    }
   });
   assert.equal(parsed.setupComplete, true);
   assert.equal(parsed.sourceText, 'hello');
@@ -71,7 +71,7 @@ test('parser accepts camelCase server messages', () => {
   assert.equal(parsed.sourceFinished, true);
   assert.equal(parsed.sourceSpeaker, 'spk_1');
   assert.equal(parsed.audio.length, 1);
-  assert.equal(parsed.resumptionHandle, 'handle');
+  assert.equal(parsed.resumptionHandle, undefined);
 });
 
 test('parser accepts snake_case server messages', () => {

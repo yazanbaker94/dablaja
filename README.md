@@ -45,7 +45,7 @@ Popup click
 
 The playback worklet resamples 24 kHz output to the device `AudioContext` rate, adapts its prebuffer between 280–520 ms, and absorbs short network jitter as silence instead of stopping and rebuffering. It caps queued audio at 2.5 seconds and drops stale backlog to roughly 1.2 seconds if it grows too large. It fades in after a real gap, limits peaks, and can smoothly duck original audio while Arabic speech plays. The capture path keeps sending through short pauses, then sends `audioStreamEnd` after two seconds of silence and retains 300 ms of in-memory pre-roll.
 
-## Verified API contract (2026-08-11)
+## Verified API contract (2026-08-25)
 
 The implementation follows Google's official [Live translation guide](https://ai.google.dev/gemini-api/docs/live-api/live-translate):
 
@@ -56,9 +56,9 @@ The implementation follows Google's official [Live translation guide](https://ai
 - Target language: `ar`
 - Input and output transcription enabled
 - `echoTargetLanguage: false`
-- Context-window compression and session resumption enabled; `GoAway` triggers a safe reconnect
+- Context-window compression enabled; `GoAway` triggers a safe reconnect into a fresh translation session
 
-Google documents roughly ten-minute connection lifetimes and 15-minute uncompressed audio-only session limits. This implementation enables compression and resumption as recommended in the official [session-management guide](https://ai.google.dev/gemini-api/docs/live-api/session-management).
+The extension intentionally does not configure Gemini session resumption. Google documents that a generated resumption handle can retain live conversation state, including audio and text, for up to 24 hours. Reconnects therefore start a fresh translation session; context-window compression remains enabled to bound long-session context and cost. Google's current paid-tier effective audio price is approximately $0.0368 per minute, while the free tier is free of charge but may be used to improve Google's products and is subject to quotas and preview availability. See the official [Live Translate guide](https://ai.google.dev/gemini-api/docs/live-api/live-translate), [pricing](https://ai.google.dev/gemini-api/docs/pricing), and [data-retention guidance](https://ai.google.dev/gemini-api/docs/zdr).
 
 Protocol note: Google's Live Translate page currently shows transcription objects nested in `generationConfig`, while the current official `@google/genai` serializer emits `inputAudioTranscription` and `outputAudioTranscription` directly under `setup`. Live testing rejected the nested shape with WebSocket code 1007. The extension therefore starts with the field-tested root transcription shape and performs one bounded 1007 compatibility retry using the documented nested shape; it never loops between setup layouts.
 
@@ -70,7 +70,7 @@ Core live dubbing is available to all users. Dablaja provides a **local-only** s
 
 - Local session saving is enabled by default and can be disabled from the Plus library without affecting live dubbing. Free users may save one session, one bookmark, and one site profile.
 - Plus users can save up to 500 sessions, 100 bookmarks per session, and 50 site profiles.
-- Audio is never stored anywhere on any device or server.
+- Dablaja and AudioFetcher never store audio. Google processes session audio under the Gemini API terms and the data-use rules of the billing tier attached to the user's key.
 - Saved transcripts, titles, and URLs remain strictly local on your device in IndexedDB.
 - **«احفظ الجلسة»** saves a recoverable live draft immediately. On stop, the first free session or a verified Plus session is finalized locally; disabling local saving prevents new draft/session storage.
 - Session notes and timestamped bookmarks (editable, deletable).
@@ -88,7 +88,7 @@ python3 scripts/verify-signing-key.py --env-file /etc/dablaja.env
 ## Security model and important BYOK trade-off
 
 - The key is stored only in `chrome.storage.local`, never sync storage, and is revealed only when the user explicitly presses the show/change control.
-- Audio is never stored. Captions exist in extension-page memory; while local saving is enabled, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session before automatic finalization or a manual save.
+- Dablaja and AudioFetcher never store audio. Captions exist in extension-page memory; while local saving is enabled, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session before automatic finalization or a manual save. Google processes session audio and text under the Gemini API terms and the data-use rules of the billing tier attached to the user's key.
 - Saved transcripts, titles, and URLs remain local on this device.
 - No ads, content scripts, or browsing-history collection.
 - Core audio and transcripts go directly to Google; they never pass through the developer server.

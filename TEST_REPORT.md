@@ -17,6 +17,7 @@
 | `npm run e2e` | PASS — 51/51 default checks; live-server mode 54/54; live-Checkout mode 52/52 and opened an independently validated production `checkout.stripe.com` URL without entering payment details or purchasing |
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
 | `git diff --check` | PASS; line-ending notices only |
+| Official Gemini documentation recheck | PASS on 25 August 2026 — model `gemini-3.5-live-translate-preview`, 16kHz PCM input, 24kHz PCM output, 100ms chunks, Arabic `ar`, input/output transcription, and current pricing/data-use copy match Google documentation |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
 | VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), privacy (`4db1fdc0…3998d`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
 | VPS database audit | PASS — exact allowlisted diagnostic/form schemas (obsolete empty `error_message`/`user_agent` columns removed), hashed credentials, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
@@ -59,6 +60,11 @@
 - Gemini key entry includes a visible, non-blocking in-product disclosure.
   Saving the key alone sends no audio; capture and Google processing begin only
   after the user explicitly presses Start.
+- Gemini session resumption is intentionally absent from both accepted setup
+  shapes. A reconnect starts a fresh translation session because Google now
+  documents that generated resumption handles may retain live conversation
+  state, including audio and text, for up to 24 hours. Context-window
+  compression remains enabled.
 - Anonymous aggregate usage/error reporting is exact opt-in. Usage sends only a
   one-time event ID, coarse platform category, and bounded duration. Error
   diagnostics use an allowlisted schema and never free-form messages, keys,
