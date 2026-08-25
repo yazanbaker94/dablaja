@@ -12,7 +12,7 @@
 8. Cleanup LIFO order, error tolerance, and idempotence.
 9. Syntax checks for every runtime JavaScript file.
 10. Secret-pattern, logging, dynamic-code, and inline-script/style scan.
-11. Consent-gated community telemetry and exact three-field usage payload.
+11. Explicitly opted-in community telemetry and exact three-field usage payload.
 12. Server deduplication/aggregation with no URL, title, audio, transcript, key, or install-ID columns.
 13. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
 14. Clean package generation and ZIP-root manifest check.
@@ -37,6 +37,17 @@ npm run package
 `npm run e2e` is non-destructive by default. Live AudioFetcher ingestion and
 live Stripe Checkout probes remain skipped unless their explicit environment
 flags are set for a controlled acceptance run.
+
+The live-ingestion mode uses reserved `e2e…` event IDs. After the assertions,
+take a VPS database backup, run `scripts/cleanup-dablaja-e2e.py` first without
+`--apply`, then with `--apply`, and rerun `scripts/verify-dablaja-db.py`. This
+keeps public community statistics free of synthetic acceptance traffic.
+
+The live-Checkout mode writes a reserved `e2e-checkout-…` installation ID and
+opens Checkout without payment. After the assertion, take a VPS database
+backup and run `scripts/cleanup-dablaja-checkout-e2e.py` dry-run then `--apply`;
+the script refuses completed purchases, expires only an open synthetic Stripe
+session, and removes only its reserved attempt row.
 
 ## Chrome integration matrix
 

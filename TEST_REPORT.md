@@ -7,14 +7,14 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 279/279 Node tests on the current worktree |
+| `npm test` | PASS — 286/286 Node tests on the current worktree |
 | `python -m unittest server/test_dablaja.py` | PASS — 112/112 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
 | Element-binding checker | PASS — library, popup, and stats bindings |
 | ESLint | PASS |
 | Manifest validation (development) | PASS |
 | `npm run smoke` | PASS — isolated unpacked Edge/Chromium profile; popup, static Gemini disclosure/key flow, analytics default-off/opt-in, local-saving default-on, volumes/site profile, library, stats, side panel, diagnostics, and console checks |
-| `npm run e2e` | PASS — 51/51 safe isolated-browser checks across key lifecycle, settings persistence, free limits, worker-suspension recovery, no-hostage reads, notes/bookmarks/search, export/delete/import gate, locked entitlement, stats, side panel, and local-saving persistence |
+| `npm run e2e` | PASS — 51/51 default checks; live-server mode 54/54; live-Checkout mode 52/52 and opened an independently validated production `checkout.stripe.com` URL without entering payment details or purchasing |
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
 | `git diff --check` | PASS; line-ending notices only |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
@@ -44,6 +44,11 @@
 - License reconciliation is single-flight, recreates its alarm after worker
   restart, preserves local state during network failure, verifies renewed
   tokens, and locks on authenticated revocation.
+- Start is single-flight, Stop waits for an in-flight startup before disposing
+  resources, and a duplicate Start cannot tear down a healthy active session.
+- Offscreen reconnect/setup timers plus socket, worklet, and track callbacks are
+  bound to the session that created them; stale events cannot mutate a
+  replacement session or clear its network watchdog.
 - Recovery rotation uses the extracted production controller, prevents duplicate
   requests, keeps plaintext visible only in the modal, wipes it on close/unload,
   and reports ambiguous network results honestly.
@@ -75,9 +80,18 @@
   verifies the static Gemini disclosure, persists a fake test key locally,
   keeps analytics off until explicitly enabled, persists local/profile settings,
   and reports no page or console errors on the tested surfaces.
-- The larger isolated E2E run passed 51 checks. Its live recovery, telemetry
-  ingestion, and Stripe Checkout mutations were intentionally disabled; they
-  require explicit acceptance flags and are not counted as verified here.
+- The larger isolated E2E run passed 51 default checks. A separate controlled
+  run with live AudioFetcher enabled passed 54/54, including invalid recovery
+  rejection and exact usage/diagnostic duplicate suppression. The two synthetic
+  usage events and one synthetic diagnostic created across the corrective runs
+  were removed by reserved ID after an exact database backup; the verifier then
+  confirmed zero synthetic E2E rows and restored aggregate counts of 18
+  diagnostics, 2 feedback forms, 1 uninstall form, and 60 usage sessions.
+  A separate live-Checkout run passed 52/52 after hardening the harness against
+  an Edge target-close false-success path. Its reserved Checkout session had no
+  purchase, was expired through Stripe, and its reserved database attempt was
+  removed after an exact backup. This verifies Checkout creation/navigation,
+  not payment completion, activation, refund, or dispute behavior.
 
 ## Evidence not yet obtained
 

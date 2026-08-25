@@ -33,6 +33,13 @@ const browser = await puppeteer.launch({
   headless: false,
   args: [`--disable-extensions-except=${stage}`, `--load-extension=${stage}`, '--no-first-run']
 });
+// An unresolved CDP promise alone does not keep Node alive. Keep a bounded
+// watchdog handle so a prematurely disconnected browser can never look like a
+// successful exit simply because the event loop became empty.
+const overallTimeout = setTimeout(() => {
+  console.error('E2E HARNESS TIMEOUT: browser flow did not reach final totals');
+  process.exit(1);
+}, 180_000);
 
 // ---------- helpers ----------
 const extId = async () => {
@@ -112,7 +119,13 @@ const waitStripe = async (before, ms = 15000) => {
   return null;
 };
 const sweepStripe = async () => {
-  for (const p of await browser.pages()) if (p.url().startsWith('https://checkout.stripe.com')) await p.close().catch(() => undefined);
+  for (const p of await browser.pages()) {
+    if (!p.url().startsWith('https://checkout.stripe.com')) continue;
+    // Edge occasionally leaves Page.close unresolved after target churn. The
+    // whole throwaway browser is closed in finally, so a bounded best-effort
+    // close is sufficient here and must not stall the remaining suites.
+    await Promise.race([p.close().catch(() => undefined), sleep(1500)]);
+  }
   await sleep(400);
 };
 
@@ -358,11 +371,22 @@ try {
   check('S7: entitlement locked for free install', r.resp.plus?.entitlement?.plusEnabled === false, JSON.stringify(r.resp.plus?.entitlement));
 
   if (process.env.DABLAJA_E2E_LIVE_CHECKOUT === '1') {
+    // Reserve an unmistakable installation id so an abandoned live test
+    // Checkout can be audited/expired without touching a real installation.
+    await page.evaluate(() => {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      const credential = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      return chrome.storage.local.set({
+        installId: `e2e-checkout-${Date.now().toString(36)}`,
+        plusInstallCredential: credential
+      });
+    });
     const before = stripeCount();
     r = await msg(page, { type: 'PLUS_START_CHECKOUT' });
     const stripeUrl = await waitStripe(before);
     check('S7: explicitly enabled live-checkout probe opens Stripe', r.resp.ok === true && Boolean(stripeUrl && stripeUrl.includes('checkout.stripe.com/c/pay/cs_live')), stripeUrl?.slice(0, 60) || 'no tab');
-    await sweepStripe();
+    await sweepStripe().catch(() => undefined);
   } else {
     console.log('skip - S7 live checkout (set DABLAJA_E2E_LIVE_CHECKOUT=1 explicitly)');
   }
@@ -451,7 +475,10 @@ try {
     const usageEvent = 'e2eusage' + Date.now().toString(36);
     const u1 = await post('/api/usage', { event_id: usageEvent, platform: 'youtube', dubbed_ms: 60000 });
     const u2 = await post('/api/usage', { event_id: usageEvent, platform: 'youtube', dubbed_ms: 60000 });
-    const errorEvent = 'e2eerr' + Date.now().toString(36);
+    // Production requires a clean event id of at least 16 characters. Use the
+    // same UUID-shaped value emitted by reportRemoteError() so this opt-in
+    // live probe exercises ingestion instead of only exercising validation.
+    const errorEvent = 'e2e-error-' + crypto.randomUUID();
     const e1 = await post('/api/errors', { event_id: errorEvent, error_code: 'network_error', status: 'error', site_host: 'youtube', extension_version: '1.0.0' });
     const e2 = await post('/api/errors', { event_id: errorEvent, error_code: 'network_error', status: 'error', site_host: 'youtube', extension_version: '1.0.0' });
     return { u1, u2, e1, e2 };
@@ -474,8 +501,13 @@ try {
   r = await msg(page, { type: 'PLUS_SET_LOCAL_SAVING', value: true });
   check('S11: local saving back ON persists', (await msg(page, { type: 'PLUS_GET_STATUS' })).resp.plus?.localSavingEnabled === true);
   noErrors('S11');
+} catch (error) {
+  fail++;
+  failures.push('E2E harness completed all suites');
+  console.error('E2E HARNESS ERROR:', String((error && (error.message || error.stack)) || error));
 } finally {
-  await browser.close().catch(() => undefined);
+  await Promise.race([browser.close().catch(() => undefined), sleep(5000)]);
+  clearTimeout(overallTimeout);
   rmSync(stage, { recursive: true, force: true });
 }
 

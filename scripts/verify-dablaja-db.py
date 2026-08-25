@@ -94,6 +94,16 @@ def main() -> int:
         expired_usage_ids = connection.execute(
             "SELECT COUNT(*) AS n FROM usage_event_ids WHERE created_at < datetime('now', '-8 days')"
         ).fetchone()["n"]
+        synthetic_usage_ids = connection.execute(
+            "SELECT COUNT(*) AS n FROM usage_event_ids WHERE id LIKE 'e2eusage%'"
+        ).fetchone()["n"]
+        synthetic_error_ids = connection.execute(
+            """SELECT COUNT(*) AS n FROM error_reports
+               WHERE event_id LIKE 'e2e-error-%' OR event_id LIKE 'e2eerr%'"""
+        ).fetchone()["n"]
+        synthetic_checkout_attempts = connection.execute(
+            "SELECT COUNT(*) AS n FROM checkout_attempts WHERE install_id LIKE 'e2e-checkout-%'"
+        ).fetchone()["n"]
 
         checks = {
             "expected_tables": not missing,
@@ -113,6 +123,8 @@ def main() -> int:
             "diagnostic_retention_enforced": expired_errors == 0,
             "feedback_retention_enforced": expired_feedback == 0,
             "usage_dedupe_retention_enforced": expired_usage_ids == 0,
+            "no_synthetic_e2e_telemetry": synthetic_usage_ids == 0 and synthetic_error_ids == 0,
+            "no_synthetic_e2e_checkout_attempts": synthetic_checkout_attempts == 0,
         }
         for name, passed in checks.items():
             print(f"{name}={'PASS' if passed else 'FAIL'}")

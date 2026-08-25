@@ -34,7 +34,7 @@ test('1007 fallback flips the shape exactly once, in either direction', async ()
   const idx = src.indexOf("event.code === 1007");
   const block = src.slice(idx, src.indexOf('return;', idx));
   assert.match(block, /setupRetryUsed = true/, 'retry budget must be consumed');
-  assert.match(block, /session\.setupPrimary = !session\.setupPrimary/, 'shape must flip');
+  assert.match(block, /socketOwner\.setupPrimary = !socketOwner\.setupPrimary/, 'owning session shape must flip');
 });
 
 test('both wire shapes remain available and structurally distinct', () => {

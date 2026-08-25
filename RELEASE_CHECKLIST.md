@@ -52,6 +52,8 @@ not equivalent to a passed release requirement.
 - [x] Live privacy policy and terms match the reviewed local documents by SHA-256.
 - [x] Sensitive Dablaja forms and private API routes return `no-store` and `no-referrer`; form and success pages use route-scoped no-script CSP.
 - [x] The live read-only data audit confirms allowlisted aggregate rows, no forbidden identity/content fields, and the documented 8/45/180-day retention boundaries.
+- [x] Controlled live usage/error ingestion accepts each reserved event once, rejects its duplicate, and leaves no synthetic rows after backup-backed cleanup.
+- [x] Controlled live Checkout creates and opens the correct Stripe-hosted URL without payment; the reserved open session is expired and removed after backup-backed cleanup.
 
 ## Store submission
 

@@ -78,6 +78,10 @@ async function cleanup({ preserveSession = false } = {}) {
   current.stopping = true;
   clearTimeout(current.reconnectTimer);
   clearTimeout(current.errorWatchdog);
+  clearTimeout(current.setupRetryTimer);
+  current.reconnectTimer = null;
+  current.errorWatchdog = null;
+  current.setupRetryTimer = null;
   closeSocket(current.socket);
   current.socket = null;
   current.ready = false;
@@ -85,7 +89,11 @@ async function cleanup({ preserveSession = false } = {}) {
   current.goAwayScheduled = false;
   current.pendingInput.clear();
   current.preRoll.clear();
-  current.playbackNode?.port.postMessage({ type: 'CLEAR' });
+  try { current.playbackNode?.port.postMessage({ type: 'CLEAR' }); } catch { }
+  if (current.captureNode?.port) current.captureNode.port.onmessage = null;
+  if (current.playbackNode?.port) current.playbackNode.port.onmessage = null;
+  try { current.captureNode?.port.close(); } catch { }
+  try { current.playbackNode?.port.close(); } catch { }
   try { current.sourceNode?.disconnect(); } catch { }
   try { current.captureNode?.disconnect(); } catch { }
   try { current.captureMute?.disconnect(); } catch { }
@@ -195,9 +203,10 @@ function scheduleReconnect(failure, immediate = false) {
     reconnectAttempt: session.reconnectAttempt,
     reconnectCount: session.reconnectCount
   });
-  session.reconnectTimer = setTimeout(() => {
-    if (!session || session.stopping) return;
-    session.reconnectTimer = null;
+  const reconnectOwner = session;
+  reconnectOwner.reconnectTimer = setTimeout(() => {
+    if (session !== reconnectOwner || reconnectOwner.stopping) return;
+    reconnectOwner.reconnectTimer = null;
     connectSocket();
   }, delay);
 }
@@ -206,10 +215,11 @@ function scheduleGoAwayReconnect(delayMs) {
   if (!session || session.stopping || session.reconnectTimer || session.goAwayScheduled) return;
   session.goAwayScheduled = true;
   const wait = Math.max(250, delayMs);
-  session.reconnectTimer = setTimeout(() => {
-    if (!session || session.stopping) return;
-    session.reconnectTimer = null;
-    session.goAwayScheduled = false;
+  const reconnectOwner = session;
+  reconnectOwner.reconnectTimer = setTimeout(() => {
+    if (session !== reconnectOwner || reconnectOwner.stopping) return;
+    reconnectOwner.reconnectTimer = null;
+    reconnectOwner.goAwayScheduled = false;
     scheduleReconnect({ kind: 'network', transient: true }, true);
   }, wait);
 }
@@ -324,48 +334,55 @@ function connectSocket() {
 
   const socket = new WebSocket(buildWebSocketUrl(session.apiKey));
   session.socket = socket;
+  const socketOwner = session;
   // Do NOT reset the setup-shape selector here: the one-shot 1007 fallback
   // flips setupPrimary before reconnecting and this function must keep that
   // choice for the retry (and all later reconnects of this session).
   if (session.setupPrimary == null) session.setupPrimary = true;
   if (session.setupRetryUsed == null) session.setupRetryUsed = false;
   socket.onopen = () => {
-    if (socket !== session?.socket || session.stopping) return;
-    const msg = session.setupPrimary ? buildSetupMessage(session.resumptionHandle) : buildLegacySetupMessage(session.resumptionHandle);
+    if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
+    const msg = socketOwner.setupPrimary ? buildSetupMessage(socketOwner.resumptionHandle) : buildLegacySetupMessage(socketOwner.resumptionHandle);
     socket.send(JSON.stringify(msg));
     // Record which shape was sent for diagnostics (no key/WSS URL logged)
-    session.lastSetupShape = session.setupPrimary ? 'primary_nested' : 'legacy_root';
+    socketOwner.lastSetupShape = socketOwner.setupPrimary ? 'primary_nested' : 'legacy_root';
   };
   socket.onmessage = async (event) => {
-    if (socket !== session?.socket || session.stopping) return;
+    if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
     try {
       const raw = typeof event.data === 'string' ? event.data : await event.data.text();
+      if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
       handleServerObject(JSON.parse(raw));
     } catch {
       handleConnectionFailure({ code: 1011, message: 'invalid server response' });
     }
   };
   socket.onerror = () => {
-    if (!session || session.stopping) return;
-    clearTimeout(session.errorWatchdog);
-    session.errorWatchdog = setTimeout(() => {
-      if (session?.socket === socket) handleConnectionFailure({ code: 1006, message: 'network error' });
+    if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
+    clearTimeout(socketOwner.errorWatchdog);
+    socketOwner.errorWatchdog = setTimeout(() => {
+      if (session === socketOwner && !socketOwner.stopping && socketOwner.socket === socket) {
+        handleConnectionFailure({ code: 1006, message: 'network error' });
+      }
     }, 1500);
   };
   socket.onclose = (event) => {
-    clearTimeout(session?.errorWatchdog);
-    if (socket !== session?.socket || session?.stopping) return;
+    if (session !== socketOwner || socketOwner.stopping || socketOwner.socket !== socket) return;
+    clearTimeout(socketOwner.errorWatchdog);
+    socketOwner.errorWatchdog = null;
     // Single compatibility retry for setup rejection 1007: flip to the other
     // transcription-field layout (root <-> nested generationConfig) once.
-    if (event.code === 1007 && !session.setupRetryUsed) {
-      session.setupRetryUsed = true;
-      session.setupPrimary = !session.setupPrimary;
+    if (event.code === 1007 && !socketOwner.setupRetryUsed) {
+      socketOwner.setupRetryUsed = true;
+      socketOwner.setupPrimary = !socketOwner.setupPrimary;
       // Record safe diagnostic: code + new shape, no key/WSS URL
-      session.lastSetupRetry = { code: event.code, shape: session.setupPrimary ? 'primary_nested' : 'legacy_root', at: Date.now() };
+      socketOwner.lastSetupRetry = { code: event.code, shape: socketOwner.setupPrimary ? 'primary_nested' : 'legacy_root', at: Date.now() };
       closeSocket(socket);
       // Reconnect with the flipped shape once
-      setTimeout(() => {
-        if (!session || session.stopping) return;
+      const retryOwner = socketOwner;
+      retryOwner.setupRetryTimer = setTimeout(() => {
+        if (session !== retryOwner || retryOwner.stopping) return;
+        retryOwner.setupRetryTimer = null;
         connectSocket();
       }, 250);
       return;
@@ -429,6 +446,7 @@ async function startSession(message) {
       stopping: false,
       reconnectTimer: null,
       errorWatchdog: null,
+      setupRetryTimer: null,
       reconnectAttempt: 0,
       resumptionHandle: null,
       pendingInput: new BoundedQueue(8),
@@ -480,11 +498,13 @@ async function startSession(message) {
     sourceNode.connect(captureNode).connect(captureMute).connect(audioContext.destination);
     playbackNode.connect(dubbedGain).connect(outputLimiter).connect(audioContext.destination);
 
+    const callbackOwner = session;
     captureNode.port.onmessage = ({ data }) => {
+      if (session !== callbackOwner || callbackOwner.stopping) return;
       if (data?.type === 'PCM_CHUNK' && data.buffer) handleCaptureChunk(data.buffer);
     };
     playbackNode.port.onmessage = ({ data }) => {
-      if (!session || session.stopping) return;
+      if (session !== callbackOwner || callbackOwner.stopping) return;
       if (data?.type === 'BUFFER_STATUS') {
         const heapEstimateMb = Number.isFinite(performance.memory?.usedJSHeapSize)
           ? Math.round(performance.memory.usedJSHeapSize / 1048576)
@@ -509,7 +529,7 @@ async function startSession(message) {
     };
     for (const track of stream.getAudioTracks()) {
       track.addEventListener('ended', () => {
-        if (session && !session.stopping) {
+        if (session === callbackOwner && !callbackOwner.stopping) {
           fatal(STATUS.ERROR, 'توقف التقاط صوت التبويب. ابدأ جلسة جديدة.', null, 'audio_capture_failed');
         }
       }, { once: true });

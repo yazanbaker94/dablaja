@@ -29,6 +29,7 @@ import { normalizeProfileOrigin, profileForOrigin, removeProfile, upsertProfile 
 const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
 let state = publicState();
 let creatingOffscreen = null;
+let startingPromise = null;
 let stoppingPromise = null;
 let captureStatusTimer = null;
 let usageStats = normalizeUsageStats(EMPTY_USAGE_STATS);
@@ -455,10 +456,12 @@ async function resolveStartTab({ tabId = null, tabUrl = '', tabTitle = '' } = {}
   return { id: tab.id, url, origin: originOf(url) || originOf(tabUrl) || tabUrl || null, title };
 }
 
-async function startSession({ tabId = null, tabUrl = '', tabTitle = '', streamId = null } = {}) {
+async function performStartSession({ tabId = null, tabUrl = '', tabTitle = '', streamId = null } = {}) {
   await initialStateReady;
   if (ACTIVE_STATUSES.has(state.status)) {
-    throw new Error('أوقف الدبلجة الحالية قبل بدء التقاط جديد.');
+    const error = new Error('أوقف الدبلجة الحالية قبل بدء التقاط جديد.');
+    error.code = 'session_already_active';
+    throw error;
   }
 
   const stored = await chrome.storage.local.get([
@@ -548,6 +551,16 @@ async function startSession({ tabId = null, tabUrl = '', tabTitle = '', streamId
   return state;
 }
 
+async function startSession(options = {}) {
+  if (stoppingPromise) await stoppingPromise;
+  if (!startingPromise) {
+    startingPromise = performStartSession(options).finally(() => {
+      startingPromise = null;
+    });
+  }
+  return startingPromise;
+}
+
 async function performStopSession(message) {
   let saved = false;
   try {
@@ -603,6 +616,10 @@ async function performStopSession(message) {
 }
 
 async function stopSession(message = 'تم إيقاف الدبلجة.') {
+  // A Stop issued while tab capture/offscreen startup is still pending must
+  // not finish before that startup creates its resources. Await the shared
+  // start window, then dispose the resulting session exactly once.
+  if (startingPromise) await startingPromise.catch(() => undefined);
   if (!stoppingPromise) {
     stoppingPromise = performStopSession(message).finally(() => {
       stoppingPromise = null;
@@ -1111,15 +1128,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     .then(sendResponse)
     .catch(async (error) => {
       const errorMessage = error?.message || 'حدث خطأ غير متوقع.';
-      if (message?.type === 'START_SESSION') {
+      if (['START_SESSION', 'START_SESSION_FOR_LAST_TAB'].includes(message?.type)
+        && error?.code !== 'session_already_active') {
+        const failedStartState = state;
         await closeOffscreenDocument().catch(() => undefined);
         await setState(publicState({ status: STATUS.ERROR, message: errorMessage }));
-        await recordEnd(state, true);
+        await recordEnd(failedStartState, true);
         await reportRemoteError({
           code: 'start_failed',
           message: errorMessage,
           status: STATUS.ERROR,
-          site: state.tabOrigin
+          site: failedStartState.tabOrigin
         });
         sessionVolumes = null;
         await plusController.finish({ autosave: false, reason: 'start_failure' }).catch(() => undefined);
