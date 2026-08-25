@@ -15,11 +15,20 @@ test('setup message uses the verified Live Translate model and Arabic config', (
   assert.equal(setup.model, 'models/gemini-3.5-live-translate-preview');
   assert.equal(setup.generationConfig.translationConfig.targetLanguageCode, 'ar');
   assert.deepEqual(setup.generationConfig.responseModalities, ['AUDIO']);
-  assert.deepEqual(setup.inputAudioTranscription, {});
-  assert.deepEqual(setup.outputAudioTranscription, {});
-  assert.equal(setup.generationConfig.inputAudioTranscription, undefined);
+  // Primary: official nested shape inside generationConfig
+  assert.deepEqual(setup.generationConfig.inputAudioTranscription, {});
+  assert.deepEqual(setup.generationConfig.outputAudioTranscription, {});
+  assert.equal(setup.inputAudioTranscription, undefined);
+  assert.equal(setup.outputAudioTranscription, undefined);
   assert.deepEqual(setup.sessionResumption, { handle: 'resume-token' });
   assert.ok(setup.contextWindowCompression.slidingWindow);
+});
+
+test('legacy fallback has root transcription', async () => {
+  const { buildLegacySetupMessage } = await import('../src/shared/protocol.js');
+  const { setup: legacy } = buildLegacySetupMessage('resume-token');
+  assert.deepEqual(legacy.inputAudioTranscription, {});
+  assert.deepEqual(legacy.outputAudioTranscription, {});
 });
 
 test('WebSocket URL is scoped to the official endpoint and includes provided key', () => {
@@ -91,4 +100,3 @@ test('connection failures distinguish permanent and transient cases', () => {
   assert.equal(classifyConnectionFailure({ reason: 'model not found 404' }).kind, 'model_unavailable');
   assert.deepEqual(classifyConnectionFailure({ code: 400, reason: 'bad request' }), { kind: 'api_error', transient: false });
 });
-

@@ -4,6 +4,12 @@ export function calculateDuckedVolume(baseVolume, autoDucking, playbackActive, d
   return base * scale;
 }
 
+export function calculateTailFade(queuedSamples, fadeSamples) {
+  const remaining = Math.max(0, Number(queuedSamples) || 0);
+  const duration = Math.max(1, Number(fadeSamples) || 1);
+  return Math.min(1, (remaining + 1) / duration);
+}
+
 export class AdaptiveNoiseGate {
   constructor({ initialNoiseFloor = 0.0004, minimum = 0.0012, maximum = 0.008, multiplier = 3.5 } = {}) {
     this.noiseFloor = initialNoiseFloor;

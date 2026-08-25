@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AdaptiveBufferPolicy, AdaptiveNoiseGate, calculateDuckedVolume } from '../src/shared/audio-control.js';
+import {
+  AdaptiveBufferPolicy,
+  AdaptiveNoiseGate,
+  calculateDuckedVolume,
+  calculateTailFade
+} from '../src/shared/audio-control.js';
 
 test('ducking respects base volume, activity, toggle, and safe bounds', () => {
   assert.equal(calculateDuckedVolume(0.5, true, true), 0.16);
@@ -8,6 +13,14 @@ test('ducking respects base volume, activity, toggle, and safe bounds', () => {
   assert.equal(calculateDuckedVolume(0.5, false, true), 0.5);
   assert.equal(calculateDuckedVolume(5, false, false), 1.5);
   assert.equal(calculateDuckedVolume(-1, true, true), 0);
+});
+
+test('tail fade reaches silence smoothly without attenuating a healthy queue', () => {
+  assert.equal(calculateTailFade(1000, 576), 1);
+  assert.equal(calculateTailFade(575, 576), 1);
+  assert.equal(calculateTailFade(287, 576), 0.5);
+  assert.equal(calculateTailFade(0, 576), 1 / 576);
+  assert.equal(calculateTailFade(-5, 0), 1);
 });
 
 test('adaptive noise gate learns quiet background but opens for speech', () => {

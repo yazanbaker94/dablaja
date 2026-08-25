@@ -1,17 +1,17 @@
-import { STORAGE_KEYS, SESSION_STORAGE_KEYS } from '../shared/constants.js';
-import { describeEntitlement, ENTITLEMENT_STATES, PLUS_PRICE_LABEL } from '../shared/plus-entitlement.js';
+import { SESSION_STORAGE_KEYS } from '../shared/constants.js';
+import { describeEntitlement, RECOVERY_CODE_PATTERN } from '../shared/plus-entitlement.js';
 import { transcriptLineCount, validateSessionRecord } from '../shared/plus-session.js';
 import { createNoteFlushController } from '../shared/note-flush.js';
 import { searchSessions, searchTranscriptRows, sessionSummary } from '../shared/plus-search.js';
-import { hasSrtTimestamps, toExportJson, toPlainText, toPrintRows, toSrt } from '../shared/plus-export.js';
+import { toExportJson, toPlainText, toPrintRows, toSrt } from '../shared/plus-export.js';
 import { createBackup } from '../shared/plus-backup.js';
+import { createRotationController } from '../shared/rotation-controller.js';
 import {
   clearSavedSessions,
   deleteSavedSession,
   estimatePlusStorage,
   getSavedSession,
-  listSavedSessions,
-  putSavedSessionBatch
+  listSavedSessions
 } from '../shared/plus-db.js';
 
 const $ = (id) => document.getElementById(id);
@@ -19,6 +19,7 @@ const elements = {
   sidebar: $('sidebar'),
   scrim: $('scrim'),
   menuButton: $('menuButton'),
+  topPlusBadge: $('topPlusBadge'),
   navMomentsCount: $('navMomentsCount'),
   quickStatsCard: $('quickStatsCard'),
   statSessions: $('statSessions'),
@@ -31,6 +32,9 @@ const elements = {
   plusCard: $('plusCard'),
   plusState: $('plusState'),
   entitlementNotice: $('lockedNotice'),
+  freeTierUpgradeBanner: $('freeTierUpgradeBanner'),
+  upgradeTopBtn: $('upgradeTopBtn'),
+  activateTopBtn: $('activateTopBtn'),
   draftSection: $('draftSection'),
   draftMeta: $('draftMeta'),
   draftBody: $('draftBody'),
@@ -44,7 +48,6 @@ const elements = {
   resetFilters: $('resetFilters'),
   sessionGrid: $('sessionGrid'),
   emptyState: $('emptyState'),
-  emptyCta: $('emptyCta'),
   noResults: $('noResults'),
   momentsList: $('momentsList'),
   momentsEmpty: $('momentsEmpty'),
@@ -67,9 +70,10 @@ const elements = {
   deleteSession: $('deleteSession'),
   printArea: $('printArea'),
   backToList: $('backToList'),
-  autosaveToggle: $('autosaveToggle'),
+  autoDuckingToggle: $('autoDuckingToggle'),
   rememberVolumesToggle: $('rememberVolumesToggle'),
-  settingsStatus: $('settingsStatus'),
+  analyticsToggle: $('analyticsToggle'),
+  localSavingToggle: $('localSavingToggle'),
   audioStatus: $('audioStatus'),
   profileList: $('profileList'),
   noProfiles: $('noProfiles'),
@@ -83,13 +87,36 @@ const elements = {
   storageInfo: $('storageInfo'),
   deleteAll: $('deleteAll'),
   aboutPlus: $('aboutPlus'),
+  aboutPlusTitle: $('aboutPlusTitle'),
+  aboutPlusTag: $('aboutPlusTag'),
+  plusUpgradeBlock: $('plusUpgradeBlock'),
+  libUpgradeBtn: $('libUpgradeBtn'),
+  openActivationBtn: $('openActivationBtn'),
+  activationModal: $('activationModal'),
+  modalUpgradeCheckoutBtn: $('modalUpgradeCheckoutBtn'),
+  activationInput: $('activationInput'),
+  activationStatus: $('activationStatus'),
+  activationCancel: $('activationCancel'),
+  activationSubmit: $('activationSubmit'),
   menuLayer: $('menuLayer'),
   modalRoot: $('modalRoot'),
   modalTitle: $('modalTitle'),
   modalCopy: $('modalCopy'),
   modalCancel: $('modalCancel'),
   modalConfirm: $('modalConfirm'),
-  toastRoot: $('toastRoot')
+  toastRoot: $('toastRoot'),
+  plusActiveActions: $('plusActiveActions'),
+  rotateRecoveryBtn: $('rotateRecoveryBtn'),
+  rotateRecoveryModal: $('rotateRecoveryModal'),
+  rotateRecoveryTitle: $('rotateRecoveryTitle'),
+  rotateConfirmStep: $('rotateConfirmStep'),
+  rotateResultStep: $('rotateResultStep'),
+  rotateConfirmBtn: $('rotateConfirmBtn'),
+  rotateCancelBtn: $('rotateCancelBtn'),
+  rotateResultCode: $('rotateResultCode'),
+  rotateCopyBtn: $('rotateCopyBtn'),
+  rotateCloseBtn: $('rotateCloseBtn'),
+  rotateStatus: $('rotateStatus')
 };
 
 let plusSettings = null;
@@ -255,13 +282,6 @@ function safeFilePrefix(session) {
     .slice(0, 60) || 'dablaja-session';
 }
 
-function requireSavedRecord(response, expectedId) {
-  if (!response?.record?.id || (expectedId && response.record.id !== expectedId)) {
-    throw new Error('لم يكتمل الحفظ بشكل صحيح.');
-  }
-  return response.record;
-}
-
 function showToast(message, tone = '') {
   const toast = document.createElement('div');
   toast.className = tone === 'error' ? 'toast is-error' : 'toast';
@@ -399,8 +419,6 @@ document.addEventListener('click', () => {
 // View navigation & Sidebar responsiveness
 // ---------------------------------------------------------------------------
 
-const VIEWS = ['library', 'moments', 'audio', 'settings', 'backup', 'detail'];
-
 function setView(name) {
   for (const view of document.querySelectorAll('.view')) {
     view.classList.toggle('is-active', view.dataset.view === name);
@@ -502,123 +520,99 @@ async function readUnsavedDrafts() {
 async function renderDraftCard() {
   const status = await send({ type: 'PLUS_GET_STATUS' });
   plusSettings = status.plus;
-  const active = status.draft;
-  const drafts = await readUnsavedDrafts();
+  let drafts = await readUnsavedDrafts();
   elements.draftBody.replaceChildren();
+  elements.draftMeta.textContent = '';
+  showSaveStatus('', '');
 
-  if (status.storageWarning) {
-    const warning = document.createElement('p');
-    warning.className = 'notice';
-    warning.textContent = status.storageWarning;
-    elements.draftBody.append(warning);
-  }
-
-  const makeStat = (label, value) => {
-    const stat = document.createElement('span');
-    const bold = document.createElement('b');
-    bold.textContent = value;
-    stat.append(bold, ` ${label}`);
-    return stat;
-  };
-
-  if (active) {
-    elements.draftMeta.textContent = active.siteOrigin || 'جلسة جارية';
-    const info = document.createElement('div');
-    info.className = 'draft-info';
-    info.append(
-      makeStat('سطر ترجمة', String(active.lineCount)),
-      makeStat('علامة', String(active.bookmarkCount)),
-      makeStat('بدأت', formatClock(Date.now() - active.startedAt))
-    );
-    if (active.truncated === true) {
-      const truncated = document.createElement('span');
-      truncated.textContent = 'تنبيه: اقتُطع أقدم جزء من المسودة بسبب حدود التخزين المحلي';
-      info.append(truncated);
-    }
-    if (active.saved === true) {
-      const savedNote = document.createElement('span');
-      savedNote.textContent = 'محفوظة — وستُحدَّث حتى تتوقف الدبلجة';
-      info.append(savedNote);
-    }
-    const save = document.createElement('button');
-    save.type = 'button';
-    save.className = 'btn-cta-navy';
-    save.textContent = 'احفظ الجلسة الآن';
-    save.disabled = !plusEnabled();
-    save.addEventListener('click', async () => {
-      save.disabled = true;
-      save.setAttribute('aria-busy', 'true');
-      save.textContent = 'جارٍ الحفظ…';
-      showSaveStatus('جارٍ حفظ الجلسة محلياً على هذا الجهاز…');
-      try {
-        const response = await send({ type: 'PLUS_SAVE_ACTIVE' });
-        requireSavedRecord(response, active.id);
-        showSaveStatus('تم حفظ الجلسة.', 'success');
-        showToast('تم حفظ الجلسة في مكتبتك');
-        await reloadAll();
-      } catch (error) {
-        showSaveStatus(`تعذر حفظ الجلسة: ${error.message}`, 'error');
-        save.disabled = false;
-        save.removeAttribute('aria-busy');
-        save.textContent = 'احفظ الجلسة الآن';
-      }
-    });
-    elements.draftBody.append(info, save);
+  if (!drafts.length) {
+    elements.draftSection.classList.add('hidden');
+  } else {
     elements.draftSection.classList.remove('hidden');
-  } else if (drafts.length) {
-    elements.draftMeta.textContent = 'جلسات غير محفوظة';
-    const list = document.createElement('div');
-    list.className = 'draft-info draft-stack';
-    for (const draft of drafts.slice(0, 3)) {
+    const container = document.createElement('div');
+    container.className = 'draft-stack';
+    for (const draft of drafts) {
       const row = document.createElement('div');
       row.className = 'draft-info';
-      row.append(
-        makeStat(draft.siteOrigin || 'جلسة', `${transcriptLineCount(draft)} سطر · ${formatDuration(draft.durationMs)}`)
-      );
-      const save = document.createElement('button');
-      save.type = 'button';
-      save.className = 'btn-utility';
-      save.textContent = 'حفظ';
-      save.disabled = !plusEnabled();
-      save.addEventListener('click', async () => {
-        save.disabled = true;
-        save.setAttribute('aria-busy', 'true');
-        save.textContent = 'جارٍ الحفظ…';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      info.style.display = 'flex';
+      info.style.flexDirection = 'column';
+      const title = document.createElement('strong');
+      title.textContent = draft.title || 'جلسة دبلجة';
+      title.dir = 'auto';
+      const meta = document.createElement('span');
+      meta.style.fontSize = '0.82rem';
+      meta.style.color = '#64748b';
+      meta.textContent = `${formatDuration(draft.durationMs || 0)} · ${transcriptLineCount(draft)} سطر`;
+      info.append(title, meta);
+      const actions = document.createElement('div');
+      actions.className = 'draft-actions-wrap';
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'draft-save-btn';
+      saveBtn.textContent = 'حفظ';
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        showSaveStatus('جارٍ الحفظ…', '');
         try {
-          const response = await send({ type: 'PLUS_SAVE_UNSAVED', draftId: draft.id });
-          requireSavedRecord(response, draft.id);
-          showToast('تم حفظ الجلسة');
-          await reloadAll();
-        } catch (error) {
-          showToast(`تعذر الحفظ: ${error.message}`, 'error');
-          save.disabled = false;
-          save.removeAttribute('aria-busy');
+          const res = await send({ type: 'PLUS_SAVE_UNSAVED', draftId: draft.id });
+          if (res?.saved) {
+            showSaveStatus('تم الحفظ', '');
+            showToast('تم حفظ الجلسة');
+            await reloadAll();
+          } else if (res?.ok) {
+            showSaveStatus('تم الحفظ', '');
+            showToast('تم حفظ الجلسة');
+            await reloadAll();
+          }
+        } catch {
+          showSaveStatus('تعذر حفظ الجلسة. حاول مجدداً.', 'error');
+          showToast('تعذر الحفظ — بقيت نسخة الاسترجاع', 'error');
+        } finally {
+          saveBtn.disabled = false;
+          await renderDraftCard().catch(() => undefined);
         }
       });
-      const discard = document.createElement('button');
-      discard.type = 'button';
-      discard.className = 'btn-utility';
-      discard.style.color = '#C53030';
-      discard.textContent = 'تجاهل';
-      discard.addEventListener('click', async () => {
-        await send({ type: 'PLUS_DISCARD_DRAFT', draftId: draft.id });
-        await reloadAll();
+      const discardBtn = document.createElement('button');
+      discardBtn.type = 'button';
+      discardBtn.className = 'draft-discard-btn';
+      discardBtn.textContent = 'تجاهل';
+      discardBtn.addEventListener('click', async () => {
+        const confirmed = await confirmModal({
+          title: 'تجاهل المسودة؟',
+          copy: 'سيتم حذف هذه المسودة غير المحفوظة نهائياً.',
+          confirmLabel: 'تجاهل'
+        });
+        if (!confirmed) return;
+        discardBtn.disabled = true;
+        try {
+          await send({ type: 'PLUS_DISCARD_DRAFT', draftId: draft.id });
+          showToast('تم تجاهل المسودة');
+          await reloadAll();
+        } catch {
+          showSaveStatus('تعذر تجاهل المسودة. حاول مجدداً.', 'error');
+        } finally {
+          discardBtn.disabled = false;
+        }
       });
-      row.append(save, discard);
-      list.append(row);
+      actions.append(saveBtn, discardBtn);
+      row.append(info, actions);
+      container.append(row);
     }
-    elements.draftBody.append(list);
-    elements.draftSection.classList.remove('hidden');
-  } else {
-    elements.draftSection.classList.add('hidden');
+    elements.draftBody.append(container);
+    elements.draftMeta.textContent = `${drafts.length} مسودة بانتظار الحفظ`;
   }
-  // Entitlement notice
+
+  // Entitlement & Free Tier Upgrade Banner
   const entitlement = plusSettings?.entitlement;
   const isActive = entitlement?.plusEnabled === true;
-  elements.entitlementNotice.classList.toggle('hidden', isActive);
-  if (!isActive) {
-    elements.entitlementNotice.textContent = describeEntitlement(entitlement) || 'يتطلب اشتراك Plus مفعلاً لحفظ الجلسات.';
+
+  if (elements.freeTierUpgradeBanner) {
+    elements.freeTierUpgradeBanner.classList.toggle('hidden', isActive);
   }
+
+  elements.entitlementNotice.classList.add('hidden');
   elements.plusState.textContent = isActive ? 'مفعّل على هذا الجهاز' : describeEntitlement(entitlement) || 'غير مفعّل';
 }
 
@@ -711,6 +705,7 @@ function renderSiteOptions() {
   if (![...elements.filterSite.options].some((option) => option.selected)) {
     elements.filterSite.value = 'all';
   }
+  updateResetVisibility();
 }
 
 function applyFiltersAndSort() {
@@ -742,45 +737,10 @@ function applyFiltersAndSort() {
 // Compact Session Cards
 // ---------------------------------------------------------------------------
 
-function extractYouTubeThumbnail(pageUrl) {
-  if (!pageUrl) return null;
-  try {
-    const url = new URL(pageUrl);
-    if (url.hostname.includes('youtube.com')) {
-      const v = url.searchParams.get('v');
-      if (v && /^[a-zA-Z0-9_-]{6,15}$/.test(v)) {
-        return `https://i.ytimg.com/vi/${v}/hqdefault.jpg`;
-      }
-      const shortsMatch = url.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{6,15})/);
-      if (shortsMatch) {
-        return `https://i.ytimg.com/vi/${shortsMatch[1]}/hqdefault.jpg`;
-      }
-    }
-    if (url.hostname === 'youtu.be') {
-      const id = url.pathname.slice(1).split('?')[0];
-      if (id && /^[a-zA-Z0-9_-]{6,15}$/.test(id)) {
-        return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-      }
-    }
-  } catch {}
-  return null;
-}
-
 function getThumbnailForSession(session) {
-  if (session.thumbnailUrl) return session.thumbnailUrl;
-  const ytThumb = extractYouTubeThumbnail(session.pageUrl);
-  if (ytThumb) return ytThumb;
-
-  const title = (session.title || '').toLowerCase();
-  const origin = (session.siteOrigin || '').toLowerCase();
-
-  if (title.includes('كواكب') || title.includes('شمسية') || title.includes('space')) return 'assets/ref-thumb-space.png';
-  if (title.includes('javascript') || title.includes('كود') || title.includes('code') || title.includes('برمجة') || title.includes('جافا')) return 'assets/ref-thumb-coding.png';
-  if (title.includes('deep learning') || origin.includes('coursera')) return 'assets/ref-thumb-coursera.png';
-  if (title.includes('فنجان') || title.includes('بودكاست') || origin.includes('spotify')) return 'assets/ref-thumb-spotify.png';
-  if (title.includes('مدن') || title.includes('ذكية') || title.includes('city')) return 'assets/ref-thumb-city.png';
-  if (title.includes('تصوير') || title.includes('موبايل') || title.includes('mountains') || origin.includes('vimeo')) return 'assets/ref-thumb-mountains.png';
-
+  // One clearly decorative bundled fallback. Never infer or fabricate a
+  // thumbnail from the saved title/site, and never contact a remote image host.
+  void session;
   return 'assets/thumbnail-fallback.png';
 }
 
@@ -833,7 +793,10 @@ function sessionCard(summary, session) {
     media.append(duration);
   }
 
-  const open = () => openDetail(summary.id);
+  const open = () => {
+    openDetail(summary.id);
+  };
+
   media.style.cursor = 'pointer';
   media.addEventListener('click', open);
 
@@ -903,6 +866,7 @@ function sessionCard(summary, session) {
   const isAudio = host.includes('spotify') || host.includes('podcast') || host.includes('soundcloud');
   const playBtn = document.createElement('button');
   playBtn.type = 'button';
+
   playBtn.className = 'btn-continue-play';
   playBtn.innerHTML = `<span>▶</span> <span>${isAudio ? 'تابع الاستماع' : 'تابع المشاهدة'}</span>`;
   playBtn.addEventListener('click', (e) => {
@@ -991,13 +955,22 @@ function renderList() {
 // Moments view
 // ---------------------------------------------------------------------------
 
-function renderMoments() {
+async function renderMoments() {
   const moments = [];
   for (const session of sessions) {
     for (const bookmark of session.bookmarks || []) {
-      moments.push({ session, bookmark });
+      moments.push({ session, bookmark, isDraft: false });
     }
   }
+  try {
+    const unsaved = await readUnsavedDrafts();
+    for (const draft of unsaved) {
+      for (const bookmark of draft.bookmarks || []) {
+        moments.push({ session: draft, bookmark, isDraft: true });
+      }
+    }
+  } catch {}
+
   moments.sort((a, b) => (b.bookmark.createdAt || 0) - (a.bookmark.createdAt || 0));
 
   if (moments.length) {
@@ -1014,88 +987,130 @@ function renderMoments() {
   }
   elements.momentsEmpty.classList.add('hidden');
 
-  for (const { session, bookmark } of moments) {
+  moments.forEach(({ session, bookmark, isDraft }) => {
     const card = document.createElement('article');
-    card.className = 'panel settings-group-panel moment-card';
+    card.className = 'moment-card';
 
     const head = document.createElement('div');
-    head.className = 'card-meta-row';
+    head.className = 'moment-meta-head';
+
+    const titleGroup = document.createElement('div');
+    titleGroup.className = 'moment-title-group';
 
     const title = document.createElement('h3');
-    title.className = 'card-title';
+    title.className = 'moment-title';
     title.dir = 'auto';
-    title.textContent = session.title;
+    title.textContent = session.title || 'جلسة دبلجة';
+    title.title = session.title || 'جلسة دبلجة';
     title.style.cursor = 'pointer';
-    title.addEventListener('click', () => openDetail(session.id, bookmark.atMs));
+    title.addEventListener('click', () => {
+      openDetail(session.id, bookmark.atMs);
+    });
 
-    const time = document.createElement('span');
-    time.className = 'duration-pill';
-    time.style.position = 'static';
-    time.textContent = formatStamp(bookmark.atMs);
+    const origin = siteLabel(session);
+    if (origin) {
+      const siteBadge = document.createElement('span');
+      siteBadge.className = 'moment-site-pill';
+      siteBadge.textContent = origin;
+      titleGroup.append(siteBadge);
+    }
+    titleGroup.append(title);
 
-    head.append(title, time);
+    const timePill = document.createElement('span');
+    timePill.className = 'moment-time-pill';
+    timePill.textContent = formatStamp(bookmark.atMs);
+
+    head.append(titleGroup, timePill);
+
+    // Look for quote from transcript if note is empty
+    let noteText = bookmark.note;
+    if (!noteText && (session.sourceSegments?.length || session.targetSegments?.length)) {
+      const all = [
+        ...(session.targetSegments || []).map((s) => ({ ...s, isTarget: true })),
+        ...(session.sourceSegments || []).map((s) => ({ ...s, isTarget: false }))
+      ];
+      let closest = all[0];
+      let minD = Math.abs((closest?.startMs || 0) - bookmark.atMs);
+      for (const s of all) {
+        const d = Math.abs((s.startMs || 0) - bookmark.atMs);
+        if (d < minD) {
+          minD = d;
+          closest = s;
+        }
+      }
+      if (closest && closest.text) {
+        noteText = closest.text;
+      }
+    }
 
     const note = document.createElement('p');
-    note.className = 'panel-copy';
-    note.textContent = bookmark.note || 'علامة محفوظة بدون ملاحظة إضافية.';
+    note.className = 'moment-quote-box';
+    note.dir = 'auto';
+    note.textContent = noteText || 'علامة محفوظة أثناء تشغيل الدبلجة.';
 
     // Moment Actions Row
     const actions = document.createElement('div');
     actions.className = 'moment-actions-row';
 
-    // 1. Play Video at Timestamp
-    const playBtn = document.createElement('button');
-    playBtn.type = 'button';
-    playBtn.className = 'btn-continue-play';
-    playBtn.style.padding = '6px 14px';
-    playBtn.style.fontSize = '12px';
-    playBtn.innerHTML = `<span>▶</span> <span>تشغيل عند ${formatStamp(bookmark.atMs)}</span>`;
-    playBtn.addEventListener('click', () => {
-      if (session.pageUrl) {
-        let targetUrl = session.pageUrl;
-        const atSeconds = Math.floor((bookmark.atMs || 0) / 1000);
-        if (targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
-          targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
+    {
+      // 1. Play Video at Timestamp
+      const playBtn = document.createElement('button');
+      playBtn.type = 'button';
+      playBtn.className = 'btn-continue-play';
+      playBtn.style.padding = '7px 15px';
+      playBtn.style.fontSize = '12px';
+      playBtn.innerHTML = `<span>▶</span> <span>تشغيل عند ${formatStamp(bookmark.atMs)}</span>`;
+      playBtn.addEventListener('click', () => {
+        if (session.pageUrl) {
+          let targetUrl = session.pageUrl;
+          const atSeconds = Math.floor((bookmark.atMs || 0) / 1000);
+          if (targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
+            targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
+          }
+          chrome.tabs.create({ url: targetUrl });
+        } else {
+          openDetail(session.id, bookmark.atMs);
         }
-        chrome.tabs.create({ url: targetUrl });
-      } else {
-        openDetail(session.id, bookmark.atMs);
-      }
-    });
+      });
 
-    // 2. View Transcript & Translation
-    const viewBtn = document.createElement('button');
-    viewBtn.type = 'button';
-    viewBtn.className = 'btn-ghost-s';
-    viewBtn.style.padding = '6px 12px';
-    viewBtn.innerHTML = `<span>📄</span> <span>عرض النص والترجمة</span>`;
-    viewBtn.addEventListener('click', () => openDetail(session.id, bookmark.atMs));
+      // 2. View Transcript & Translation
+      const viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'btn-ghost-s';
+      viewBtn.style.padding = '7px 14px';
+      viewBtn.innerHTML = `<span>📄</span> <span>عرض النص والترجمة</span>`;
+      viewBtn.addEventListener('click', () => openDetail(session.id, bookmark.atMs));
 
-    // 3. Delete Bookmark
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'btn-ghost-danger-s';
-    delBtn.style.padding = '6px 10px';
-    delBtn.title = 'حذف هذه العلامة';
-    delBtn.innerHTML = `<span>🗑️</span> <span>حذف</span>`;
-    delBtn.addEventListener('click', async () => {
-      try {
-        await send({
-          type: 'PLUS_DELETE_BOOKMARK',
-          sessionId: session.id,
-          bookmarkId: bookmark.id
+      // 3. Delete Bookmark (only for saved sessions)
+      if (!isDraft) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-ghost-danger-s';
+        delBtn.style.padding = '7px 12px';
+        delBtn.title = 'حذف هذه العلامة';
+        delBtn.innerHTML = `<span>🗑️</span> <span>حذف</span>`;
+        delBtn.addEventListener('click', async () => {
+          try {
+            await send({
+              type: 'PLUS_DELETE_BOOKMARK',
+              sessionId: session.id,
+              bookmarkId: bookmark.id
+            });
+            showToast('تم حذف العلامة');
+            await reloadAll();
+          } catch (err) {
+            showToast(`تعذر حذف العلامة: ${err.message}`, 'error');
+          }
         });
-        showToast('تم حذف العلامة');
-        await reloadAll();
-      } catch (err) {
-        showToast(`تعذر حذف العلامة: ${err.message}`, 'error');
+        actions.append(playBtn, viewBtn, delBtn);
+      } else {
+        actions.append(playBtn, viewBtn);
       }
-    });
+    }
 
-    actions.append(playBtn, viewBtn, delBtn);
     card.append(head, note, actions);
     elements.momentsList.append(card);
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1103,6 +1118,7 @@ function renderMoments() {
 // ---------------------------------------------------------------------------
 
 let noteController = null;
+let detailSearchTimer = null;
 
 async function flushPendingNote() {
   if (!noteController) return true;
@@ -1112,7 +1128,11 @@ async function flushPendingNote() {
 async function openDetail(id, seekMs = null) {
   try {
     if (!(await leaveDetailSafely())) return;
-    const session = await getSavedSession(id);
+    let session = await getSavedSession(id);
+    if (!session) {
+      const drafts = await readUnsavedDrafts();
+      session = drafts.find((d) => d.id === id);
+    }
     if (!session) {
       showToast('لم يتم العثور على هذه الجلسة.', 'error');
       return;
@@ -1168,7 +1188,6 @@ async function openDetail(id, seekMs = null) {
       }, 100);
     }
   } catch (error) {
-    console.error('[dablaja] openDetail failed:', error);
     showToast(`خطأ: ${error.message}`, 'error');
   }
 }
@@ -1223,8 +1242,18 @@ function renderBookmarks(session) {
     time.className = 'btn-utility';
     time.textContent = formatStamp(bookmark.atMs);
     time.addEventListener('click', () => {
-      const row = elements.transcriptView.querySelector(`[data-time="${bookmark.atMs}"]`);
-      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const rows = Array.from(elements.transcriptView.querySelectorAll('.t-row'));
+      if (!rows.length) return;
+      let closest = rows[0];
+      let minDiff = Math.abs(Number(closest.dataset.time || 0) - bookmark.atMs);
+      for (const row of rows) {
+        const diff = Math.abs(Number(row.dataset.time || 0) - bookmark.atMs);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = row;
+        }
+      }
+      closest.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
     const note = document.createElement('span');
@@ -1243,7 +1272,9 @@ elements.notesEditor.addEventListener('input', () => {
 });
 
 elements.detailSearch.addEventListener('input', () => {
-  if (activeDetail) renderTranscript(activeDetail, elements.detailSearch.value.trim());
+  if (!activeDetail) return;
+  clearTimeout(detailSearchTimer);
+  detailSearchTimer = setTimeout(() => renderTranscript(activeDetail, elements.detailSearch.value.trim()), 150);
 });
 
 elements.backToList.addEventListener('click', async () => {
@@ -1381,24 +1412,103 @@ async function renderStorage() {
   elements.storageInfo.textContent = `المساحة المستخدمة حالياً: ${formatBytes(estimate.usageBytes)} عبر ${sessions.length} جلسة.`;
 }
 
+function makeProfileVolumeControl(profile, origin, kind, defaultPercent) {
+  const isOriginal = kind === 'original';
+  const field = isOriginal ? 'originalVolume' : 'dubbedVolume';
+  const max = isOriginal ? 100 : 150;
+  const fallback = Number.isFinite(defaultPercent) ? defaultPercent : (isOriginal ? 25 : 100);
+  const stored = Number(profile[field]);
+  const percent = Number.isFinite(stored)
+    ? Math.max(0, Math.min(max, Math.round(stored * 100)))
+    : fallback;
+
+  const wrap = document.createElement('label');
+  wrap.className = 'profile-volume';
+
+  const name = document.createElement('span');
+  name.className = 'profile-volume-name';
+  name.textContent = isOriginal ? 'الأصلي' : 'الدبلجة';
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = String(max);
+  slider.step = '1';
+  slider.value = String(percent);
+  slider.className = 'profile-volume-slider';
+  slider.setAttribute('aria-label', `${isOriginal ? 'مستوى الصوت الأصلي' : 'مستوى صوت الدبلجة'} — ${origin}`);
+
+  const output = document.createElement('output');
+  output.className = 'profile-volume-value';
+  output.textContent = `${percent}%`;
+
+  slider.addEventListener('input', () => {
+    output.textContent = `${slider.value}%`;
+  });
+  slider.addEventListener('change', async () => {
+    const value = Number(slider.value) / 100;
+    slider.disabled = true;
+    try {
+      const response = await send({
+        type: 'PLUS_UPDATE_SITE_PROFILE',
+        origin,
+        originalVolume: isOriginal ? value : null,
+        dubbedVolume: isOriginal ? null : value
+      });
+      if (response.plus) plusSettings = response.plus;
+      showToast('تم حفظ مستوى الصوت.');
+    } catch (error) {
+      slider.value = String(percent);
+      output.textContent = `${percent}%`;
+      showToast(`فشل الحفظ: ${error.message}`, 'error');
+    } finally {
+      slider.disabled = false;
+    }
+  });
+
+  wrap.append(name, slider, output);
+  return wrap;
+}
+
 async function renderSettings() {
-  const settings = plusSettings?.settings || {};
-  elements.autosaveToggle.checked = settings.autosave !== false;
-  elements.rememberVolumesToggle.checked = settings.rememberVolumes !== false;
+  try {
+    const status = await send({ type: 'PLUS_GET_STATUS' });
+    if (status?.plus) plusSettings = status.plus;
+  } catch {}
 
-  const profiles = plusSettings?.siteProfiles || {};
-  const entries = Object.entries(profiles);
+  elements.rememberVolumesToggle.checked = plusSettings?.rememberVolumes === true;
+  if (elements.localSavingToggle) elements.localSavingToggle.checked = plusSettings?.localSavingEnabled !== false;
+
+  let extSettings = null;
+  try {
+    const res = await send({ type: 'GET_STATE' });
+    extSettings = res?.settings || null;
+  } catch {
+    extSettings = null;
+  }
+
+  if (elements.autoDuckingToggle) {
+    elements.autoDuckingToggle.checked = extSettings?.autoDucking !== false;
+  }
+  if (elements.analyticsToggle) {
+    elements.analyticsToggle.checked = extSettings?.analyticsConsent === true;
+  }
+
+  const profiles = Array.isArray(plusSettings?.siteProfiles) ? plusSettings.siteProfiles : [];
   elements.profileList.replaceChildren();
-  elements.noProfiles.classList.toggle('hidden', entries.length > 0);
+  elements.noProfiles.classList.toggle('hidden', profiles.length > 0);
 
-  for (const [origin, profile] of entries) {
+  for (const profile of profiles) {
+    const origin = String(profile?.origin || '');
+    if (!origin) continue;
     const li = document.createElement('li');
-    li.className = 'switch-row';
-    li.style.padding = '8px 0';
-    li.style.borderBottom = '1px solid var(--border-light)';
+    li.className = 'profile-row';
+
+    const head = document.createElement('div');
+    head.className = 'profile-row-head';
 
     const label = document.createElement('span');
-    label.className = 'switch-head';
+    label.className = 'profile-site';
     label.textContent = SITE_LABELS.get(origin) || origin;
 
     const del = document.createElement('button');
@@ -1412,8 +1522,57 @@ async function renderSettings() {
       await reloadAll();
     });
 
-    li.append(label, del);
+    head.append(label, del);
+
+    const volumes = document.createElement('div');
+    volumes.className = 'profile-volumes';
+    volumes.append(
+      makeProfileVolumeControl(profile, origin, 'original', 25),
+      makeProfileVolumeControl(profile, origin, 'dubbed', 100)
+    );
+
+    li.append(head, volumes);
     elements.profileList.append(li);
+  }
+
+  const isPlus = plusEnabled();
+  if (isPlus) {
+    if (elements.topPlusBadge) {
+      elements.topPlusBadge.innerHTML = '<span>Plus</span><span class="diamond-icon" aria-hidden="true">💎</span>';
+      elements.topPlusBadge.title = 'Plus مدى الحياة مفعّل';
+    }
+    if (elements.plusState) elements.plusState.textContent = 'مفعّل على هذا الجهاز';
+    if (elements.aboutPlusTag) elements.aboutPlusTag.textContent = 'ترخيص مدى الحياة مفعل';
+    if (elements.plusUpgradeBlock) elements.plusUpgradeBlock.classList.add('hidden');
+    if (elements.plusActiveActions) elements.plusActiveActions.classList.remove('hidden');
+  } else {
+    if (elements.topPlusBadge) {
+      elements.topPlusBadge.innerHTML = '<span>الخطة المجانية</span><span class="diamond-icon" aria-hidden="true">✨</span>';
+      elements.topPlusBadge.title = 'النسخة المجانية — انقر للترقية إلى Plus (10$)';
+    }
+    if (elements.plusState) elements.plusState.innerHTML = `مجاني: جلسة واحدة · <bdi>${profiles.length}/1</bdi> موقع`;
+    if (elements.aboutPlusTag) elements.aboutPlusTag.innerHTML = 'النسخة المجانية — جلسة محفوظة واحدة';
+    if (elements.plusUpgradeBlock) elements.plusUpgradeBlock.classList.remove('hidden');
+    if (elements.plusActiveActions) elements.plusActiveActions.classList.add('hidden');
+  }
+
+  const oldBanner = elements.profileList.parentElement.querySelector('.free-limit-banner');
+  if (oldBanner) oldBanner.remove();
+
+  if (!isPlus && profiles.length >= 1) {
+    const upgradeBanner = document.createElement('div');
+    upgradeBanner.className = 'free-limit-banner';
+    upgradeBanner.innerHTML = `
+      <div class="free-limit-content">
+        <strong class="free-limit-title">النسخة المجانية (<bdi>1/1</bdi> موقع محفوظ)</strong>
+        <span class="free-limit-sub">احصل على <bdi>Plus</bdi> لحفظ وتخصيص مستويات الصوت حتى 50 موقع.</span>
+      </div>
+      <button type="button" class="free-limit-btn">ترقية إلى <bdi>Plus</bdi> (<bdi>10$</bdi>)</button>
+    `;
+    upgradeBanner.querySelector('button').addEventListener('click', (e) => {
+      triggerCheckout(e.currentTarget);
+    });
+    elements.profileList.after(upgradeBanner);
   }
 }
 
@@ -1435,14 +1594,17 @@ async function persistPlusToggle(input, messageType, successMessage, statusEleme
   }
 }
 
-elements.autosaveToggle.addEventListener('change', () => persistPlusToggle(
-  elements.autosaveToggle,
-  'PLUS_SET_AUTOSAVE',
-  elements.autosaveToggle.checked
-    ? 'تم تفعيل الحفظ التلقائي عند الإيقاف.'
-    : 'تم إيقاف الحفظ التلقائي.',
-  elements.settingsStatus
-));
+if (elements.autoDuckingToggle) {
+  elements.autoDuckingToggle.addEventListener('change', async () => {
+    try {
+      await send({ type: 'SET_AUTO_DUCKING', enabled: elements.autoDuckingToggle.checked });
+      showToast(elements.autoDuckingToggle.checked ? 'تم تفعيل خفض الصوت الأصلي تلقائياً.' : 'تم إيقاف خفض الصوت الأصلي تلقائياً.');
+    } catch (err) {
+      elements.autoDuckingToggle.checked = !elements.autoDuckingToggle.checked;
+      showToast(`فشل الحفظ: ${err.message}`, 'error');
+    }
+  });
+}
 
 elements.rememberVolumesToggle.addEventListener('change', () => persistPlusToggle(
   elements.rememberVolumesToggle,
@@ -1452,6 +1614,46 @@ elements.rememberVolumesToggle.addEventListener('change', () => persistPlusToggl
     : 'تم إيقاف تطبيق مستويات الصوت المحفوظة.',
   elements.audioStatus
 ));
+
+if (elements.analyticsToggle) {
+  elements.analyticsToggle.addEventListener('change', async () => {
+    const value = elements.analyticsToggle.checked;
+    elements.analyticsToggle.disabled = true;
+    try {
+      await send({ type: 'SET_ANALYTICS_CONSENT', value });
+      showToast(value ? 'تم تفعيل مشاركة الإحصاءات المجهولة.' : 'تم إيقاف مشاركة الإحصاءات.');
+    } catch (error) {
+      elements.analyticsToggle.checked = !value;
+      showToast(`فشل الحفظ: ${error.message}`, 'error');
+    } finally {
+      elements.analyticsToggle.disabled = false;
+    }
+  });
+}
+
+if (elements.localSavingToggle) {
+  elements.localSavingToggle.addEventListener('change', async () => {
+    const value = elements.localSavingToggle.checked;
+    try {
+      const res = await send({ type: 'PLUS_SET_LOCAL_SAVING', value });
+      plusSettings = res.plus;
+      showToast(value ? 'تم تفعيل حفظ الجلسات محلياً' : 'تم إيقاف حفظ الجلسات');
+      const drafts = await readUnsavedDrafts();
+      if (!value && drafts.length) {
+        const confirmed = await confirmModal({ title: 'حذف المسودات المؤقتة؟', copy: 'يوجد مسودات مؤقتة محفوظة. هل تريد حذفها الآن؟ لن يتم حذف الجلسات المحفوظة.', confirmLabel: 'حذف المسودات' });
+        if (confirmed) {
+          for (const d of drafts) await send({ type: 'PLUS_DISCARD_DRAFT', draftId: d.id }).catch(()=>{});
+          await reloadAll();
+        }
+      }
+      await renderSettings();
+      await renderDraftCard();
+    } catch (e) {
+      elements.localSavingToggle.checked = !value;
+      showToast(e?.message || 'تعذر حفظ الاختيار', 'error');
+    }
+  });
+}
 
 async function exportBackupFlow() {
   closeAllDropdowns();
@@ -1506,123 +1708,32 @@ elements.deleteAll.addEventListener('click', async () => {
   await reloadAll();
 });
 
-function generateSampleSessions() {
-  const now = Date.now();
-  const seg = (startMs, durMs, text) => ({
-    id: 'seg_' + Math.random().toString(36).slice(2, 9),
-    startMs,
-    endMs: startMs + durMs,
-    text
-  });
-  const mk = (over) => Object.assign({
-    id: 'plussession_sample' + Math.random().toString(36).slice(2, 9),
-    schemaVersion: 1,
-    title: '', pageUrl: '', siteOrigin: '',
-    saveRequested: true, truncated: false,
-    createdAt: Date.now(), updatedAt: Date.now(), startedAt: Date.now(), endedAt: null,
-    durationMs: 0, sourceSegments: [], targetSegments: [],
-    bookmarks: [], notes: '', originalVolume: null, dubbedVolume: null
-  }, over);
-
-  return [
-    mk({
-      title: 'ماذا تعرف عن الكواكب خارج المجموعة الشمسية؟',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo1',
-      durationMs: 4365000, updatedAt: now - 36e5,
-      sourceSegments: [
-        seg(0, 15000, 'Our solar system began four and a half billion years ago.'),
-        seg(15000, 42000, 'Gravity pulled dust and gas into the sun and the planets.'),
-        seg(2280000, 2301000, 'Mars once had rivers and lakes on its surface.')
-      ],
-      targetSegments: [
-        seg(0, 15000, 'بدأ نظامنا الشمسي قبل أربعة مليارات ونصف المليار سنة.'),
-        seg(15000, 42000, 'جذبت الجاذبية الغبار والغاز لتشكّل الشمس والكواكب.'),
-        seg(2280000, 2301000, 'كان على المريخ أنهار وبحيرات في الماضي.')
-      ],
-      bookmarks: [
-        { id: 'bmk_a1', atMs: 1185000, note: 'قسم المريخ والأنهار القديمة', createdAt: now - 36e5 },
-        { id: 'bmk_a2', atMs: 2400000, note: 'حجم الأرض مقارنة بالمشتري', createdAt: now - 34e5 }
-      ],
-      notes: 'أفضل وثائقي عن الكواكب — مراجعة أجزاء المريخ لاحقاً.'
-    }),
-    mk({
-      title: 'شرح JavaScript من الصفر للمبتدئين',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo4',
-      durationMs: 3378000, updatedAt: now - 864e5,
-      sourceSegments: [
-        seg(0, 25000, 'Variables let us store values in memory.'),
-        seg(920000, 947000, 'Functions are reusable blocks of code.')
-      ],
-      targetSegments: [
-        seg(0, 25000, 'المتغيرات تتيح لنا تخزين القيم في الذاكرة.'),
-        seg(920000, 947000, 'الدوال كتل قابلة لإعادة الاستخدام من الكود.')
-      ],
-      bookmarks: [{ id: 'bmk_c1', atMs: 385000, note: 'شرح الدوال — أعد المشاهدة', createdAt: now - 4 * 864e5 }],
-      notes: 'دورة ممتازة للمراجعة والتطبيق العملي.'
-    }),
-    mk({
-      title: 'Deep Learning Specialization – Andrew Ng',
-      siteOrigin: 'www.coursera.org', pageUrl: 'https://www.coursera.org/learn/machine-learning',
-      durationMs: 8133000, updatedAt: now - 2 * 864e5,
-      sourceSegments: [
-        seg(0, 20000, 'Learning rate controls how fast we move down the gradient.'),
-        seg(3700000, 3731000, 'Feature scaling speeds up convergence dramatically.')
-      ],
-      targetSegments: [
-        seg(0, 20000, 'معدل التعلم يحدد سرعة التحرك نحو الحد الأدنى.'),
-        seg(3700000, 3731000, 'تحجيم الخصائص يسرّع الوصول إلى التقارب بشكل كبير.')
-      ],
-      bookmarks: [{ id: 'bmk_b1', atMs: 905000, note: 'مثال feature scaling', createdAt: now - 26 * 36e5 }],
-      notes: 'ملاحظة: معادلة الـ Gradient Descent في الدقيقة 15.'
-    }),
-    mk({
-      title: 'بودكاست فنجان - هل الذكاء الاصطناعي يهدد وظائفنا؟',
-      siteOrigin: 'open.spotify.com', pageUrl: 'https://open.spotify.com/episode/demo3',
-      durationMs: 2709000, updatedAt: now - 3 * 864e5,
-      sourceSegments: [
-        seg(0, 30000, 'Welcome to the podcast.'),
-        seg(720000, 750000, 'Education will be transformed by large language models.')
-      ],
-      targetSegments: [
-        seg(0, 30000, 'أهلاً بكم في الحلقة الجديدة.'),
-        seg(720000, 750000, 'ستتغير التعليم بفعل النماذج اللغوية الكبيرة.')
-      ],
-      bookmarks: []
-    })
-  ];
-}
-
-if (elements.emptyCta) {
-  elements.emptyCta.addEventListener('click', async () => {
-    elements.emptyCta.disabled = true;
-    elements.emptyCta.textContent = 'جارٍ تحميل الجلسات…';
-    try {
-      const samples = generateSampleSessions();
-      await putSavedSessionBatch(samples);
-      showToast('تمت إضافة الجلسات النموذجية بنجاح!');
-      await reloadAll();
-    } catch (err) {
-      showToast(`فشل التحميل: ${err.message}`, 'error');
-      elements.emptyCta.disabled = false;
-      elements.emptyCta.textContent = 'تحميل جلسات نموذجية لتجربة المكتبة';
-    }
-  });
-}
-
 // ---------------------------------------------------------------------------
 // Search & Filter listeners
 // ---------------------------------------------------------------------------
 
-elements.searchInput.addEventListener('input', renderList);
-elements.sortDate.addEventListener('change', renderList);
-elements.filterDuration.addEventListener('change', renderList);
-elements.filterSite.addEventListener('change', renderList);
+let librarySearchTimer = null;
+elements.searchInput.addEventListener('input', () => {
+  clearTimeout(librarySearchTimer);
+  librarySearchTimer = setTimeout(renderList, 150);
+});
+function updateResetVisibility() {
+  const dirty = elements.sortDate.value !== 'newest' ||
+    elements.filterDuration.value !== 'all' ||
+    elements.filterSite.value !== 'all';
+  elements.resetFilters.classList.toggle('hidden', !dirty);
+}
+
+elements.sortDate.addEventListener('change', () => { updateResetVisibility(); renderList(); });
+elements.filterDuration.addEventListener('change', () => { updateResetVisibility(); renderList(); });
+elements.filterSite.addEventListener('change', () => { updateResetVisibility(); renderList(); });
 elements.resetFilters.addEventListener('click', () => {
   elements.searchInput.value = '';
   activeCategory = 'all';
   elements.sortDate.value = 'newest';
   elements.filterDuration.value = 'all';
   elements.filterSite.value = 'all';
+  updateResetVisibility();
   renderChips();
   renderList();
 });
@@ -1650,7 +1761,146 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
+function openActivationModal() {
+  if (elements.activationModal) {
+    elements.activationModal.classList.remove('hidden');
+    elements.activationStatus?.classList.add('hidden');
+    if (elements.activationInput) {
+      elements.activationInput.value = '';
+      elements.activationInput.focus();
+    }
+  }
+}
+
+function closeActivationModal() {
+  elements.activationModal?.classList.add('hidden');
+}
+
+if (elements.openActivationBtn) {
+  elements.openActivationBtn.addEventListener('click', openActivationModal);
+}
+if (elements.activationCancel) {
+  elements.activationCancel.addEventListener('click', closeActivationModal);
+}
+let checkoutPending = false;
+async function triggerCheckout(buttonEl) {
+  if (checkoutPending) return;
+  checkoutPending = true;
+  if (buttonEl) buttonEl.disabled = true;
+  try {
+    await send({ type: 'PLUS_START_CHECKOUT' });
+  } catch (e) {
+    showToast(e?.message || 'تعذر إنشاء جلسة الدفع. حاول لاحقاً.', 'error');
+  } finally {
+    checkoutPending = false;
+    if (buttonEl) buttonEl.disabled = false;
+  }
+}
+
+if (elements.modalUpgradeCheckoutBtn) {
+  elements.modalUpgradeCheckoutBtn.addEventListener('click', (e) => {
+    triggerCheckout(e.currentTarget);
+  });
+}
+if (elements.upgradeTopBtn) {
+  elements.upgradeTopBtn.addEventListener('click', (e) => {
+    triggerCheckout(e.currentTarget);
+  });
+}
+if (elements.activateTopBtn) {
+  elements.activateTopBtn.addEventListener('click', openActivationModal);
+}
+if (elements.libUpgradeBtn) {
+  elements.libUpgradeBtn.addEventListener('click', (e) => {
+    triggerCheckout(e.currentTarget);
+  });
+}
+if (elements.topPlusBadge) {
+  elements.topPlusBadge.addEventListener('click', (e) => {
+    if (!plusEnabled()) {
+      triggerCheckout(e.currentTarget);
+    }
+  });
+}
+
+if (elements.activationSubmit) {
+  elements.activationSubmit.addEventListener('click', async () => {
+    const code = elements.activationInput?.value.trim().toUpperCase();
+    if (!code) {
+      elements.activationStatus.textContent = 'الرجاء إدخال رمز الاسترداد.';
+      elements.activationStatus.classList.remove('hidden');
+      elements.activationStatus.style.color = '#C53030';
+      return;
+    }
+    if (!RECOVERY_CODE_PATTERN.test(code)) {
+      elements.activationStatus.textContent = 'الصيغة: DABLAJA-XXXXXXXXXXXXXXXXXXXX (من صفحة نجاح الدفع).';
+      elements.activationStatus.classList.remove('hidden');
+      elements.activationStatus.style.color = '#C53030';
+      return;
+    }
+    elements.activationSubmit.disabled = true;
+    elements.activationStatus.textContent = 'جارٍ التحقق من الرمز…';
+    elements.activationStatus.style.color = '#16324f';
+    elements.activationStatus.classList.remove('hidden');
+    try {
+      const res = await send({ type: 'PLUS_RECOVER_LICENSE', code });
+      if (res?.ok) {
+        elements.activationStatus.textContent = 'تم تفعيل ترخيص Plus بنجاح! 🎉';
+        elements.activationStatus.style.color = '#0d6f68';
+        showToast('تم تفعيل dablaja Plus مدى الحياة بنجاح!');
+        setTimeout(() => {
+          closeActivationModal();
+          reloadAll();
+        }, 1200);
+      }
+    } catch (err) {
+      elements.activationStatus.textContent = err.message || 'رمز الاسترداد غير صحيح.';
+      elements.activationStatus.style.color = '#C53030';
+    } finally {
+      elements.activationSubmit.disabled = false;
+    }
+  });
+}
+
+if (elements.activationInput) {
+  elements.activationInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      elements.activationSubmit?.click();
+    }
+  });
+}
+
+// Recovery-code rotation: production controller lives in
+// src/shared/rotation-controller.js so both the real library page and its
+// tests exercise the same implementation.
+const rotationController = createRotationController({
+  elements,
+  send: (msg) => send(msg),
+  clipboard: globalThis.navigator?.clipboard || null,
+  showToast
+});
+rotationController.bind();
+const openRotateRecoveryModal = rotationController.openModal.bind(rotationController);
+const closeRotateRecoveryModal = rotationController.closeModal.bind(rotationController);
+
+if (window.location.hash === '#activate') {
+  openActivationModal();
+}
+
+// Listen for automatic license activation from the service worker polling
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
+    showToast('تم تفعيل dablaja Plus مدى الحياة بنجاح! 🎉');
+    reloadAll().catch(() => undefined);
+  }
+});
+
+updateResetVisibility();
 injectIcons();
 window.reloadAll = reloadAll;
 window.openDetail = openDetail;
+window.openActivationModal = openActivationModal;
+window.openRotateRecoveryModal = openRotateRecoveryModal;
+window.closeRotateRecoveryModal = closeRotateRecoveryModal;
 reloadAll().catch(() => undefined);

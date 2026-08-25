@@ -13,6 +13,9 @@ test('stats page includes the creator review card and bundled avatar', async () 
   assert.match(html, /class="card review-card"/);
   assert.match(html, /src="yzn\.jpg"/);
   assert.match(html, /id="reviewCta"/);
+  assert.match(html, /<span>أرسل رأيك<\/span>/);
+  assert.doesNotMatch(html, /اترك تقييماً/);
+  assert.match(await readFile(path.join(root, 'src', 'stats', 'stats.js'), 'utf8'), /reviewCta\?\.addEventListener\('click', openFeedbackPage\)/);
   assert.match(css, /\.review-card-inner\s*\{/);
   assert.match(css, /\.review-card\s*\{[\s\S]*grid-row:\s*2;/);
   assert.match(css, /@keyframes reviewAttention/);

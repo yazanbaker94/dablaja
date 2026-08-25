@@ -6,6 +6,7 @@ import {
 import {
   buildAudioMessage,
   buildAudioStreamEndMessage,
+  buildLegacySetupMessage,
   buildSetupMessage,
   buildWebSocketUrl,
   classifyConnectionFailure,
@@ -98,12 +99,12 @@ async function cleanup({ preserveSession = false } = {}) {
   if (!preserveSession) session = null;
 }
 
-async function fatal(status, message, diagnosticCode = null) {
+async function fatal(status, message, diagnosticCode = null, errorKind = null) {
   const finalState = session
     ? { ...session.state, status, message, diagnosticCode, sourcePaused: false, outputBufferMs: 0 }
     : publicState({ status, message, diagnosticCode });
   await cleanup();
-  await notify({ type: 'OFFSCREEN_FATAL', status, message, diagnosticCode, state: finalState });
+  await notify({ type: 'OFFSCREEN_FATAL', status, message, diagnosticCode, errorKind, state: finalState });
 }
 
 function flushPendingInput() {
@@ -179,7 +180,7 @@ function scheduleReconnect(failure, immediate = false) {
   session.reconnectAttempt += 1;
   session.reconnectCount += 1;
   if (session.reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {
-    fatal(STATUS.ERROR, 'تعذر استعادة الاتصال بعد عدة محاولات. تحقق من الشبكة وحاول مجدداً.');
+    fatal(STATUS.ERROR, 'تعذر استعادة الاتصال بعد عدة محاولات. تحقق من الشبكة وحاول مجدداً.', null, 'network_error');
     return;
   }
 
@@ -222,16 +223,18 @@ function handleConnectionFailure(details) {
   if (failure.kind === 'normal') {
     scheduleReconnect({ kind: 'network', transient: true });
   } else if (failure.kind === 'invalid_key') {
-    fatal(STATUS.ERROR, 'رفضت Google مفتاح Gemini. غيّر المفتاح أو تأكد من تفعيله.', diagnosticCode);
+    fatal(STATUS.ERROR, 'رفضت Google مفتاح Gemini. غيّر المفتاح أو تأكد من تفعيله.', diagnosticCode, 'api_key_invalid');
   } else if (failure.kind === 'model_unavailable') {
-    fatal(STATUS.ERROR, 'نموذج الترجمة المباشرة غير متاح لهذا المفتاح أو المنطقة حالياً.', diagnosticCode);
+    fatal(STATUS.ERROR, 'نموذج الترجمة المباشرة غير متاح لهذا المفتاح أو المنطقة حالياً.', diagnosticCode, 'model_unavailable');
   } else if (failure.transient) {
     scheduleReconnect(failure);
   } else {
+    const reasonText = String(details.reason || '').replace(/\s+/g, ' ').trim().slice(0, 140);
     fatal(
       STATUS.ERROR,
-      `رفضت Gemini إعداد الجلسة (${diagnosticCode}).`,
-      diagnosticCode
+      `رفضت Gemini إعداد الجلسة (${diagnosticCode}${reasonText ? `: ${reasonText}` : ''}).`,
+      diagnosticCode,
+      'setup_failed'
     );
   }
 }
@@ -321,9 +324,17 @@ function connectSocket() {
 
   const socket = new WebSocket(buildWebSocketUrl(session.apiKey));
   session.socket = socket;
+  // Do NOT reset the setup-shape selector here: the one-shot 1007 fallback
+  // flips setupPrimary before reconnecting and this function must keep that
+  // choice for the retry (and all later reconnects of this session).
+  if (session.setupPrimary == null) session.setupPrimary = true;
+  if (session.setupRetryUsed == null) session.setupRetryUsed = false;
   socket.onopen = () => {
     if (socket !== session?.socket || session.stopping) return;
-    socket.send(JSON.stringify(buildSetupMessage(session.resumptionHandle)));
+    const msg = session.setupPrimary ? buildSetupMessage(session.resumptionHandle) : buildLegacySetupMessage(session.resumptionHandle);
+    socket.send(JSON.stringify(msg));
+    // Record which shape was sent for diagnostics (no key/WSS URL logged)
+    session.lastSetupShape = session.setupPrimary ? 'primary_nested' : 'legacy_root';
   };
   socket.onmessage = async (event) => {
     if (socket !== session?.socket || session.stopping) return;
@@ -344,6 +355,21 @@ function connectSocket() {
   socket.onclose = (event) => {
     clearTimeout(session?.errorWatchdog);
     if (socket !== session?.socket || session?.stopping) return;
+    // Single compatibility retry for setup rejection 1007: flip to the other
+    // transcription-field layout (root <-> nested generationConfig) once.
+    if (event.code === 1007 && !session.setupRetryUsed) {
+      session.setupRetryUsed = true;
+      session.setupPrimary = !session.setupPrimary;
+      // Record safe diagnostic: code + new shape, no key/WSS URL
+      session.lastSetupRetry = { code: event.code, shape: session.setupPrimary ? 'primary_nested' : 'legacy_root', at: Date.now() };
+      closeSocket(socket);
+      // Reconnect with the flipped shape once
+      setTimeout(() => {
+        if (!session || session.stopping) return;
+        connectSocket();
+      }, 250);
+      return;
+    }
     handleConnectionFailure({ code: event.code, reason: event.reason, source: 'socket' });
   };
 }
@@ -417,6 +443,12 @@ async function startSession(message) {
       captionTurnId: 0,
       sourcePaused: false,
       noiseGate: new AdaptiveNoiseGate(),
+      // Setup-shape selection: starts on the ROOT-field transcription shape
+      // (what gemini-3.5-live-translate-preview accepts); a single 1007
+      // compatibility rejection flips to the nested-generationConfig shape
+      // for the retry, covering models that expect the older layout.
+      setupPrimary: false,
+      setupRetryUsed: false,
       originalBaseVolume: Math.max(0, Math.min(1.5, Number(message.originalVolume) || 0)),
       autoDucking: message.autoDucking !== false,
       playbackActive: false,
@@ -477,7 +509,9 @@ async function startSession(message) {
     };
     for (const track of stream.getAudioTracks()) {
       track.addEventListener('ended', () => {
-        if (session && !session.stopping) fatal(STATUS.ERROR, 'توقف التقاط صوت التبويب. ابدأ جلسة جديدة.');
+        if (session && !session.stopping) {
+          fatal(STATUS.ERROR, 'توقف التقاط صوت التبويب. ابدأ جلسة جديدة.', null, 'audio_capture_failed');
+        }
       }, { once: true });
     }
 

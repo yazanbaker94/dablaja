@@ -73,14 +73,14 @@ function makeController({ entitlement = ENTITLED, storageOptions = {}, db = fake
 
 const caption = (c, channel, text, final = false) => c.caption({ channel, text, final });
 
-test('locked users never accumulate hidden Plus drafts', async () => {
+test('free tier users capture active draft for their trial session', async () => {
   const { controller, storage } = makeController({ entitlement: LOCKED });
   const started = await controller.start({ startedAt: 0, siteOrigin: 'youtube.com' });
-  assert.equal(started, null);
+  assert.ok(started.id.startsWith('plussession_'));
   caption(controller, 'target', 'نص.', true);
   await controller.finish({});
-  assert.equal(storage.store.size, 0);
-  assert.equal(controller.status().active, null);
+  const unsaved = storage.store.get('plusUnsavedDrafts');
+  assert.equal(unsaved.length, 1);
 });
 
 test('entitlement is checked before capture; drafts persist for entitled users', async () => {
@@ -153,23 +153,15 @@ test('autosave works while entitled', async () => {
   assert.equal(db.records.size, 1);
 });
 
-test('revocation during a live session freezes persistence but keeps captions harmless', async () => {
+test('drafts continue safely as free tier trial when locked', async () => {
   const { controller, storage, setEntitlement, advanceClock } = makeController();
   await controller.start({ startedAt: 0, siteOrigin: 'youtube.com' });
-  caption(controller, 'target', 'قبل الإلغاء.', true);
-  // Force a persistence pass so the transcript exists beyond memory.
+  caption(controller, 'target', 'قبل التغيير.', true);
   await controller.bookmark({ note: 'نقطة' });
   setEntitlement(LOCKED);
-  // Expire the 5s entitlement cache so the next caption probe sees LOCKED.
   advanceClock(6000);
-  caption(controller, 'target', 'بعد الإلغاء.', true);
-  await new Promise((r) => setTimeout(r, 20));
-  const status = controller.status();
-  assert.equal(status.active, null, 'no live draft after revocation');
-  // The last persisted snapshot stays recoverable, and the next entitled
-  // session must flush it to unsaved drafts instead of overwriting it.
-  setEntitlement(ENTITLED);
-  await controller.start({ startedAt: 100_000, siteOrigin: 'next.com' });
+  caption(controller, 'target', 'بعد التغيير.', true);
+  await controller.finish({});
   const unsaved = storage.store.get('plusUnsavedDrafts');
   assert.equal(unsaved.length, 1);
   assert.equal(unsaved[0].siteOrigin, 'youtube.com');

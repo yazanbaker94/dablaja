@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "dablaja",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "افهم الفيديوهات الإنجليزية مباشرةً بالعربية، بصوت عربي وترجمة ثنائية.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -9,7 +9,8 @@
     "tabCapture",
     "storage",
     "offscreen",
-    "sidePanel"
+    "sidePanel",
+    "alarms"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",

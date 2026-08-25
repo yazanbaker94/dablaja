@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>دبلجة</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../../icons/icon-32.png">
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="wordmark" src="wordmark.png" alt="دبلجة">
+        </div>
+        <button id="topUpgradeBadge" class="top-upgrade-badge" type="button" aria-label="ترقية إلى Plus">
+          <span class="badge-sparkle">💎</span>
+          <span id="topUpgradeBadgeText"><bdi>Plus (10$)</bdi></span>
+        </button>
+      </header>
+
+      <section class="hero">
+        <img class="wave" src="wave.png" alt="">
+        <img class="mascot" src="mascot.png" alt="">
+        <div id="controls" class="hero-actions">
+          <button id="startStop" class="cta start" type="button">
+            <span class="cta-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="cta-label">ابدأ الدبلجة</span>
+          </button>
+          <p id="sessionStatus" class="session-status" role="status" aria-live="polite">أدخل مفتاح Gemini للبدء</p>
+          <button id="quickBookmark" class="quick-bookmark-btn hidden" type="button">
+            <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+            <span>حفظ لحظة مميزة</span>
+          </button>
+          <p id="actionError" class="action-error hidden" role="alert"></p>
+          <p id="keyTestResult" class="test-result hidden" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <div class="dock">
+      <nav class="sheet-tabs" aria-label="الإعدادات">
+        <button id="openAudio" class="sheet-tab" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 9v6h3l4 4V5L7 9H4zm11.5 3a3.5 3.5 0 0 0-2-3.15v6.3A3.5 3.5 0 0 0 15.5 12zM13.5 4.07v2.06A6.5 6.5 0 0 1 18.5 12a6.5 6.5 0 0 1-5 6.87v2.06A8.5 8.5 0 0 0 20.5 12a8.5 8.5 0 0 0-7-7.93z"/></svg>
+          <span data-i18n="audioBalance">الصوت</span>
+        </button>
+        <button id="openKey" class="sheet-tab" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M7.5 14.5A4.5 4.5 0 1 1 12 10h8v3h-2v3h-3v-3h-3.1A4.5 4.5 0 0 1 7.5 14.5zm0-3A1.5 1.5 0 1 0 9 13a1.5 1.5 0 0 0-1.5-1.5z"/></svg>
+          <span data-i18n="geminiKey">مفتاح API</span>
+        </button>
+        <button id="openStats" class="sheet-tab" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M5 19V9h3v10zm6 0V5h3v14zm6 0v-6h3v6z"/></svg>
+          <span data-i18n="usageStats">الإحصائيات</span>
+        </button>
+        <button id="openLibrary" class="sheet-tab" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 4h5v16H4zm7 0h5v16h-5zm7 .5 2.4.6-3.9 15-2.4-.6z"/></svg>
+          <span>Plus</span>
+        </button>
+      </nav>
+
+      <section id="audioOverlay" class="sheet hidden" aria-labelledby="audioTitle">
+        <div class="sheet-head">
+          <h2 id="audioTitle">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 9v6h3l4 4V5L7 9H4zm11.5 3a3.5 3.5 0 0 0-2-3.15v6.3A3.5 3.5 0 0 0 15.5 12z"/></svg>
+            <span data-i18n="audioBalance">الصوت</span>
+          </h2>
+        </div>
+        <div class="volume-block">
+          <div class="volume-top"><output id="dubbedOutput">١٠٠٪</output><label for="dubbedVolume" data-i18n="dubbedAudio">الصوت العربي</label></div>
+          <input id="dubbedVolume" type="range" min="0" max="150" step="1" value="100">
+          <div class="ticks"><span>٠٪</span><span>٧٥٪</span><span>١٥٠٪</span></div>
+        </div>
+        <div class="volume-block">
+          <div class="volume-top"><output id="originalOutput">٢٥٪</output><label for="originalVolume" data-i18n="originalAudio">الصوت الأصلي</label></div>
+          <input id="originalVolume" type="range" min="0" max="100" step="1" value="25">
+          <div class="ticks"><span>٠٪</span><span>٥٠٪</span><span>١٠٠٪</span></div>
+        </div>
+        <label class="switch-row">
+          <input id="autoDucking" type="checkbox" checked>
+          <span class="switch-ui" aria-hidden="true"></span>
+          <span data-i18n="autoDucking">خفض الصوت الأصلي تلقائياً</span>
+        </label>
+      </section>
+
+      <section id="keyOverlay" class="sheet hidden" aria-labelledby="keyTitle">
+        <div class="sheet-head">
+          <h2 id="keyTitle">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M7.5 14.5A4.5 4.5 0 1 1 12 10h8v3h-2v3h-3v-3h-3.1A4.5 4.5 0 0 1 7.5 14.5zm0-3A1.5 1.5 0 1 0 9 13a1.5 1.5 0 0 0-1.5-1.5z"/></svg>
+            <span data-i18n="geminiKey">مفتاح API</span>
+          </h2>
+        </div>
+        <p class="sheet-hint" data-i18n="keyHint">ألصق مفتاح Gemini الخاص بك لبدء الدبلجة. لا يُرسل الصوت إلا بعد ضغط «ابدأ الدبلجة».</p>
+        <div class="key-row">
+          <input id="apiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ألصق المفتاح هنا" data-i18n-placeholder="pasteKey">
+          <button id="toggleKey" class="eye-button" type="button" aria-label="إظهار">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 5c5.2 0 9.3 3.4 10.7 7-1.4 3.6-5.5 7-10.7 7S2.7 15.6 1.3 12C2.7 8.4 6.8 5 12 5zm0 3.2A3.8 3.8 0 1 0 15.8 12 3.8 3.8 0 0 0 12 8.2z"/></svg>
+          </button>
+        </div>
+        <p class="gemini-disclosure">
+          <span data-i18n="geminiDisclosure">عند بدء الدبلجة يُرسل صوت التبويب ونصوصه مباشرةً إلى Google Gemini أثناء الجلسة. يُحفظ المفتاح على هذا الجهاز فقط، ولا يصل الصوت أو النص إلى AudioFetcher.</span>
+          <a href="../../privacy.html" target="_blank" rel="noopener" data-i18n="privacyPolicy">سياسة الخصوصية</a>
+        </p>
+        <p id="keyError" class="error-text hidden" role="alert"></p>
+        <button id="saveKey" class="save-button" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7zm-1 16H6V5h9v4h4z"/></svg>
+          <span data-i18n="saveKey">حفظ</span>
+        </button>
+        <p class="or-label" data-i18n="or">أو</p>
+        <button id="clearKey" class="delete-button" type="button">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6 7h12l-1 14H7zm3-3h6l1 2H8z"/></svg>
+          <span data-i18n="deleteKey">حذف المفتاح</span>
+        </button>
+      </section>
+      </div>
+    </main>
+
+    <div id="upgradeModal" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <button id="modalCloseX" class="modal-close-x" type="button" aria-label="إغلاق">✕</button>
+        <div class="modal-badge">💎 <bdi>dablaja Plus</bdi> · <bdi>10$</bdi> مدى الحياة</div>
+        <h3 id="upgradeModalTitle">ترقية إلى <bdi>dablaja Plus</bdi></h3>
+        <p id="upgradeModalBody">النسخة المجانية تحفظ جلسة واحدة وعلامة واحدة وموقعاً واحداً للتجربة. احصل على <bdi>Plus</bdi> لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وحتى 50 موقعاً.</p>
+        <ul class="modal-features">
+          <li><span>✓</span> حتى 500 جلسة مع النص الأصلي والترجمة العربية</li>
+          <li><span>✓</span> علامات ولحظات ومستويات صوت لكل موقع</li>
+          <li><span>✓</span> تصدير واستيراد النسخ الاحتياطية</li>
+        </ul>
+        <button id="upgradeCheckoutBtn" class="btn-upgrade" type="button">ترقية الآن · <bdi>10$</bdi> دفعة واحدة</button>
+        <div class="modal-footer-row">
+          <a id="alreadyPurchasedLink" href="#" class="modal-link">تفعيل ترخيص مسبق</a>
+          <span class="modal-dot">·</span>
+          <button id="dismissUpgradeBtn" class="btn-dismiss" type="button">لاحقاً</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../library/preview-mock.js"></script>
+    <script src="popup-preview-mock.js"></script>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

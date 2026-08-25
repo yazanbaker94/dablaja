@@ -13,6 +13,10 @@
         <div class="brand">
           <img class="wordmark" src="wordmark.png" alt="دبلجة">
         </div>
+        <button id="topUpgradeBadge" class="top-upgrade-badge" type="button" aria-label="ترقية إلى Plus">
+          <span class="badge-sparkle">💎</span>
+          <span id="topUpgradeBadgeText"><bdi>Plus (10$)</bdi></span>
+        </button>
       </header>
 
       <section class="hero">
@@ -23,24 +27,12 @@
             <span class="cta-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <span class="cta-label">ابدأ الدبلجة</span>
           </button>
+          <p id="sessionStatus" class="session-status" role="status" aria-live="polite">أدخل مفتاح Gemini للبدء</p>
           <button id="quickBookmark" class="quick-bookmark-btn hidden" type="button">
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
-            <span>حفظ علامة للحظة الحالية 🔖</span>
+            <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+            <span>حفظ لحظة مميزة</span>
           </button>
           <p id="actionError" class="action-error hidden" role="alert"></p>
-          <p id="keyTestResult" class="test-result hidden" aria-live="polite"></p>
-        </div>
-      </section>
-
-      <section id="analyticsNotice" class="analytics-notice hidden" aria-labelledby="analyticsTitle">
-        <div>
-          <strong id="analyticsTitle">ساهم في أرقام dablaja</strong>
-          <p>بموافقتك نرسل مدة الدبلجة وفئة الموقع فقط (YouTube أو X أو Twitch أو أخرى) لعرض أرقام مجمّعة، ورمزاً تقنياً عند فشل الجلسة. لا نرسل الرابط أو العنوان أو الصوت أو النصوص أو المفتاح.</p>
-        </div>
-        <div class="analytics-actions">
-          <button id="acceptAnalytics" class="analytics-accept" type="button">موافق</button>
-          <button id="declineAnalytics" class="analytics-decline" type="button">لا أوافق</button>
-          <a href="https://audiofetcher.com/dablaja/privacy.html" target="_blank" rel="noopener">التفاصيل</a>
         </div>
       </section>
 
@@ -95,17 +87,17 @@
             <span data-i18n="geminiKey">مفتاح API</span>
           </h2>
         </div>
-        <p class="sheet-hint" data-i18n="keyHint">ألصق مفتاح API الخاص بك للوصول إلى ميزات دبلجة أكثر.</p>
-        <label class="consent-row" for="geminiConsent">
-          <input id="geminiConsent" type="checkbox">
-          <span data-i18n="consent">أوافق على إرسال صوت التبويب والنصوص المؤقتة مباشرةً إلى Google Gemini لإنتاج الدبلجة والترجمة. لا تحفظ دبلجة الصوت أو النصوص إلا إذا اخترت حفظ جلسة في Plus.</span>
-        </label>
+        <p class="sheet-hint" data-i18n="keyHint">ألصق مفتاح Gemini الخاص بك لبدء الدبلجة. لا يُرسل الصوت إلا بعد ضغط «ابدأ الدبلجة».</p>
         <div class="key-row">
           <input id="apiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ألصق المفتاح هنا" data-i18n-placeholder="pasteKey">
           <button id="toggleKey" class="eye-button" type="button" aria-label="إظهار">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 5c5.2 0 9.3 3.4 10.7 7-1.4 3.6-5.5 7-10.7 7S2.7 15.6 1.3 12C2.7 8.4 6.8 5 12 5zm0 3.2A3.8 3.8 0 1 0 15.8 12 3.8 3.8 0 0 0 12 8.2z"/></svg>
           </button>
         </div>
+        <p class="gemini-disclosure">
+          <span data-i18n="geminiDisclosure">عند بدء الدبلجة يُرسل صوت التبويب ونصوصه مباشرةً إلى Google Gemini أثناء الجلسة. يُحفظ المفتاح على هذا الجهاز فقط، ولا يصل الصوت أو النص إلى AudioFetcher.</span>
+          <a href="../../privacy.html" target="_blank" rel="noopener" data-i18n="privacyPolicy">سياسة الخصوصية</a>
+        </p>
         <p id="keyError" class="error-text hidden" role="alert"></p>
         <button id="saveKey" class="save-button" type="button">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7zm-1 16H6V5h9v4h4z"/></svg>
@@ -116,17 +108,31 @@
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M6 7h12l-1 14H7zm3-3h6l1 2H8z"/></svg>
           <span data-i18n="deleteKey">حذف المفتاح</span>
         </button>
-        <button id="openFeedback" class="save-button" type="button" style="margin-top:10px;background:#eef3f7;color:#16324f">
-          أرسل ملاحظة
-        </button>
-        <button id="changeAnalytics" class="delete-button" type="button">إعدادات مشاركة الإحصاءات</button>
       </section>
-
       </div>
-
-      <button id="openPanel" class="hidden" type="button">Captions</button>
-      <button id="openDiagnostics" class="hidden" type="button">Diagnostics</button>
     </main>
+
+    <div id="upgradeModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="upgradeModalTitle">
+      <div class="modal-dialog">
+        <button id="modalCloseX" class="modal-close-x" type="button" aria-label="إغلاق">✕</button>
+        <div class="modal-badge">💎 <bdi>dablaja Plus</bdi> · <bdi>10$</bdi> مدى الحياة</div>
+        <h3 id="upgradeModalTitle">ترقية إلى <bdi>dablaja Plus</bdi></h3>
+        <p id="upgradeModalBody">الخطة المجانية تحفظ جلسة واحدة. افتح Plus لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وحتى 50 موقعاً. النص الأصلي والترجمة العربية فقط — الصوت لا يُحفظ أبداً. ترخيص مدى الحياة بدفعة واحدة 10$ يخضع لشروط الاسترداد والإلغاء وتوفر الخدمة.</p>
+        <ul class="modal-features">
+          <li><span>✓</span> حتى 500 جلسة مع النص الأصلي والترجمة العربية</li>
+          <li><span>✓</span> حتى 100 علامة لكل جلسة مع القفز للوقت</li>
+          <li><span>✓</span> حتى 50 ملف موقع لتذكر مستويات الصوت</li>
+          <li><span>✓</span> تصدير واستيراد بأمان — الصوت لا يُحفظ أبداً</li>
+        </ul>
+        <button id="upgradeCheckoutBtn" class="btn-upgrade" type="button">ترقية الآن · <bdi>10$</bdi> دفعة واحدة</button>
+        <div class="modal-footer-row">
+          <a id="alreadyPurchasedLink" href="#" class="modal-link">تفعيل ترخيص مسبق</a>
+          <span class="modal-dot">·</span>
+          <button id="dismissUpgradeBtn" class="btn-dismiss" type="button">لاحقاً</button>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="popup.js"></script>
   </body>
 </html>

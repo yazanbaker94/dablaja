@@ -5,7 +5,6 @@
 
 (() => {
   const STORAGE_KEY = 'dablaja-preview-store';
-  const SEED_FLAG = 'dablaja-preview-seeded-v6';
 
   const persisted = (() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
@@ -53,155 +52,159 @@
     }
   });
 
+  if (!persisted.siteProfiles) persisted.siteProfiles = [];
+  if (!persisted.extSettings) {
+    persisted.extSettings = {
+      originalVolume: 0.25,
+      dubbedVolume: 1.0,
+      autoDucking: true,
+      analyticsConsent: false
+    };
+  }
+  if (!persisted.plus) {
+    persisted.plus = {
+      entitlement: {
+        plusEnabled: false,
+        state: 'free',
+        label: 'الخطة المجانية (موقع واحد / جلسة واحدة)'
+      },
+      rememberVolumes: true,
+      localSavingEnabled: true
+    };
+  }
+  if (typeof persisted.plus.localSavingEnabled !== 'boolean') persisted.plus.localSavingEnabled = true;
+  if (typeof persisted.extSettings.analyticsConsent !== 'boolean') persisted.extSettings.analyticsConsent = false;
+  delete persisted.plus.autosave;
+  delete persisted.privacyConsentAt;
+
+  if (!persisted.geminiApiKey) persisted.geminiApiKey = 'AIzaSyMockKeyForTesting12345';
+
+  const extSettings = persisted.extSettings;
   const status = {
     ok: true,
-    plus: {
-      entitlement: {
-        plusEnabled: true,
-        state: 'active',
-        label: 'مفعّل على هذا الجهاز'
-      },
-      settings: {
-        autosave: true,
-        rememberVolumes: true
-      },
-      siteProfiles: {
-        'www.youtube.com': { origin: 'www.youtube.com', originalVolume: 20, dubbedVolume: 110, updatedAt: Date.now() - 36e5 },
-        'open.spotify.com': { origin: 'open.spotify.com', originalVolume: 35, dubbedVolume: 100, updatedAt: Date.now() - 9e7 }
-      }
+    get plus() {
+      return {
+        ...persisted.plus,
+        siteProfiles: persisted.siteProfiles
+      };
     },
     draft: null,
     storageWarning: null
   };
+  // Test/inspection hooks (preview only).
+  window.__previewStatus = status;
+  window.__previewMessages = [];
+
+  const localStorageArea = makeArea(persisted);
+  const sessionStorageArea = makeArea(sessionStore);
 
   window.chrome = {
+    storage: {
+      local: localStorageArea,
+      session: sessionStorageArea
+    },
+    tabs: {
+      query: () => Promise.resolve([{ id: 1, url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'YouTube Video' }]),
+      create: (props) => Promise.resolve({ id: 99, url: props?.url })
+    },
+    tabCapture: {
+      getMediaStreamId: () => Promise.resolve('mock-tab-stream-id')
+    },
     runtime: {
       lastError: null,
       sendMessage: (message) => {
+        window.__previewMessages.push(message);
+        if (message && message.type === 'GET_STATE') {
+          return Promise.resolve({
+            ok: true,
+            state: { status: persisted.dubbingStatus || 'stopped' },
+            settings: { ...extSettings, hasKey: true },
+            plus: status.plus
+          });
+        }
+        if (message && message.type === 'START_SESSION') {
+          persisted.dubbingStatus = 'translating';
+          persist();
+          return Promise.resolve({ ok: true, state: { status: 'translating' } });
+        }
+        if (message && message.type === 'STOP_SESSION') {
+          persisted.dubbingStatus = 'stopped';
+          persist();
+          return Promise.resolve({ ok: true, state: { status: 'stopped' } });
+        }
+        if (message && message.type === 'PLUS_SET_ENTITLEMENT') {
+          persisted.plus.entitlement = message.entitlement;
+          persist();
+          return Promise.resolve({ ok: true, plus: status.plus });
+        }
+        if (message && message.type === 'SET_VOLUME') {
+          if (message.kind === 'original') extSettings.originalVolume = Number(message.value) || 0.25;
+          if (message.kind === 'dubbed') extSettings.dubbedVolume = Number(message.value) || 1.0;
+          if (message.origin && persisted.plus.rememberVolumes) {
+            const isFree = !persisted.plus.entitlement?.plusEnabled;
+            const existing = persisted.siteProfiles.find((p) => p.origin === message.origin);
+            if (!existing && isFree && persisted.siteProfiles.length >= 1) {
+              persist();
+              return Promise.resolve({ ok: true, value: message.value, plus: status.plus, upgradeRequired: true, limitReached: true });
+            }
+            const record = {
+              origin: message.origin,
+              originalVolume: message.kind === 'original' ? (Number(message.value) || 0.25) : (existing?.originalVolume ?? 0.25),
+              dubbedVolume: message.kind === 'dubbed' ? (Number(message.value) || 1.0) : (existing?.dubbedVolume ?? 1.0),
+              updatedAt: Date.now()
+            };
+            persisted.siteProfiles = existing
+              ? persisted.siteProfiles.map((p) => (p.origin === message.origin ? record : p))
+              : [...persisted.siteProfiles, record];
+            persist();
+          }
+          persist();
+          return Promise.resolve({ ok: true, value: message.value, plus: status.plus });
+        }
+        if (message && message.type === 'SET_AUTO_DUCKING') {
+          extSettings.autoDucking = message.enabled === true;
+          persist();
+          return Promise.resolve({ ok: true, value: extSettings.autoDucking });
+        }
         if (message && message.type === 'PLUS_GET_STATUS') return Promise.resolve({ ...status });
-        if (message && message.type === 'PLUS_SET_AUTOSAVE') {
-          status.plus.settings.autosave = message.value;
-          return Promise.resolve({ ok: true });
+        if (message && message.type === 'SET_ANALYTICS_CONSENT') {
+          extSettings.analyticsConsent = message.value === true;
+          persist();
+          return Promise.resolve({ ok: true, settings: { ...extSettings, hasKey: true } });
+        }
+        if (message && message.type === 'PLUS_SET_LOCAL_SAVING') {
+          persisted.plus.localSavingEnabled = message.value === true;
+          persist();
+          return Promise.resolve({ ok: true, plus: status.plus });
         }
         if (message && message.type === 'PLUS_SET_REMEMBER_VOLUMES') {
-          status.plus.settings.rememberVolumes = message.value;
-          return Promise.resolve({ ok: true });
+          persisted.plus.rememberVolumes = message.value === true;
+          persist();
+          return Promise.resolve({ ok: true, plus: status.plus });
         }
         if (message && message.type === 'PLUS_DELETE_SITE_PROFILE') {
-          delete status.plus.siteProfiles[message.origin];
-          return Promise.resolve({ ok: true });
+          persisted.siteProfiles = persisted.siteProfiles.filter((p) => p.origin !== message.origin);
+          persist();
+          return Promise.resolve({ ok: true, plus: status.plus });
+        }
+        if (message && message.type === 'PLUS_UPDATE_SITE_PROFILE') {
+          const existing = persisted.siteProfiles.find((p) => p.origin === message.origin);
+          const record = {
+            origin: message.origin,
+            originalVolume: message.originalVolume ?? existing?.originalVolume ?? null,
+            dubbedVolume: message.dubbedVolume ?? existing?.dubbedVolume ?? null,
+            updatedAt: Date.now()
+          };
+          persisted.siteProfiles = existing
+            ? persisted.siteProfiles.map((p) => (p.origin === message.origin ? record : p))
+            : [...persisted.siteProfiles, record];
+          persist();
+          return Promise.resolve({ ok: true, plus: status.plus });
         }
         return Promise.resolve({ ok: true });
       },
       onMessage: { addListener() {}, removeListener() {} },
       getURL: (path) => new URL(path.replace(/^\//, ''), '../../').href
-    },
-    storage: {
-      local: makeArea(persisted),
-      session: makeArea(sessionStore),
-      sync: makeArea({})
-    },
-    tabs: { create: ({ url }) => { try { window.open(url, '_blank'); } catch {} return Promise.resolve(); } }
+    }
   };
-
-  // ----- Demo data (mirrors the reference design: same shows/sites mix) -----
-  const seg = (startMs, durMs, text) => ({
-    id: 'seg_' + Math.random().toString(36).slice(2, 9),
-    startMs,
-    endMs: startMs + durMs,
-    text
-  });
-  const mk = (over) => Object.assign({
-    id: 'plussession_demo' + Math.random().toString(36).slice(2, 9),
-    schemaVersion: 1,
-    title: '', pageUrl: '', siteOrigin: '',
-    saveRequested: true, truncated: false,
-    createdAt: Date.now(), updatedAt: Date.now(), startedAt: Date.now(), endedAt: null,
-    durationMs: 0, sourceSegments: [], targetSegments: [],
-    bookmarks: [], notes: '', originalVolume: null, dubbedVolume: null
-  }, over);
-
-  const now = Date.now();
-  const sessions = [
-    mk({
-      title: 'ماذا تعرف عن الكواكب خارج المجموعة الشمسية؟',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo1',
-      durationMs: 4365000, updatedAt: now - 36e5,
-      sourceSegments: [seg(0, 15000, 'Our solar system began four and a half billion years ago.'), seg(15000, 42000, 'Gravity pulled dust and gas into the sun and the planets.'), seg(2280000, 2301000, 'Mars once had rivers and lakes on its surface.')],
-      targetSegments: [seg(0, 15000, 'بدأ نظامنا الشمسي قبل أربعة مليارات ونصف المليار سنة.'), seg(15000, 42000, 'جذبت الجاذبية الغبار والغاز لتشكّل الشمس والكواكب.'), seg(2280000, 2301000, 'كان على المريخ أنهار وبحيرات في الماضي.')],
-      bookmarks: [
-        { id: 'bmk_a1', atMs: 1185000, note: 'قسم المريخ والأنهار القديمة', createdAt: now - 36e5 },
-        { id: 'bmk_a2', atMs: 2400000, note: 'حجم الأرض مقارنة بالمشتري', createdAt: now - 34e5 }
-      ],
-      notes: 'أفضل وثائقي عن الكواكب — أكمل الباقي نهاية الأسبوع.'
-    }),
-    mk({
-      title: 'شرح JavaScript من الصفر للمبتدئين',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo4',
-      durationMs: 3378000, updatedAt: now - 864e5,
-      sourceSegments: [seg(0, 25000, 'Variables let us store values in memory.'), seg(920000, 947000, 'Functions are reusable blocks of code.')],
-      targetSegments: [seg(0, 25000, 'المتغيرات تتيح لنا تخزين القيم في الذاكرة.'), seg(920000, 947000, 'الدوال كتل قابلة لإعادة الاستخدام من الكود.')],
-      bookmarks: [{ id: 'bmk_c1', atMs: 385000, note: 'شرح الدوال — أعد المشاهدة', createdAt: now - 4 * 864e5 }]
-    }),
-    mk({
-      title: 'Deep Learning Specialization – Andrew Ng',
-      siteOrigin: 'www.coursera.org', pageUrl: 'https://www.coursera.org/learn/machine-learning',
-      durationMs: 8133000, updatedAt: now - 2 * 864e5,
-      sourceSegments: [seg(0, 20000, 'Learning rate controls how fast we move down the gradient.'), seg(3700000, 3731000, 'Feature scaling speeds up convergence dramatically.')],
-      targetSegments: [seg(0, 20000, 'معدل التعلم يحدد سرعة التحرك نحو الحد الأدنى.'), seg(3700000, 3731000, 'تحجيم الخصائص يسرّع الوصول إلى التقارب بشكل كبير.')],
-      bookmarks: [{ id: 'bmk_b1', atMs: 905000, note: 'مثال feature scaling', createdAt: now - 26 * 36e5 }]
-    }),
-    mk({
-      title: 'بودكاست فنجان - هل الذكاء الاصطناعي يهدد وظائفنا؟',
-      siteOrigin: 'open.spotify.com', pageUrl: 'https://open.spotify.com/episode/demo3',
-      durationMs: 2709000, updatedAt: now - 3 * 864e5,
-      sourceSegments: [seg(0, 30000, 'Welcome to the podcast.'), seg(720000, 750000, 'Education will be transformed by large language models.')],
-      targetSegments: [seg(0, 30000, 'أهلاً بكم في الحلقة الجديدة.'), seg(720000, 750000, 'ستتغير التعليم بفعل النماذج اللغوية الكبيرة.')],
-      bookmarks: []
-    }),
-    mk({
-      title: 'مستقبل المدن الذكية',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo6',
-      durationMs: 1994000, updatedAt: now - 4 * 864e5,
-      sourceSegments: [seg(0, 12000, 'A quiet morning in the city.'), seg(1300000, 1330000, 'Sensors manage traffic in real time.')],
-      targetSegments: [seg(0, 12000, 'صباح هادئ في المدينة.'), seg(1300000, 1330000, 'المستشعرات تدير حركة السير لحظياً.')],
-      bookmarks: []
-    }),
-    mk({
-      title: 'تعلم التصوير بالموبايل',
-      siteOrigin: 'www.youtube.com', pageUrl: 'https://www.youtube.com/watch?v=demo5',
-      durationMs: 1124000, updatedAt: now - 5 * 864e5,
-      sourceSegments: [seg(0, 18000, 'Composition rules apply to phones too.')],
-      targetSegments: [seg(0, 18000, 'قواعد التكوين تنطبق على الجوال أيضاً.')],
-      bookmarks: [{ id: 'bmk_d1', atMs: 5000, note: 'قاعدة الأثلاث', createdAt: now - 15 * 864e5 }]
-    })
-  ];
-
-  function autoSeed() {
-    const request = indexedDB.open('dablaja-plus', 1);
-    request.onupgradeneeded = () => {
-      const store = request.result.createObjectStore('sessions', { keyPath: 'id' });
-      store.createIndex('updatedAt', 'updatedAt');
-    };
-    request.onsuccess = () => {
-      const db = request.result;
-      const tx = db.transaction('sessions', 'readwrite');
-      const store = tx.objectStore('sessions');
-      const countReq = store.count();
-      countReq.onsuccess = () => {
-        if (countReq.result === 0) {
-          for (const record of sessions) store.put(record);
-          tx.oncomplete = () => {
-            if (typeof window.reloadAll === 'function') {
-              window.reloadAll();
-            } else {
-              location.reload();
-            }
-          };
-        }
-      };
-    };
-  }
-
-  autoSeed();
 })();

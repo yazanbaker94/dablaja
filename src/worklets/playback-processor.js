@@ -1,4 +1,4 @@
-import { AdaptiveBufferPolicy } from '../shared/audio-control.js';
+import { AdaptiveBufferPolicy, calculateTailFade } from '../shared/audio-control.js';
 import { alignPcm16Bytes } from '../shared/audio-utils.js';
 
 class PlaybackProcessor extends AudioWorkletProcessor {
@@ -132,7 +132,11 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         }
         this.drySamples = 0;
         if (this.envelope < 1) this.envelope = Math.min(1, this.envelope + 1 / this.fadeSamples);
-        output[index] = sample * this.envelope;
+        // Fade the final 12 ms of a drained burst toward silence. Without this,
+        // the last non-zero PCM sample could be followed by an abrupt zero when
+        // the network queue runs dry, producing an audible click.
+        const tailEnvelope = calculateTailFade(this.queuedSamples, this.fadeSamples);
+        output[index] = sample * Math.min(this.envelope, tailEnvelope);
       }
     }
 

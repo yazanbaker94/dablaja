@@ -89,11 +89,25 @@ test('reconnect duplicate of the last finalized segment is dropped', () => {
   const draft = createDraft({ startedAt: 0 });
   appendCaption(draft, { channel: 'source', text: 'Repeated turn.', atMs: 100 });
   assert.equal(draft.sourceSegments.length, 1);
-  // Simulate resumption re-emitting the same finalized turn.
-  appendCaption(draft, { channel: 'source', text: 'Repeated turn.', atMs: 5000, final: true });
+  // Simulate resumption re-emitting the same finalized turn immediately.
+  appendCaption(draft, { channel: 'source', text: 'Repeated turn.', atMs: 700, final: true });
   assert.equal(draft.sourceSegments.length, 1);
   appendCaption(draft, { channel: 'source', text: 'New turn.', atMs: 6000 });
   assert.equal(draft.sourceSegments.length, 2);
+});
+
+test('identical repeated utterances far apart are NOT dropped as duplicates', () => {
+  const draft = createDraft({ startedAt: 0 });
+  appendCaption(draft, { channel: 'source', text: 'Yeah.', atMs: 1000, final: true });
+  appendCaption(draft, { channel: 'source', text: 'Yeah.', atMs: 300_000, final: true });
+  assert.equal(draft.sourceSegments.length, 2, 'a genuine repeat five minutes later is kept');
+});
+
+test('same turnId re-emission is dropped regardless of timing', () => {
+  const draft = createDraft({ startedAt: 0 });
+  appendCaption(draft, { channel: 'source', text: 'Hello there.', atMs: 1000, final: true, turnId: 7 });
+  appendCaption(draft, { channel: 'source', text: 'Hello there.', atMs: 400_000, final: true, turnId: 7 });
+  assert.equal(draft.sourceSegments.length, 1);
 });
 
 test('snapshotDraft saves a finalized copy while the live draft continues', () => {

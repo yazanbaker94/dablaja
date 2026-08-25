@@ -160,23 +160,45 @@
         </dl>
       </section>
 
-      <section class="card review-card" id="reviewCard" aria-labelledby="reviewTitle">
-        <div class="review-card-inner">
-          <img class="review-avatar" src="yzn.jpg" alt="Yaz" width="72" height="72">
-          <div class="review-copy">
-            <p class="review-intro" id="reviewTitle">أنا <strong>يزن</strong>، صانع دبلجة.</p>
-            <p class="review-text">إذا كانت الدبلجة العربية مفيدة لك، أرسل ملاحظتك أو اترك تقييماً يساعد الآخرين على اكتشافها.</p>
-            <p class="review-emphasis">رأيك بساعد أكثر مما تتخيل!</p>
+      <div class="action-cards-row">
+        <section class="card review-card" id="reviewCard" aria-labelledby="reviewTitle">
+          <div class="review-card-inner">
+            <img class="review-avatar" src="yzn.jpg" alt="Yaz" width="72" height="72">
+            <div class="review-copy">
+              <p class="review-intro" id="reviewTitle">أنا <strong>يزن</strong>، صانع دبلجة.</p>
+              <p class="review-text">إذا كانت الدبلجة العربية مفيدة لك، أرسل رأيك أو ملاحظتك لتساعدني على تحسينها.</p>
+              <p class="review-emphasis">رأيك بساعد أكثر مما تتخيل!</p>
+            </div>
+            <div class="review-actions">
+              <button class="review-cta" id="reviewCta" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h16v12H7l-3 3V4zm3 4v2h10V8H7zm0 4v2h7v-2H7z"/></svg>
+                <span>أرسل رأيك</span>
+              </button>
+              <span class="review-hint">يفتح نموذج الملاحظات الخاص بدبلجة</span>
+            </div>
           </div>
-          <div class="review-actions">
-            <button class="review-cta" id="reviewCta" type="button">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z"/></svg>
-              <span>اترك تقييماً</span>
-            </button>
-            <span class="review-hint">ملاحظاتك تساعد على تحسين الإضافة</span>
+        </section>
+
+        <section class="card stats-plus-card" id="statsPlusCard" aria-labelledby="statsPlusTitle">
+          <div class="stats-plus-inner">
+            <div class="stats-plus-badge-row">
+              <span class="stats-plus-pill">💎 <bdi>dablaja Plus</bdi></span>
+              <span class="stats-plus-price-tag"><bdi>10$</bdi> · مدى الحياة</span>
+            </div>
+            <div class="stats-plus-copy">
+              <h3 class="stats-plus-title" id="statsPlusTitle">ترقية إلى <bdi>Plus</bdi> </h3>
+              <p class="stats-plus-desc" id="statsPlusDesc">احفظ حتى 500 جلسة بالنص الأصلي والترجمة العربية، وحتى 100 علامة لكل جلسة، ومستويات صوت لكل موقع.</p>
+            </div>
+            <div class="stats-plus-actions">
+              <button class="stats-plus-btn" id="statsUpgradeBtn" type="button">
+                <span>ترقية الآن (<bdi>10$</bdi>)</span>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+              </button>
+              <span class="stats-plus-hint">دفعة واحدة · تفعيل فوري</span>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <section class="card privacy">
         <div>

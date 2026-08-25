@@ -38,10 +38,21 @@
           <section class="view is-active" data-view="library" aria-labelledby="libraryTitle">
             <p id="lockedNotice" class="banner banner-warn hidden" role="status"></p>
 
+            <div id="freeTierUpgradeBanner" class="free-limit-banner hidden" style="margin-bottom: 20px;">
+              <div class="free-limit-content">
+                <strong class="free-limit-title">النسخة المجانية — جلسة محفوظة واحدة</strong>
+                <span class="free-limit-sub">احصل على ترخيص Plus مدى الحياة لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وتخصيص الصوت حتى 50 موقعاً.</span>
+              </div>
+              <div class="free-limit-actions">
+                <button id="upgradeTopBtn" type="button" class="free-limit-btn">ترقية إلى Plus (10$)</button>
+                <button id="activateTopBtn" type="button" class="btn-utility" style="padding:7px 12px;font-size:12px;border-radius:8px;">تفعيل ترخيص</button>
+              </div>
+            </div>
+
             <section class="draft-panel hidden" id="draftSection" aria-labelledby="draftTitle">
               <div class="draft-head">
                 <span class="live-dot" aria-hidden="true"></span>
-                <h2 id="draftTitle">الجلسة الحالية</h2>
+                <h2 id="draftTitle">جلسة بانتظار الحفظ</h2>
                 <span id="draftMeta" class="draft-meta" dir="auto"></span>
               </div>
               <div id="draftBody" class="draft-body"></div>
@@ -140,11 +151,7 @@
               </div>
               <div class="mascot-banner-content">
                 <h2 class="mascot-banner-title">ما حفظت أي جلسة بعد</h2>
-                <p class="mascot-banner-desc">ابدأ دبلجة أي فيديو أو محتوى تعليمي، وستُحفظ نصوصه وملاحظاتك تلقائياً هنا.</p>
-                <button id="emptyCta" class="btn-cta-navy" type="button">
-                  <span class="btn-star-icon" aria-hidden="true">✦</span>
-                  <span>تحميل جلسات نموذجية لتجربة المكتبة</span>
-                </button>
+                <p class="mascot-banner-desc">ابدأ دبلجة أي فيديو، ثم اختر «حفظ الجلسة» لتبقى النصوص وملاحظاتك هنا.</p>
               </div>
             </div>
 
@@ -172,7 +179,7 @@
             <div id="momentsList" class="moments-list"></div>
             <div id="momentsEmpty" class="empty-center-container hidden">
               <div class="empty-mascot-wrap">
-                <img class="empty-mascot-img" src="assets/mascot.png" width="180" height="180" alt="Dablaja Mascot">
+                <img class="empty-mascot-img" src="assets/mascot.png" width="220" height="220" alt="Dablaja Mascot">
               </div>
               <h2 class="empty-title">لا توجد لحظات محفوظة بعد</h2>
               <p class="empty-copy">أثناء تشغيل الدبلجة اضغط زر العلامة لحفظ أي فكرة أو اقتباس مهم والرجوع إليه لاحقاً.</p>
@@ -188,6 +195,16 @@
 
             <section class="panel settings-group-panel" aria-labelledby="audioVolumeTitle">
               <h2 id="audioVolumeTitle" class="panel-title">التحكم في الصوت</h2>
+
+              <label class="switch-row">
+                <span class="switch-text">
+                  <span class="switch-head">خفض الصوت الأصلي تلقائياً</span>
+                  <span class="switch-sub">يخفض الصوت الأصلي بسلاسة أثناء تشغيل الدبلجة ثم يعيده.</span>
+                </span>
+                <input id="autoDuckingToggle" type="checkbox" class="switch-input" checked>
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
+
               <label class="switch-row">
                 <span class="switch-text">
                   <span class="switch-head">تذكر مستويات الصوت لكل موقع</span>
@@ -204,7 +221,7 @@
               <ul id="profileList" class="profile-list"></ul>
               <div id="noProfiles" class="empty-profile-box hidden">
                 <span class="empty-profile-icon" data-icon="globe" aria-hidden="true"></span>
-                <p class="empty-profile-text">لا توجد مواقع محفوظة بعد — عدّل مستوى الصوت أثناء أي جلسة لحفظ تفضيل الموقع.</p>
+                <p class="empty-profile-text">ستظهر هنا المواقع التي ضبطت صوتها أثناء جلسة دبلجة: حرّك شريط الصوت (الأصلي أو الدبلجة) في أي جلسة وسيُحفظ المستوى تلقائياً لهذا الموقع، ويمكنك تعديله من هنا في أي وقت.</p>
               </div>
             </section>
           </section>
@@ -213,47 +230,61 @@
           <section class="view" data-view="settings" aria-labelledby="settingsTitle">
             <header class="view-head">
               <h1 id="settingsTitle" class="page-main-title">خلاصة الإعدادات</h1>
-              <p class="view-sub">تفضيلات dablaja Plus العامة وخيارات المزامنة المحلية.</p>
+              <p class="view-sub">تفضيلات عامة وخيارات الحفظ على هذا الجهاز.</p>
             </header>
 
             <section class="panel settings-group-panel" aria-labelledby="generalTitle">
               <h2 id="generalTitle" class="panel-title">عام</h2>
               <label class="switch-row">
                 <span class="switch-text">
-                  <span class="switch-head">الحفظ التلقائي للجلسات عند الإيقاف</span>
-                  <span class="switch-sub">تُحفظ الجلسة تلقائياً في مكتبتك عند إيقاف الدبلجة لتفادي فقدان النصوص.</span>
+                  <span class="switch-head">حفظ الجلسات محلياً على هذا الجهاز</span>
+                  <span class="switch-sub">عند التفعيل، تُحفظ الجلسة المجانية الأولى وجلسات Plus تلقائياً على جهازك، مع مسودة مؤقتة للحماية من فقدانها. الصوت لا يُحفظ أبداً ولا يُرسل شيء إلى الخادم.</span>
                 </span>
-                <input id="autosaveToggle" type="checkbox" class="switch-input">
+                <input id="localSavingToggle" type="checkbox" class="switch-input">
                 <span class="switch-ui" aria-hidden="true"></span>
               </label>
-              <p id="settingsStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
+              <label class="switch-row">
+                <span class="switch-text">
+                  <span class="switch-head">مشاركة إحصاءات مجهولة</span>
+                  <span class="switch-sub">إرسال مدة الدبلجة وفئة الموقع فقط (بدون أي روابط أو نصوص أو صوت) لدعم الأرقام المجمعة، ورمز تقني مختصر عند فشل الجلسة.</span>
+                </span>
+                <input id="analyticsToggle" type="checkbox" class="switch-input">
+                <span class="switch-ui" aria-hidden="true"></span>
+              </label>
             </section>
 
             <section class="panel settings-group-panel" aria-labelledby="aboutTitle">
-              <h2 id="aboutTitle" class="panel-title">حول dablaja Plus</h2>
+              <h2 id="aboutTitle" class="panel-title">خطة dablaja Plus</h2>
               <div class="about-plus-card">
                 <div class="about-plus-badge">
                   <span class="diamond-icon-large" aria-hidden="true">💎</span>
                   <div>
-                    <h3 class="about-plus-name">dablaja Plus</h3>
-                    <span class="about-plus-tag">ترخيص مدى الحياة مفعل</span>
+                    <h3 class="about-plus-name" id="aboutPlusTitle">dablaja Plus</h3>
+                    <span class="about-plus-tag" id="aboutPlusTag">النسخة المجانية</span>
                   </div>
                 </div>
                 <p class="about-plus-desc" id="aboutPlus">
-                  مكتبة دبلجة المتقدمة تمنحك إمكانية حفظ وإدارة جميع الجلسات والملاحظات والترجمات الصوتية محلياً على جهازك بسرعة وأمان.
+                  تمنحك Plus إمكانية حفظ حتى 500 جلسة بالنص الأصلي والترجمة العربية، وحتى 100 علامة لكل جلسة، وتخصيص مستويات الصوت لكل موقع، وتصدير واستيراد النسخ الاحتياطية.
                 </p>
+                <div id="plusUpgradeBlock" class="upgrade-action-box" style="margin:14px 0;padding:14px 16px;background:linear-gradient(135deg, #f0fdf9 0%, #e6faf6 100%);border:1.5px solid #2ad4c4;border-radius:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                  <button id="libUpgradeBtn" class="btn-primary-compact" type="button" style="background:linear-gradient(135deg, #14b8a8 0%, #0d9488 100%);color:#ffffff;border:0;border-radius:10px;padding:9px 18px;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(20, 184, 168, 0.45);cursor:pointer;">ترقية إلى Plus مدى الحياة (10$)</button>
+                  <button id="openActivationBtn" class="btn-utility" type="button" style="border:1px solid #cbd5e1;background:#fff;color:#16324f;border-radius:10px;padding:9px 16px;font-weight:650;font-size:13px;cursor:pointer;">تفعيل ترخيص مسبق</button>
+                </div>
+                <div id="plusActiveActions" class="upgrade-action-box hidden" style="margin:14px 0;padding:14px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                  <button id="rotateRecoveryBtn" class="btn-utility" type="button" style="border:1px solid #cbd5e1;background:#fff;color:#16324f;border-radius:10px;padding:9px 16px;font-weight:650;font-size:13px;cursor:pointer;">توليد رمز استرداد بديل</button>
+                </div>
                 <div class="about-features-grid">
                   <div class="about-feat-item">
-                    <span class="feat-check" aria-hidden="true">✓</span>
-                    <span>تخزين واسترجاع محلي فوري</span>
+                    <span class="feat-icon" data-icon="stack" aria-hidden="true"></span>
+                    <span class="feat-label">تخزين واسترجاع محلي فوري</span>
                   </div>
                   <div class="about-feat-item">
-                    <span class="feat-check" aria-hidden="true">✓</span>
-                    <span>تصدير بصيغ TXT و SRT و JSON</span>
+                    <span class="feat-icon" data-icon="download" aria-hidden="true"></span>
+                    <span class="feat-label">تصدير بصيغ TXT و SRT و JSON</span>
                   </div>
                   <div class="about-feat-item">
-                    <span class="feat-check" aria-hidden="true">✓</span>
-                    <span>خصوصية تامة بدون جمع بيانات</span>
+                    <span class="feat-icon" data-icon="shield" aria-hidden="true"></span>
+                    <span class="feat-label">خصوصية تامة بدون جمع بيانات</span>
                   </div>
                 </div>
               </div>
@@ -468,12 +499,17 @@
 
           <!-- Quiet Help & Support Links -->
           <div class="sidebar-footer-links">
-            <a class="footer-help-link" href="https://dablaja.com/faq" target="_blank" rel="noopener">
+            <a class="footer-help-link" href="https://audiofetcher.com/dablaja/" target="_blank" rel="noopener">
               <span data-icon="info" aria-hidden="true"></span>
-              <span>الأسئلة الشائعة</span>
+              <span>موقع dablaja</span>
             </a>
             <span class="footer-dot-sep" aria-hidden="true">·</span>
-            <a class="footer-help-link" href="mailto:support@dablaja.com">
+            <a class="footer-help-link" href="https://audiofetcher.com/dablaja/privacy.html" target="_blank" rel="noopener">
+              <span data-icon="shield" aria-hidden="true"></span>
+              <span>سياسة الخصوصية</span>
+            </a>
+            <span class="footer-dot-sep" aria-hidden="true">·</span>
+            <a class="footer-help-link" href="mailto:help@audiofetcher.com">
               <span>تواصل معنا</span>
             </a>
           </div>
@@ -497,10 +533,75 @@
         </div>
       </div>
 
+      <div class="modal-backdrop hidden" id="activationModal" role="dialog" aria-modal="true" aria-labelledby="activationTitle">
+        <div class="modal-card modal-upgrade-card">
+          <div class="modal-top-tag">💎 <span>dablaja Plus · 10$ مدى الحياة</span></div>
+          <h2 class="modal-title" id="activationTitle">الترقية إلى dablaja Plus</h2>
+          <p class="modal-copy">النسخة المجانية تحفظ جلسة واحدة محلياً. افتح Plus لحفظ حتى 500 جلسة، وحتى 100 علامة لكل جلسة، وحتى 50 ملف موقع. النص الأصلي والترجمة العربية فقط — الصوت لا يُحفظ.</p>
+
+          <ul class="modal-features-list">
+            <li><span class="feat-check">✓</span> <span>حفظ حتى 500 جلسة مع النص الأصلي والترجمة العربية</span></li>
+            <li><span class="feat-check">✓</span> <span>حتى 100 علامة لكل جلسة مع القفز المباشر للوقت في الفيديو</span></li>
+            <li><span class="feat-check">✓</span> <span>تخصيص وحفظ مستويات الصوت لكل موقع بشكل مستقل</span></li>
+            <li><span class="feat-check">✓</span> <span>تصدير واستيراد النسخ الاحتياطية بأي وقت</span></li>
+          </ul>
+
+          <button id="modalUpgradeCheckoutBtn" class="btn-modal-upgrade-cta" type="button">
+            <span>💳</span> <span>ترقية الآن · 10$ دفعة واحدة مدى الحياة</span>
+          </button>
+
+          <div class="modal-divider-row">
+            <span>أو إذا كنت قد قمت بالشراء مسبقاً</span>
+          </div>
+
+          <div class="modal-activation-box">
+            <label for="activationInput" class="activation-label">تفعيل عبر رمز الاسترداد:</label>
+            <div class="activation-input-group">
+              <input type="text" id="activationInput" placeholder="DABLAJA-XXXX-XXXX-..." autocomplete="off" />
+              <button id="activationSubmit" class="btn-activation-apply" type="button">تحقق وتفعيل</button>
+            </div>
+            <p style="font-size:11px;color:#64748b;margin-top:6px;">رمز الاسترداد يُعرض مرة واحدة بعد الدفع ويُحفظ لديك. لا نطلب بريدك الإلكتروني.</p>
+            <p id="activationStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="modal-footer-row">
+            <button id="activationCancel" class="btn-modal-dismiss" type="button">إغلاق</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop hidden" id="rotateRecoveryModal" role="dialog" aria-modal="true" aria-labelledby="rotateRecoveryTitle">
+        <div class="modal-card">
+          <div class="modal-top-tag">🔑 <span>رمز استرداد بديل</span></div>
+          <h2 class="modal-title" id="rotateRecoveryTitle">توليد رمز استرداد بديل</h2>
+          <div id="rotateConfirmStep">
+            <p class="modal-copy">
+              تنبيه: توليد رمز استرداد جديد سيُبطل الرمز الحالي فوراً. لن تتمكن من استخدام الرمز السابق لاستعادة الترخيص على جهاز آخر.
+            </p>
+            <p id="rotateStatus" class="inline-status hidden" role="status" aria-live="polite"></p>
+            <div class="modal-actions" style="margin-top:16px;">
+              <button id="rotateCancelBtn" class="btn-secondary" type="button">إلغاء</button>
+              <button id="rotateConfirmBtn" class="btn-danger" type="button">تأكيد وتوليد الرمز</button>
+            </div>
+          </div>
+          <div id="rotateResultStep" class="hidden">
+            <p class="modal-copy" style="color:#0f766e;font-weight:600;">
+              تم توليد رمز الاسترداد الجديد بنجاح. احفظ هذا الرمز في مكان آمن، فلن يُعرض مرة أخرى أبداً!
+            </p>
+            <div class="rc-box" style="background:#f8fafc;border:1.5px dashed #0d9488;border-radius:12px;padding:14px;margin:14px 0;text-align:center;">
+              <code id="rotateResultCode" dir="ltr" style="font-family:monospace;font-size:15px;font-weight:700;letter-spacing:1px;color:#0f766e;user-select:all;"></code>
+            </div>
+            <div class="modal-actions" style="margin-top:16px;">
+              <button id="rotateCloseBtn" class="btn-secondary" type="button">إغلاق</button>
+              <button id="rotateCopyBtn" class="btn-primary" type="button">نسخ الرمز</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="toast-shelf" id="toastRoot" aria-live="polite" aria-atomic="true"></div>
     </div>
 
-    <script src="preview-mock.js"></script>
     <script type="module" src="library.js"></script>
   </body>
 </html>

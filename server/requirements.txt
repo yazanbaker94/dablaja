@@ -1,0 +1,9 @@
+# Pinned dependencies for reproducible server installation (2026-08-25)
+# Stripe Python SDK with webhook signature verification (official)
+stripe==15.5.0
+# Cryptography for Ed25519 license token signing
+cryptography==45.0.4
+# Starlette/ASGI server
+starlette==0.47.0
+uvicorn==0.34.0
+# Database and utilities (stdlib otherwise)

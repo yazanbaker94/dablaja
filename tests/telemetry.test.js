@@ -43,6 +43,17 @@ test('remote usage reporting is disabled until the user opts in', async (t) => {
   assert.equal(calls, 0);
 });
 
+test('missing analytics decision does not report remotely', async (t) => {
+  const previousChrome = globalThis.chrome;
+  const previousFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.chrome = { storage: { local: { get: async () => ({}) } } };
+  globalThis.fetch = async () => { calls += 1; return { ok: true }; };
+  t.after(() => { globalThis.chrome = previousChrome; globalThis.fetch = previousFetch; });
+  assert.equal(await reportUsageSession({ site: 'https://youtube.com/watch?v=x', dubbedMs: 20_000 }), false);
+  assert.equal(calls, 0);
+});
+
 test('opted-in usage reporting sends only the three approved fields', async (t) => {
   const previousChrome = globalThis.chrome;
   const previousFetch = globalThis.fetch;
@@ -54,4 +65,13 @@ test('opted-in usage reporting sends only the three approved fields', async (t) 
   assert.deepEqual(Object.keys(sent).sort(), ['dubbed_ms', 'event_id', 'platform']);
   assert.equal(sent.platform, 'twitch');
   assert.equal(sent.dubbed_ms, 20_000);
+});
+
+test('usage reporting returns false when the server rejects the event', async (t) => {
+  const previousChrome = globalThis.chrome;
+  const previousFetch = globalThis.fetch;
+  globalThis.chrome = { storage: { local: { get: async () => ({ anonymousUsageConsent: true }) } } };
+  globalThis.fetch = async () => ({ ok: false, status: 403 });
+  t.after(() => { globalThis.chrome = previousChrome; globalThis.fetch = previousFetch; });
+  assert.equal(await reportUsageSession({ site: 'https://example.test', dubbedMs: 20_000 }), false);
 });

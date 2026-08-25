@@ -19,11 +19,22 @@ function safeVolume(value) {
   return Math.max(0, Math.min(1.5, numeric));
 }
 
-export function upsertProfile(profiles, { origin, originalVolume, dubbedVolume } = {}) {
+export function canAddProfile(profiles, origin, limit = SITE_PROFILE_LIMITS.MAX_PROFILES) {
+  const key = normalizeProfileOrigin(origin);
+  if (!key) return false;
+  const existing = Array.isArray(profiles) ? profiles : [];
+  const exists = existing.some((p) => p.origin === key);
+  if (exists) return true;
+  return existing.length < (Number.isFinite(limit) ? limit : SITE_PROFILE_LIMITS.MAX_PROFILES);
+}
+
+export function upsertProfile(profiles, { origin, originalVolume, dubbedVolume } = {}, limit = SITE_PROFILE_LIMITS.MAX_PROFILES) {
   const key = normalizeProfileOrigin(origin);
   if (!key) return Array.isArray(profiles) ? [...profiles] : [];
-  const original = safeVolume(originalVolume);
-  const dubbed = safeVolume(dubbedVolume);
+  // Explicit null/undefined means "keep the stored level" — safeVolume(null)
+  // would coerce to 0 and silently zero the untouched channel.
+  const original = originalVolume == null ? null : safeVolume(originalVolume);
+  const dubbed = dubbedVolume == null ? null : safeVolume(dubbedVolume);
   if (original == null && dubbed == null) return Array.isArray(profiles) ? [...profiles] : [];
   const existing = Array.isArray(profiles) ? [...profiles] : [];
   const previous = existing.find((profile) => profile.origin === key);
@@ -36,11 +47,12 @@ export function upsertProfile(profiles, { origin, originalVolume, dubbedVolume }
   if (previous) {
     return existing.map((profile) => (profile.origin === key ? record : profile));
   }
+  const max = Number.isFinite(limit) ? limit : SITE_PROFILE_LIMITS.MAX_PROFILES;
   const next = [...existing, record];
-  if (next.length > SITE_PROFILE_LIMITS.MAX_PROFILES) {
+  if (next.length > max) {
     // Records are appended chronologically, so evict from the front; this
     // stays correct even when Date.now() ties within the same millisecond.
-    next.splice(0, next.length - SITE_PROFILE_LIMITS.MAX_PROFILES);
+    next.splice(0, next.length - max);
   }
   return next;
 }

@@ -1,6 +1,6 @@
 # Implementation notes and official sources
 
-Research date: **2026-08-11**. Only official Google/Chrome documentation was used to select the API and extension architecture.
+Research date: **2026-08-11**; implementation status reviewed **2026-08-25**. Only official Google/Chrome documentation was used to select the API and extension architecture.
 
 ## Gemini Live Translate
 
@@ -27,7 +27,7 @@ Research date: **2026-08-11**. Only official Google/Chrome documentation was use
 
 ### Permission decision
 
-No `tabs`, scripting, content-script, history, webRequest, microphone, or broad host permission is used. `activeTab` plus `tabCapture` scopes capture to the user-invoked active tab. `storage`, `offscreen`, and `sidePanel` directly support the disclosed feature. The only host is `https://generativelanguage.googleapis.com/*`; CSP separately permits that HTTPS/WSS origin.
+No `tabs`, scripting, content-script, history, webRequest, microphone, or broad host permission is used. `activeTab` plus `tabCapture` scopes capture to the user-invoked active tab. `storage`, `offscreen`, `sidePanel`, and `alarms` support local settings/library state, audio processing, persistent captions, and license refresh. Host access is limited to `https://generativelanguage.googleapis.com/*` for Gemini and `https://audiofetcher.com/*` for optional aggregate diagnostics, user-submitted forms, and Plus checkout/licensing. Audio and transcripts never pass through AudioFetcher. CSP permits only those required HTTPS/WSS destinations.
 
 ## Audio behavior
 
@@ -37,3 +37,12 @@ No `tabs`, scripting, content-script, history, webRequest, microphone, or broad 
 - A playback worklet decodes PCM16, streaming-resamples 24 kHz to the actual device context rate, adaptively prebuffers 280–520 ms, and bounds queued output to 2.5 seconds. Short jitter gaps stay in the playhead as silence; only an 80 ms dry run counts as a hard underrun and grows the prebuffer. If backlog exceeds the cap it drops stale content to approximately 1.2 seconds. Incoming odd PCM bytes are carried to the next chunk. Fade-in is used after a real gap only. A compressor/limiter protects peaks; optional ducking lowers the original path only while translated playback is active.
 - Live Translate is a continuous interpreter, not a turn-taking agent. The client does not flush already-received Arabic audio on `interrupted`. After two seconds of source silence it sends `audioStreamEnd` so Gemini can flush cached input cleanly. `GoAway` audio in the same message is played first; reconnect waits for `timeLeft` when the server still has time.
 - The latency display is observed activity-to-first-returned-audio and is explicitly approximate.
+
+## Stripe Checkout and Plus licensing
+
+- [Stripe Checkout fulfillment](https://docs.stripe.com/checkout/fulfillment) — fulfillment is server-side and idempotent; immediate and delayed payments are handled through `checkout.session.completed`, `checkout.session.async_payment_succeeded`, and `checkout.session.async_payment_failed`.
+- [Stripe event types](https://docs.stripe.com/api/events/types) — `checkout.session.expired` cleans abandoned attempts; `refund.created` and `charge.dispute.created` revoke the corresponding lifetime license according to the disclosed refund/dispute policy.
+- [Stripe webhook security](https://docs.stripe.com/webhooks?lang=python) — the server verifies the untouched raw body and `Stripe-Signature` with the official Python SDK before any mutation.
+- [Stripe refund guidance](https://docs.stripe.com/refunds) — Stripe recommends listening for `refund.created`; the server treats any full or partial refund as revocation, matching the Terms.
+
+The server pins `stripe==15.5.0`. Checkout retrieval explicitly uses API version `2025-03-31.basil`, the account's known Managed Payments-compatible contract, instead of silently changing object semantics whenever the SDK default advances. Payment card numbers are handled by Stripe Checkout and never reach Dablaja.

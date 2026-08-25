@@ -25,7 +25,7 @@ Manifest V3 Chrome extension that captures **audio only** from the active tab af
 
 1. Open an ordinary audible HTTPS tab. Initial target: [TED: Inside the mind of a master procrastinator](https://www.youtube.com/watch?v=arj7oStGLkU).
 2. Open the extension popup.
-3. Paste your own Gemini API key into the masked field, read the disclosure, check the consent box, and save. **Never paste the key into chat, a terminal command, or a bug report.**
+3. Paste your own Gemini API key into the masked field, read the disclosure beside it, and save. **Never paste the key into chat, a terminal command, or a bug report.**
 4. Click **ابدأ الدبلجة**. Tab capture begins only from this click.
 5. Click **فتح الترجمة الثنائية** for persistent source/Arabic captions.
 6. Adjust original and dubbed volume independently.
@@ -60,34 +60,39 @@ The implementation follows Google's official [Live translation guide](https://ai
 
 Google documents roughly ten-minute connection lifetimes and 15-minute uncompressed audio-only session limits. This implementation enables compression and resumption as recommended in the official [session-management guide](https://ai.google.dev/gemini-api/docs/live-api/session-management).
 
-Protocol note: Google's Live Translate page currently shows transcription objects nested in `generationConfig`, while the current official `@google/genai` serializer emits `inputAudioTranscription` and `outputAudioTranscription` directly under `setup`. Live testing rejected the nested shape with WebSocket code 1007, so this implementation follows the official SDK's accepted wire shape: transcription objects at setup level and `translationConfig` inside `generationConfig`.
+Protocol note: Google's Live Translate page currently shows transcription objects nested in `generationConfig`, while the current official `@google/genai` serializer emits `inputAudioTranscription` and `outputAudioTranscription` directly under `setup`. Live testing rejected the nested shape with WebSocket code 1007. The extension therefore starts with the field-tested root transcription shape and performs one bounded 1007 compatibility retry using the documented nested shape; it never loops between setup layouts.
 
-## Dablaja Plus (local session library — in development)
+## Dablaja Plus (local session library)
 
 > **وعد Plus:** «اسمعه بالعربية الآن، واحفظ النص واللحظات المهمة للرجوع إليها.»
 
-Core live dubbing stays free and unchanged. Plus adds a **local-only** saved-session library on top of the transcripts Gemini already returns during a live session:
+Core live dubbing is available to all users. Dablaja provides a **local-only** session library on top of the transcripts Gemini returns during live dubbing:
 
-- Explicit **«احفظ الجلسة»** from the side panel or the library page; optional autosave on stop (default OFF).
-- English source + Arabic target transcripts with session-relative timestamps, stored in IndexedDB on this device only.
-- Saved-session library with search across Arabic/English transcripts, titles, notes and bookmarks.
+- Local session saving is enabled by default and can be disabled from the Plus library without affecting live dubbing. Free users may save one session, one bookmark, and one site profile.
+- Plus users can save up to 500 sessions, 100 bookmarks per session, and 50 site profiles.
+- Audio is never stored anywhere on any device or server.
+- Saved transcripts, titles, and URLs remain strictly local on your device in IndexedDB.
+- **«احفظ الجلسة»** saves a recoverable live draft immediately. On stop, the first free session or a verified Plus session is finalized locally; disabling local saving prevents new draft/session storage.
 - Session notes and timestamped bookmarks (editable, deletable).
-- The source URL/title is stored **only when the user explicitly saves** the session.
 - Exports: plain text, bilingual SRT, print/PDF, JSON; full local backup + validated import that never corrupts existing data.
 - Opt-in per-site volume profiles (hostname only, deletable).
 - Up to three recent unsaved drafts survive service-worker suspension in `chrome.storage.session`.
 
-**Privacy boundaries:** no audio is ever stored; no saved-session content (transcripts, notes, bookmarks, URLs, titles) is sent to AudioFetcher or anywhere else; Plus makes no additional Gemini requests; the API key never enters the session database, exports or logs.
+**Payment via Stripe Checkout (10$ one-time).** Plus is unlocked only by a verified Ed25519 signed token (`dpl1.<payload>.<sig>`) bound to the current `install_id` with 30-day expiry and 7-day offline grace. Every privileged licensing request (checkout, license-status, token renewal, recovery, rotation) is authenticated with a high-entropy per-installation credential (256-bit random) stored in `chrome.storage.local`. A plain local `{ state: "active" }` record never unlocks Plus. Stripe handles payment-card data; Dablaja does not receive or store card numbers. Licensing data retained by AudioFetcher is strictly limited to: random installation identifier (`install_id`), hashed installation credential (`credential_hash`), stable internal license identifier (`license_id`), Stripe reference identifiers, product/price IDs, amount/currency/status, bindings, timestamps, revocation state, and hashed recovery code (`code_hash`). Recovery codes are shown once on the verified success page or upon rotation, stored only as SHA-256 hashes, rate-limited, rotatable from settings, and used for cross-device recovery. Security rate limits use a day-scoped HMAC bucket rather than storing a raw client IP in the application database; production should configure `DABLAJA_RATE_LIMIT_SECRET`. Refunds/disputes revoke the license.
 
-**Payment is not connected yet.** Plus currently runs under a clearly labelled `development_preview` entitlement (`src/shared/plus-entitlement.js`) so every feature can be tested locally. The UI shows «نسخة تطوير Plus» and the planned $10-lifetime pricing without claiming purchase availability. A plain local `{ state: "active" }` license record can never unlock production Plus — only the future Stripe-phase verifier pipeline (signed token or the Dablaja entitlement endpoint) can; see the `STRIPE_INTEGRATION_CONTRACT` notes in that module, including cross-device/reinstall recovery, refunds/revocation and offline-grace behavior.
+To verify VPS signing key alignment safely without exposing secrets:
+```bash
+python3 scripts/verify-signing-key.py --env-file /etc/dablaja.env
+```
 
 ## Security model and important BYOK trade-off
 
 - The key is stored only in `chrome.storage.local`, never sync storage, and is revealed only when the user explicitly presses the show/change control.
-- Audio is never written to storage. Captions exist only in extension-page memory; with an entitled Plus session active, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session — locked/free users get no such draft capture.
-- No ads, content scripts, or browsing-history collection. Core/free captions are never stored; the only locally stored page title/URL belongs to an entitled Plus session — temporarily while live, permanently only after an explicit save or enabled autosave.
+- Audio is never stored. Captions exist in extension-page memory; while local saving is enabled, a bounded transcript draft (plus temporary title/page URL) may additionally live in `chrome.storage.session` so service-worker suspension does not lose the session before finalization or an explicit save.
+- Saved transcripts, titles, and URLs remain local on this device.
+- No ads, content scripts, or browsing-history collection.
 - Core audio and transcripts go directly to Google; they never pass through the developer server.
-- With separate opt-in consent, the extension sends only dubbed duration, a coarse platform category, and bounded technical error diagnostics to `audiofetcher.com`. Declining does not affect dubbing.
+- With separate opt-in consent, the extension sends only dubbed duration, a coarse platform category (`youtube`, `x`, `twitch`, `other`), and allowlisted technical error diagnostics (`event_id`, bounded `error_code`, `status`, `site_host`, `extension_version`, `reconnect_count`) to `audiofetcher.com`. Diagnostics do not include the stable licensing installation ID. Never arbitrary error messages, stack traces, URLs, titles, audio, transcripts, or keys. Declining does not affect dubbing.
 - Feedback and uninstall forms are user-submitted and hosted on `audiofetcher.com`.
 - No runtime dependency, remote code, `eval`, or inline script.
 - Logs intentionally exclude keys, URLs, audio, and transcripts.
@@ -96,21 +101,21 @@ Google recommends ephemeral tokens for client-to-server Live API apps. Ephemeral
 
 ## Pricing note
 
-The free tier is **not marketed as unlimited**. Availability and rate limits can change. Google's current [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing) says free-tier Live Translate usage is free of charge and may be used to improve Google's products; paid-tier handling differs. Transcription can add text-token charges. Check the current page before extended use.
+Free users can locally save 1 session, 1 bookmark, and 1 site profile. Local saving is enabled by default and can be disabled. Plus unlocks up to 500 sessions, 100 bookmarks per session, and 50 site profiles for a one-time $10 payment. Availability and rate limits for Google's Live Translate API are controlled by Google; check Google's current [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing) for details on free-tier and paid-tier data use and text-token charges.
 
 ## Development and packaging
 
 ```powershell
 npm run verify        # tests + server tests + static checks + manifest validation
-npm run package:dev   # development build (preview entitlement allowed)
-npm run package:release  # release build — REFUSES while the preview is enabled
+npm run package:dev      # development/test ZIP; never submit this build
+npm run package:release  # release ZIP; refuses until every acceptance gate passes
 ```
 
 `package:dev` re-runs static and manifest checks, copies only runtime files into a clean staging folder, rejects common secret/test/dev artifacts, and creates an unmistakably named build:
 
-`dist\dablaja-v0.3.0-DEVELOPMENT-PREVIEW.zip`
+`dist\dablaja-v1.0.0-DEVELOPMENT-PREVIEW.zip`
 
-`package:release` additionally enforces manifest/package version parity and fails while `PLUS_DEV_PREVIEW_ENABLED` is true, so a publishable ZIP can never be produced from a preview build. It does not publish or upload anything.
+`package:release` additionally enforces manifest/package version parity, requires the development entitlement switch to remain disabled, and requires explicit Chrome/listening/VPS/Stripe/clean-profile acceptance evidence. It does not publish or upload anything.
 
 Regenerate toolbar and page icons from `design images/logo toolbar.png` (cropped, transparency kept) with:
 

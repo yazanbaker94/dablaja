@@ -15,7 +15,7 @@ export const PLUS_LIMITS = Object.freeze({
   MAX_ORIGIN_LENGTH: 300,
   MAX_SEGMENT_TEXT: 2000,
   MAX_SEGMENTS_PER_CHANNEL: 4000,
-  MAX_BOOKMARKS_PER_SESSION: 200,
+  MAX_BOOKMARKS_PER_SESSION: 100,
   MAX_BOOKMARK_NOTE: 500,
   MAX_SAVED_SESSIONS: 500,
   MAX_DRAFTS: 3,
@@ -73,12 +73,11 @@ export function sanitizeOrigin(value) {
   return normalizeOrigin(value).slice(0, PLUS_LIMITS.MAX_ORIGIN_LENGTH);
 }
 
-const utf8Encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+const utf8Encoder = new TextEncoder();
 
 export function utf8ByteLength(value) {
   if (!value) return 0;
-  if (utf8Encoder) return utf8Encoder.encode(String(value)).length;
-  return Buffer.byteLength(String(value), 'utf8');
+  return utf8Encoder.encode(String(value)).length;
 }
 
 export function sessionStorageBytes(record) {
@@ -118,7 +117,10 @@ export function createDraft({ startedAt = Date.now(), siteOrigin = '', title = '
     sourceSegments: [],
     targetSegments: [],
     bookmarks: [],
+    // Tombstones for deleted bookmarks: { [bookmarkId]: deletedAtMs }
+    bookmarkTombstones: {},
     notes: '',
+    notesUpdatedAt: 0,
     originalVolume: null,
     dubbedVolume: null,
     _pending: { source: null, target: null }
@@ -153,10 +155,21 @@ function pushSegment(draft, channel, text, startMs, endMs, speaker = '', turnId 
   const segments = channelState(draft, channel);
   const previous = segments[segments.length - 1];
   const clean = sanitizeText(text, PLUS_LIMITS.MAX_SEGMENT_TEXT);
+  const roundedEnd = Math.max(0, Math.round(Number(endMs) || 0));
   if (!clean) return;
   // Duplicate suppression after reconnects: Gemini may re-emit an identical
-  // finalized turn when the session resumes. Drop exact repeats only.
-  if (previous && previous.text === clean) return;
+  // finalized turn when the session resumes. Same non-null turnId is always
+  // a genuine duplicate; for legacy segments without turn ids, only exact
+  // repeats within ~1 s are dropped so genuinely repeated short utterances
+  // ("Yeah." … "Yeah.") later in the session survive.
+  if (
+    previous &&
+    previous.text === clean &&
+    ((previous.turnId != null && normalizeTurnId(turnId) === previous.turnId) ||
+      Math.abs(previous.endMs - roundedEnd) <= 1000)
+  ) {
+    return;
+  }
   if (segments.length >= PLUS_LIMITS.MAX_SEGMENTS_PER_CHANNEL) {
     segments.shift();
   }
@@ -279,12 +292,20 @@ export function addBookmark(draft, { atMs, note = '', createdAt = Date.now() } =
   if (!draft) return draft;
   const validated = validateBookmarkInput({ atMs, note });
   if (!validated) return draft;
-  if (draft.bookmarks.length >= PLUS_LIMITS.MAX_BOOKMARKS_PER_SESSION) draft.bookmarks.shift();
+  if (draft.bookmarks.length >= PLUS_LIMITS.MAX_BOOKMARKS_PER_SESSION) {
+    const removed = draft.bookmarks.shift();
+    if (removed?.id) {
+      draft.bookmarkTombstones = draft.bookmarkTombstones || {};
+      draft.bookmarkTombstones[removed.id] = Date.now();
+    }
+  }
+  const now = Number.isFinite(Number(createdAt)) ? Number(createdAt) : Date.now();
   draft.bookmarks.push({
     id: newId('bmk'),
     atMs: validated.atMs,
     note: validated.note,
-    createdAt: Number.isFinite(Number(createdAt)) ? Number(createdAt) : Date.now()
+    createdAt: now,
+    updatedAt: now
   });
   draft.bookmarks.sort((a, b) => a.atMs - b.atMs);
   draft.updatedAt = Date.now();
@@ -293,7 +314,25 @@ export function addBookmark(draft, { atMs, note = '', createdAt = Date.now() } =
 
 export function removeBookmark(draft, bookmarkId) {
   if (!draft) return draft;
-  draft.bookmarks = draft.bookmarks.filter((bookmark) => bookmark.id !== bookmarkId);
+  const cleanId = String(bookmarkId || '').trim();
+  if (!cleanId) return draft;
+  const before = draft.bookmarks.length;
+  draft.bookmarks = draft.bookmarks.filter((bookmark) => bookmark.id !== cleanId);
+  if (draft.bookmarks.length !== before) {
+    draft.bookmarkTombstones = draft.bookmarkTombstones || {};
+    draft.bookmarkTombstones[cleanId] = Date.now();
+  }
+  draft.updatedAt = Date.now();
+  return draft;
+}
+
+export function updateBookmarkNote(draft, bookmarkId, note) {
+  if (!draft) return draft;
+  const cleanId = String(bookmarkId || '').trim();
+  const bookmark = draft.bookmarks.find((b) => b.id === cleanId);
+  if (!bookmark) return draft;
+  bookmark.note = sanitizeText(note, PLUS_LIMITS.MAX_BOOKMARK_NOTE);
+  bookmark.updatedAt = Date.now();
   draft.updatedAt = Date.now();
   return draft;
 }
@@ -302,8 +341,84 @@ export function setNotes(draft, notes) {
   if (!draft) return draft;
   // Notes are the one multiline field; never collapse their line breaks.
   draft.notes = sanitizeMultilineText(notes, PLUS_LIMITS.MAX_NOTE_LENGTH);
+  draft.notesUpdatedAt = Date.now();
   draft.updatedAt = Date.now();
   return draft;
+}
+
+// Deterministic merge for live vs saved records. Preserves newer notes and
+// bookmark edits via updatedAt, and respects tombstones so deleted bookmarks
+// are never resurrected. Used by finish() and restore().
+export function mergeDraftWithSaved(live, saved) {
+  if (!live) return saved || null;
+  if (!saved) return live;
+  if (live.id !== saved.id) return live;
+  const merged = structuredClone(live);
+  // Notes: keep whichever has newer notesUpdatedAt
+  const liveNotesAt = Number(live.notesUpdatedAt) || 0;
+  const savedNotesAt = Number(saved.notesUpdatedAt) || 0;
+  if (savedNotesAt > liveNotesAt && typeof saved.notes === 'string') {
+    merged.notes = saved.notes;
+    merged.notesUpdatedAt = saved.notesUpdatedAt;
+  }
+  // Tombstones: union, newer wins
+  const mergedTombstones = { ...(saved.bookmarkTombstones || {}), ...(live.bookmarkTombstones || {}) };
+  for (const [id, ts] of Object.entries(saved.bookmarkTombstones || {})) {
+    const liveTs = live.bookmarkTombstones?.[id] || 0;
+    mergedTombstones[id] = Math.max(Number(ts) || 0, Number(liveTs) || 0);
+  }
+  for (const [id, ts] of Object.entries(live.bookmarkTombstones || {})) {
+    const savedTs = saved.bookmarkTombstones?.[id] || 0;
+    mergedTombstones[id] = Math.max(Number(ts) || 0, Number(savedTs) || 0);
+  }
+  merged.bookmarkTombstones = mergedTombstones;
+  // Bookmarks: deterministic merge by id
+  const byId = new Map();
+  for (const bm of [...(saved.bookmarks || []), ...(live.bookmarks || [])]) {
+    if (!bm?.id) continue;
+    const existing = byId.get(bm.id);
+    if (!existing) {
+      byId.set(bm.id, bm);
+      continue;
+    }
+    const existingAt = Number(existing.updatedAt) || Number(existing.createdAt) || 0;
+    const incomingAt = Number(bm.updatedAt) || Number(bm.createdAt) || 0;
+    if (incomingAt > existingAt) byId.set(bm.id, bm);
+    else if (incomingAt === existingAt && JSON.stringify(bm) > JSON.stringify(existing)) byId.set(bm.id, bm);
+  }
+  const mergedBookmarks = [];
+  for (const [id, bm] of byId.entries()) {
+    const tombAt = Number(mergedTombstones[id]) || 0;
+    const bmAt = Number(bm.updatedAt) || Number(bm.createdAt) || 0;
+    if (tombAt && tombAt >= bmAt) continue;
+    mergedBookmarks.push(bm);
+  }
+  mergedBookmarks.sort((a, b) => a.atMs - b.atMs);
+  // Enforce cap after merge (oldest first)
+  while (mergedBookmarks.length > PLUS_LIMITS.MAX_BOOKMARKS_PER_SESSION) {
+    const oldest = mergedBookmarks.shift();
+    if (oldest?.id) mergedTombstones[oldest.id] = Date.now();
+  }
+  merged.bookmarks = mergedBookmarks;
+  merged.bookmarkTombstones = mergedTombstones;
+  merged.updatedAt = Math.max(Number(live.updatedAt) || 0, Number(saved.updatedAt) || 0, Date.now());
+  return merged;
+}
+
+export function compactTombstones(record) {
+  if (!record?.bookmarkTombstones) return record;
+  // After terminal successful write, tombstones for bookmarks that no longer
+  // exist can be compacted (kept bounded). For now, keep only tombstones that
+  // correspond to recently deleted ids; drop stale ones older than 7 days if
+  // they are not needed to prevent resurrection of currently absent bookmarks.
+  // Simplified: keep tombstones for ids not present in bookmarks, drop others.
+  const present = new Set((record.bookmarks || []).map((b) => b.id));
+  const compacted = {};
+  for (const [id, ts] of Object.entries(record.bookmarkTombstones)) {
+    if (!present.has(id)) compacted[id] = ts;
+  }
+  record.bookmarkTombstones = compacted;
+  return record;
 }
 
 export function setSessionIdentity(draft, { title = '', pageUrl = '', notes } = {}) {
@@ -340,26 +455,38 @@ export function trimDrafts(drafts, keep = PLUS_LIMITS.MAX_DRAFTS) {
 export function truncateDraftToByteBudget(draft, maxBytes = PLUS_LIMITS.ACTIVE_DRAFT_MAX_BYTES) {
   if (!draft) return { draft, truncated: false };
   let working = draft;
-  let truncated = false;
-  while (sessionStorageBytes(working) > maxBytes) {
+  if (sessionStorageBytes(working) <= maxBytes) return { draft: working, truncated: false };
+  working.truncated = true;
+  working.updatedAt = Date.now();
+  // Track the serialized size incrementally: dropping a segment removes its
+  // own JSON plus one separator byte. Re-stringifying the whole draft per
+  // dropped segment made long sessions freeze the worker for seconds.
+  let size = sessionStorageBytes(working);
+  const segmentCost = (segment) => utf8ByteLength(JSON.stringify(segment)) + 1;
+  while (size > maxBytes) {
     const source = working.sourceSegments || [];
     const target = working.targetSegments || [];
     const oldestSource = source[0];
     const oldestTarget = target[0];
     if (!oldestSource && !oldestTarget) break;
-    // Remove whichever channel holds the oldest segment.
     if (oldestSource && (!oldestTarget || oldestSource.startMs <= oldestTarget.startMs)) {
+      size -= segmentCost(oldestSource);
       source.shift();
     } else {
+      size -= segmentCost(oldestTarget);
       target.shift();
     }
-    truncated = true;
   }
-  if (truncated) {
-    working.truncated = true;
-    working.updatedAt = Date.now();
+  // The running estimate is off by at most a separator byte; verify exactly
+  // once and drain the remainder if needed (rare, a few iterations).
+  while (sessionStorageBytes(working) > maxBytes) {
+    const source = working.sourceSegments || [];
+    const target = working.targetSegments || [];
+    if (!source.length && !target.length) break;
+    if (source.length && (!target.length || source[0].startMs <= target[0].startMs)) source.shift();
+    else target.shift();
   }
-  return { draft: working, truncated };
+  return { draft: working, truncated: true };
 }
 
 // Trims the unsaved-draft list to the combined byte budget, preferring the
@@ -413,21 +540,39 @@ export function validateSessionRecord(record) {
         .map((bookmark) => {
           const validated = validateBookmarkInput({ atMs: bookmark?.atMs, note: bookmark?.note });
           if (!validated) return null;
+          const createdAt = Number.isFinite(Number(bookmark.createdAt)) ? Number(bookmark.createdAt) : 0;
+          const updatedAt = Number.isFinite(Number(bookmark.updatedAt)) ? Number(bookmark.updatedAt) : createdAt;
           return {
             id: sanitizeText(bookmark.id, 60) || newId('bmk'),
             atMs: validated.atMs,
             note: validated.note,
-            createdAt: Number.isFinite(Number(bookmark.createdAt)) ? Number(bookmark.createdAt) : 0
+            createdAt,
+            updatedAt
           };
         })
         .filter(Boolean)
         .slice(0, PLUS_LIMITS.MAX_BOOKMARKS_PER_SESSION)
     : [];
+  // Bookmark tombstones: { [id]: deletedAt }
+  let bookmarkTombstones = {};
+  if (record.bookmarkTombstones && typeof record.bookmarkTombstones === 'object' && !Array.isArray(record.bookmarkTombstones)) {
+    for (const [id, ts] of Object.entries(record.bookmarkTombstones)) {
+      const cleanId = sanitizeText(id, 60);
+      const numeric = Number(ts);
+      if (cleanId && Number.isFinite(numeric) && numeric > 0) {
+        if (Object.keys(bookmarkTombstones).length < PLUS_LIMITS.MAX_BOOKMARKS_PER_SESSION * 2) {
+          bookmarkTombstones[cleanId] = Math.round(numeric);
+        }
+      }
+    }
+  }
   const durationMs = Math.max(0, Math.round(Number(record.durationMs) || 0));
   const volume = (value) => {
     const numeric = Number(value);
     return Number.isFinite(numeric) && numeric >= 0 && numeric <= 1.5 ? numeric : null;
   };
+  const notes = sanitizeMultilineText(record.notes, PLUS_LIMITS.MAX_NOTE_LENGTH);
+  const notesUpdatedAt = Number.isFinite(Number(record.notesUpdatedAt)) ? Math.max(0, Math.round(Number(record.notesUpdatedAt))) : 0;
   return {
     schemaVersion: PLUS_SCHEMA_VERSION,
     id: record.id,
@@ -446,8 +591,9 @@ export function validateSessionRecord(record) {
     sourceSegments: cleanSegments(record.sourceSegments),
     targetSegments: cleanSegments(record.targetSegments),
     bookmarks,
-    notes: sanitizeMultilineText(record.notes, PLUS_LIMITS.MAX_NOTE_LENGTH),
-    truncated: record.truncated === true,
+    bookmarkTombstones,
+    notes,
+    notesUpdatedAt,
     originalVolume: volume(record.originalVolume),
     dubbedVolume: volume(record.dubbedVolume)
   };

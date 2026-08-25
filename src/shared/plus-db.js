@@ -12,11 +12,18 @@ export const SAVED_SESSION_LIMIT_MESSAGE =
   'وصلت إلى الحد الأقصى للجلسات المحفوظة (500). صدّر نسخة احتياطية أو احذف جلسات قديمة لإفساح المجال.';
 
 // Pure decision for the record cap: updating an existing record is always
-// allowed; creating a new one beyond MAX_SAVED_SESSIONS is rejected.
+// allowed; creating a new one beyond the storage cap is rejected. There is
+// The database owns the absolute 500-record safety cap. Tier limits are
+// enforced at the service-worker message boundary so existing records from an
+// older build remain readable/editable and are never held hostage.
 export function decidePut({ exists, count, limit = PLUS_LIMITS.MAX_SAVED_SESSIONS } = {}) {
   if (exists === true) return { ok: true };
   if (Number.isFinite(count) && count >= limit) {
-    return { ok: false, error: SAVED_SESSION_LIMIT_MESSAGE };
+    return {
+      ok: false,
+      error: SAVED_SESSION_LIMIT_MESSAGE,
+      code: 'saved_session_limit'
+    };
   }
   return { ok: true };
 }
@@ -138,7 +145,7 @@ async function withStore(mode, run) {
   });
 }
 
-export async function putSavedSession(record) {
+export async function putSavedSession(record, { limit = PLUS_LIMITS.MAX_SAVED_SESSIONS } = {}) {
   const clean = validateSessionRecord(record);
   if (!clean) throw new Error('سجل الجلسة غير صالح للحفظ.');
   // Existence check, count check AND the put run inside ONE readwrite
@@ -169,10 +176,10 @@ export async function putSavedSession(record) {
       settle(store.count())
     ])
       .then(([existing, count]) => {
-        const decision = decidePut({ exists: Boolean(existing), count });
+        const decision = decidePut({ exists: Boolean(existing), count, limit });
         if (!decision.ok) {
           const error = new Error(decision.error);
-          error.code = 'saved_session_limit';
+          error.code = decision.code || 'saved_session_limit';
           fail(error);
           return;
         }

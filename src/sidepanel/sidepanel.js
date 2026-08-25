@@ -41,7 +41,9 @@ function renderStats(state = {}) {
 
 function renderState(state) {
   const active = ACTIVE_STATUSES.has(state.status);
-  if (active && !sessionStartedAt) sessionStartedAt = Date.now();
+  if (active && !sessionStartedAt) {
+    sessionStartedAt = Number(state.startedAt) > 0 ? Number(state.startedAt) : Date.now();
+  }
   const names = uiLanguage === 'en' ? {
     [STATUS.CONNECTING]: 'Connecting', [STATUS.LISTENING]: state.sourcePaused ? 'Source paused' : 'Listening', [STATUS.TRANSLATING]: 'Live dubbing',
     [STATUS.RECONNECTING]: 'Reconnecting', [STATUS.RATE_LIMITED]: 'Rate limited', [STATUS.ERROR]: 'Error', [STATUS.READY]: 'Ready', [STATUS.STOPPED]: 'Stopped', [STATUS.NO_KEY]: 'Key required'
@@ -72,8 +74,8 @@ function applyLanguage(language) {
   document.querySelector('#sourceHeading').textContent = english ? 'Original transcript' : 'النص الأصلي';
   document.querySelector('#targetHeading').textContent = english ? 'Arabic translation' : 'الترجمة العربية';
   document.querySelector('#retentionNote').textContent = english
-    ? 'No audio is stored; transcripts save locally only via Plus'
-    : 'لا يُحفظ الصوت؛ والنصوص تُحفظ محلياً فقط عبر Plus';
+    ? 'No audio is stored; transcripts stay local when local saving is enabled'
+    : 'لا يُحفظ الصوت؛ وتبقى النصوص محلياً عند تفعيل الحفظ المحلي';
   durationLabel.textContent = english ? 'Session' : 'مدة الجلسة';
   captionCountLabel.textContent = english ? 'Lines' : 'السطور';
   latencyLabel.textContent = english ? 'Delay' : 'التأخير';
@@ -218,10 +220,9 @@ async function updatePlusToolbar() {
     // Consistent shape: `draft` IS the active draft summary (or null) and
     // `plus` is the full settings object carrying `entitlement`.
     plusDraftActive = Boolean(status.draft);
-    // Strict: only an explicit plusEnabled === true shows the toolbar.
-    // Missing/malformed entitlement keeps it hidden (locked by default).
-    const enabled = status.plus?.entitlement?.plusEnabled === true;
-    plusToolbar.classList.toggle('hidden', !enabled);
+    // Free and Plus users alike can see the toolbar for their included session
+    // or the expanded Plus library.
+    plusToolbar.classList.remove('hidden');
     plusSave.disabled = !plusDraftActive;
     plusAddBookmark.disabled = !plusDraftActive;
     if (status.storageWarning) {

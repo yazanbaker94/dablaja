@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { hostnameOf, normalizeOrigin } from '../src/shared/normalize-origin.js';
 import { decidePut, planBatchInsert, SAVED_SESSION_LIMIT_MESSAGE } from '../src/shared/plus-db.js';
@@ -80,6 +80,18 @@ test('decidePut allows updates at the cap and rejects new records', () => {
   assert.equal(decidePut({ exists: false, count: undefined }).ok, true);
 });
 
+test('no tier-based save limit: every tier saves up to the storage cap', () => {
+  // The free-tier gate is the VIEW lock (oldest session unlocked), not a
+  // save cap — decidePut treats every save identically.
+  assert.equal(decidePut({ exists: false, count: 0 }).ok, true);
+  assert.equal(decidePut({ exists: false, count: 1 }).ok, true);
+  assert.equal(decidePut({ exists: false, count: 42 }).ok, true);
+  // Only the shared 500-record storage cap rejects.
+  const rejected = decidePut({ exists: false, count: PLUS_LIMITS.MAX_SAVED_SESSIONS });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, 'saved_session_limit');
+});
+
 test('planBatchInsert dedupes by id and admits deterministically within capacity', () => {
   const records = [
     { id: 'plussession_a' }, { id: 'plussession_a' }, { id: 'plussession_b' },
@@ -135,37 +147,36 @@ test('Plus page restores both persisted toggles and active-site profiles are cap
 
 // ---- Packaging gates -------------------------------------------------------
 
-test('manifest and package versions stay in sync (0.3.0)', async () => {
+test('manifest and package versions stay in sync', async () => {
   const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(manifest.version, '0.3.0');
+  assert.equal(manifest.version, '1.0.0');
   assert.equal(packageJson.version, manifest.version);
 });
 
-test('release validation refuses while the development preview is enabled', () => {
-  assert.equal(PLUS_DEV_PREVIEW_ENABLED, true, 'precondition: preview still on in this phase');
-  let threw = null;
-  try {
-    execFileSync(process.execPath, ['scripts/validate-manifest.mjs'], {
+test('release validation remains blocked until every manual acceptance marker is real', async () => {
+  assert.equal(PLUS_DEV_PREVIEW_ENABLED, false);
+  await access(path.join(root, 'RELEASE_ACCEPTANCE.md'));
+  assert.throws(
+    () => execFileSync(process.execPath, ['scripts/validate-manifest.mjs'], {
       cwd: root,
       env: { ...process.env, DABLAJA_RELEASE: '1' },
       stdio: 'pipe'
-    });
-  } catch (error) {
-    threw = error;
-  }
-  assert.ok(threw, 'release-mode validation must fail');
-  assert.match(String(threw.stderr), /PLUS_DEV_PREVIEW_ENABLED is still true/);
+    }),
+    (error) => {
+      const output = `${error?.stdout || ''}${error?.stderr || ''}`;
+      return /decision is not APPROVED|unchecked manual items|Missing release evidence marker/.test(output);
+    }
+  );
 });
 
-test('dev-mode validation passes with a visible preview warning', () => {
+test('manifest validation passes cleanly for development and release', () => {
   const output = execFileSync(process.execPath, ['scripts/validate-manifest.mjs'], {
     cwd: root,
     env: { ...process.env, DABLAJA_RELEASE: '' },
     stdio: 'pipe'
   }).toString();
   assert.match(output, /Manifest valid/);
-  assert.match(output, /WARNING: Plus development-preview entitlement is ENABLED/);
 });
 
 test('dev packaging script names the preview ZIP unmistakably', async () => {

@@ -8,7 +8,6 @@ export const TARGET_LANGUAGE = 'ar';
 
 export const STORAGE_KEYS = Object.freeze({
   API_KEY: 'geminiApiKey',
-  CONSENT: 'privacyConsentAt',
   ORIGINAL_VOLUME: 'originalVolume',
   DUBBED_VOLUME: 'dubbedVolume',
   AUTO_DUCKING: 'autoDucking',
@@ -16,11 +15,12 @@ export const STORAGE_KEYS = Object.freeze({
   USAGE_STATS: 'localUsageStats',
   INSTALL_ID: 'installId',
   ANALYTICS_CONSENT: 'anonymousUsageConsent',
-  ANALYTICS_DECIDED_AT: 'anonymousUsageDecisionAt',
   PLUS_LICENSE: 'plusLicense',
-  PLUS_AUTOSAVE: 'plusAutosave',
   PLUS_REMEMBER_VOLUMES: 'plusRememberVolumes',
-  PLUS_SITE_PROFILES: 'plusSiteProfiles'
+  PLUS_SITE_PROFILES: 'plusSiteProfiles',
+  // Preserve the original on-disk key so existing users keep their choice.
+  PLUS_LOCAL_SAVING_ENABLED: 'plusLocalLibraryConsent',
+  PLUS_INSTALL_CREDENTIAL: 'plusInstallCredential'
 });
 
 export const SESSION_STORAGE_KEYS = Object.freeze({

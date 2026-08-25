@@ -16,21 +16,27 @@
 12. Server deduplication/aggregation with no URL, title, audio, transcript, key, or install-ID columns.
 13. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
 14. Clean package generation and ZIP-root manifest check.
-15. Plus entitlement states: development preview, locked, active, expired/revoked; malformed licenses ignored.
+15. Plus entitlement states: locked, active, offline grace, expired, and revoked; malformed or mismatched licenses ignored.
 16. Plus draft lifecycle: interim/cumulative merge, punctuation and final-flag finalization, source/target separation, reconnect duplicate suppression, snapshot-vs-live independence, stop finalization.
 17. Plus bounds: segment text, per-channel segment counts, bookmarks, notes/title sanitization, session and draft caps, total-character ceiling.
 18. Plus search normalization: Arabic diacritics/tatweel/letter-form folding, case folding, AND semantics, title/notes/bookmark/transcript matching.
 19. Plus exports: TXT/SRT/JSON content and timestamps, bilingual SRT pairing, zero-length cue handling, forbidden-field absence.
 20. Plus backup: envelope validation, malformed rejection, per-record validation, merge dedupe by newest, session cap, import never deletes existing data.
 21. Per-site volume profiles: origin normalization, partial updates, clamping, exact-origin lookup, insertion-order eviction, deletion.
-22. Explicit Gemini key-save consent (unchecked checkbox blocks save; masked viewing does not re-require it).
+22. Gemini disclosure/key flow (static disclosure remains visible; saving the key alone sends no audio; no obsolete consent checkbox or timestamp remains).
 
 Commands:
 
 ```powershell
 npm run verify
+npm run smoke
+npm run e2e
 npm run package
 ```
+
+`npm run e2e` is non-destructive by default. Live AudioFetcher ingestion and
+live Stripe Checkout probes remain skipped unless their explicit environment
+flags are set for a controlled acceptance run.
 
 ## Chrome integration matrix
 
@@ -41,7 +47,7 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 1 | Unpacked installation | No manifest errors; icon, popup, and side panel registered. |
 | 2 | Popup RTL layout | Visual screenshot/inspection; no clipped controls. |
 | 3 | Key save/change/delete | Masked field; local-only behavior; key never appears in UI response or console. |
-| 4 | Consent gates | Google audio disclosure precedes key use. Separate anonymous-statistics disclosure supports accept, decline, and later withdrawal; declining must not block dubbing. |
+| 4 | Disclosure and optional sharing | Google audio disclosure is visible beside key entry; audio begins only after Start. The separate anonymous-statistics toggle is off by default, can be enabled/disabled later, and never blocks dubbing. |
 | 5 | Invalid key | Actionable Arabic error; capture/audio restored; no reconnect loop. |
 | 6 | Valid start | Ready → connecting → listening/translating. |
 | 7 | Captions | Source and Arabic text update in side panel; no storage entries contain text. |
@@ -56,11 +62,11 @@ Use Chrome 116 or later with the unpacked workspace root.
 | 16 | Non-YouTube page | At least one second ordinary audible HTTPS source. |
 | 17 | Console inspection | Worker/offscreen/panel show no repeated exceptions and no sensitive output. |
 | 18 | Sustained run | Target 15–20 minutes; bounded buffer, reconnection near connection limit, no obvious growth/leak. |
-| 19 | Plus save flow | Side-panel «احفظ الجلسة» during a live session stores bilingual transcript in the library (IndexedDB); URL captured only at save. |
+| 19 | Plus save flow | Side-panel «احفظ الجلسة» during a live session stores the bounded bilingual draft in IndexedDB; while local saving is enabled, source title/origin/URL may already exist only in the temporary local draft. |
 | 20 | Plus library UI | Search filters cards; detail shows bilingual timeline; notes save; bookmarks add/edit/delete; exports (TXT/SRT/JSON/print) download; delete + delete-all with confirmation. |
 | 21 | Plus backup | Full backup export downloads; importing a tampered or wrong-kind file is rejected with an Arabic error; valid import merges without losing existing sessions. |
 | 22 | Plus drafts | Stop without saving keeps the draft card (≤3); starting a new session preserves the previous draft; discarding removes it. |
-| 23 | Plus entitlement | Dev-preview chip «نسخة تطوير Plus» visible in library; features gated when entitlement disabled. |
+| 23 | Plus entitlement | Free-plan state is locked; a verified license enables Plus; expired/revoked/mismatched licenses lock paid mutations and show actionable status. |
 | 24 | Site volume profiles | Opt-in toggle; volumes applied on next session start for the same hostname; profile deletable; off by default. |
 
 ## Human listening prompt
@@ -74,10 +80,10 @@ After a valid session has produced Arabic output, ask the tester to confirm exac
 
 Browser automation must not mark these as passed without that confirmation.
 
-## Plus corrective-pass additions (0.3.0)
+## Corrective-pass additions
 
-23. Draft controller lifecycle: entitled-only capture, serialized writes, stale-generation rejection, mid-session save updating one record at stop, idempotent finish, revocation freeze, reload recovery (saved vs unsaved), byte-budget truncation, IDB-failure fallback.
+23. Draft controller lifecycle: serialized writes, stale-generation rejection, mid-session save updating one record at stop, idempotent finish, revocation freeze, reload recovery (saved vs unsaved), byte-budget truncation, IDB-failure fallback.
 24. Message-boundary entitlement enforcement: all paid mutations rejected while locked; read/export/delete of owned data remains available; raw-backup parsing happens only in the service worker.
 25. IndexedDB cap: updates allowed at 500, new records rejected with an actionable Arabic error, deterministic deduped batch planning, atomic import.
 26. Multiline note sanitizer, origin normalization, and title fallback ordering.
-27. Packaging gates: `package:dev` preview ZIP naming; `package:release` refusal while the preview flag is on and manifest/package version parity.
+27. Packaging gates: `package:dev` development ZIP naming; `package:release` refusal while the development entitlement switch is on, version parity is broken, any release-acceptance marker is pending, or checklist items remain unchecked.

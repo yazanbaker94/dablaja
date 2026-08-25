@@ -8,21 +8,24 @@
 //  • finish() is idempotent per session: drains the queue, cancels timers,
 //    and updates an explicitly-saved/autosaved IndexedDB record instead of
 //    creating a duplicate unsaved draft.
-//  • Active drafts are captured only while the entitlement provider says Plus
-//    is enabled; revocation mid-session stops persistence without touching
-//    the live dubbing path.
+//  • Draft capture obeys the local-saving setting (chrome.storage.local);
+//    entitlement only enforces tier limits (free: 1 session/1 bookmark/1
+//    profile, Plus: 500/100/50). Revocation mid-session stops persistence
+//    without touching live dubbing.
+//  • Autosave respects that setting and the tier; if the free cap is reached,
+//    it retains a visible unsaved draft.
 //  • Byte budgets (UTF-8) cap the active draft and the unsaved-draft list;
 //    truncation is surfaced, never silent.
 
 import {
-  PLUS_LIMITS,
   addBookmark,
   appendCaption,
+  compactTombstones,
   createDraft,
   finalizeDraft,
+  mergeDraftWithSaved,
   sessionTitleOrDefault,
   snapshotDraft,
-  sessionStorageBytes,
   transcriptLineCount,
   truncateDraftToByteBudget,
   trimDrafts,
@@ -35,7 +38,7 @@ const UNSAVED_KEY = 'plusUnsavedDrafts';
 
 export function createPlusDraftController({
   storage,                                  // { get(key), set(obj), remove(keyOrArray) } — async
-  db,                                       // { putSession(record) } — async, throws on failure
+  db,                                       // { putSession(record), getSession(id) } — async, throws on failure
   getEntitlement,                           // async () => { plusEnabled: boolean }
   now = Date.now
 } = {}) {
@@ -56,18 +59,7 @@ export function createPlusDraftController({
   let chain = Promise.resolve(); // serialized persistence queue
   let finished = true;          // whether the current active draft already finalized
   let lastStorageWarning = null;
-  let entitlementCache = null;  // { value, at } — refreshed at most every 5 s
   const listeners = new Set();
-
-  async function checkEntitlement() {
-    const timestamp = now();
-    if (entitlementCache && timestamp - entitlementCache.at < 5000) {
-      return entitlementCache.value;
-    }
-    const value = await getEntitlement();
-    entitlementCache = { value, at: timestamp };
-    return value;
-  }
 
   function emit(event) {
     for (const listener of listeners) {
@@ -163,17 +155,11 @@ export function createPlusDraftController({
   }
 
   async function start({ startedAt, siteOrigin = '', title = '', pageUrl = '' } = {}) {
-    const entitlement = await getEntitlement().catch(() => null);
     // Preserve any in-memory unfinished draft, then flush any persisted draft
     // left by a previous/revoked session — the new session must never
     // silently overwrite either.
     await finish({ reason: 'restart' });
     await restore().catch(() => undefined);
-    if (!entitlement?.plusEnabled) {
-      // Free/locked users get live captions but no hidden Plus draft capture.
-      broadcast();
-      return null;
-    }
     generation += 1;
     finished = false;
     active = createDraft({ startedAt, siteOrigin, title, pageUrl });
@@ -185,23 +171,6 @@ export function createPlusDraftController({
 
   function caption({ channel, text, final = false, speaker = '', turnId = null }) {
     if (!active || finished) return;
-    checkEntitlement()
-      .then((entitlement) => {
-        if (!entitlement?.plusEnabled && active && !finished) {
-          // Revoked mid-session: freeze persistence and drop the in-memory
-          // draft (the last persisted snapshot remains recoverable); the
-          // free live dubbing path is untouched.
-          finished = true;
-          active = null;
-          activeSessionId = null;
-          clearTimeout(persistTimer);
-          persistTimer = null;
-          generation += 1; // invalidate any queued write
-          broadcast();
-        }
-      })
-      .catch(() => undefined);
-    if (finished) return;
     const atMs = Math.max(0, now() - active.startedAt);
     appendCaption(active, { channel, text, final, atMs, speaker, turnId });
     schedulePersist();
@@ -228,8 +197,6 @@ export function createPlusDraftController({
   // Explicit «احفظ الجلسة». Idempotent: repeat clicks re-save the same record.
   async function save({ title = '' } = {}) {
     if (!active || finished) throw new Error('لا توجد جلسة نشطة للحفظ.');
-    const entitlement = await getEntitlement().catch(() => null);
-    if (!entitlement?.plusEnabled) throw new Error('Plus غير مفعّل لهذا الجهاز.');
     const cleanTitle = title ? sessionTitleOrDefault(title, active.siteOrigin) : '';
     if (cleanTitle) active.title = cleanTitle;
     active.saveRequested = true;
@@ -282,7 +249,7 @@ export function createPlusDraftController({
     }
   }
 
-  async function performFinish({ autosave = false, reason = 'stop' } = {}) {
+  async function performFinish({ autosave = false } = {}) {
     if (!active) {
       finished = true;
       return null;
@@ -329,12 +296,37 @@ export function createPlusDraftController({
 
     if (current.saveRequested === true || autosaveAllowed) {
       try {
-        // Update the same record the explicit save created — no duplicates.
-        const saved = await db.putSession(bounded);
+        // Deterministic merge: bookmarks need stable IDs + updatedAt,
+        // deletions use tombstones, notes use updatedAt. Finishing must
+        // merge without resurrecting deleted bookmarks or reverting newer notes.
+        let finalRecord = bounded;
+        if (typeof db.getSession === 'function') {
+          const existing = await db.getSession(current.id).catch(() => null);
+          if (existing) {
+            finalRecord = mergeDraftWithSaved(bounded, existing);
+          }
+        }
+        finalRecord = compactTombstones(finalRecord);
+        const saved = await db.putSession(finalRecord);
         await clearActiveKeyBestEffort();
         broadcast();
         return saved;
-      } catch {
+      } catch (error) {
+        // Storage failure (or the 500-record cap) must retain the unsaved
+        // draft, never destroy the user's transcript.
+        if (error?.code === 'saved_session_limit') {
+          try {
+            const drafts = await preserveUnsaved(bounded);
+            await clearActiveKeyBestEffort();
+            warn('وصلت إلى حد الجلسات المحفوظة (500) — بقيت الجلسة كمسودة. صدّر نسخة احتياطية أو احذف جلسات قديمة.');
+            broadcast();
+            return drafts;
+          } catch {
+            warn('تعذر حفظ المسودة غير المحفوظة؛ أُبقيت نسخة استرجاع محلية للمحاولة لاحقاً.');
+            broadcast();
+            return null;
+          }
+        }
         warn('تعذر تحديث الجلسة المحفوظة في المكتبة؛ أُبقيت نسخة استرجاع محلية.');
         broadcast();
         return null; // finalization did NOT durably complete — say so.
@@ -390,8 +382,6 @@ export function createPlusDraftController({
   }
 
   async function saveUnsaved(draftId, { title = '' } = {}) {
-    const entitlement = await getEntitlement().catch(() => null);
-    if (!entitlement?.plusEnabled) throw new Error('Plus غير مفعّل لهذا الجهاز.');
     const drafts = await readUnsaved();
     const target = drafts.find((draft) => draft.id === draftId);
     if (!target) throw new Error('لم يتم العثور على الجلسة غير المحفوظة.');
@@ -442,7 +432,14 @@ export function createPlusDraftController({
     }
     if (restored.saveRequested === true) {
       try {
-        const saved = await db.putSession(restored);
+        // Merge same as finish: respect updatedAt/tombstones
+        let finalRecord = restored;
+        if (typeof db.getSession === 'function') {
+          const existing = await db.getSession(restored.id).catch(() => null);
+          if (existing) finalRecord = mergeDraftWithSaved(restored, existing);
+        }
+        finalRecord = compactTombstones(finalRecord);
+        const saved = await db.putSession(finalRecord);
         await clearActiveKey();
         broadcast();
         return saved;
@@ -469,6 +466,7 @@ export function createPlusDraftController({
     caption,
     bookmark,
     save,
+    saveActive: save,
     finish,
     saveUnsaved,
     discardUnsaved,

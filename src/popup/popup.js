@@ -1,11 +1,8 @@
 import { ACTIVE_STATUSES, STATUS } from '../shared/constants.js';
-import { GEMINI_CONSENT_TEXT_AR, GEMINI_CONSENT_TEXT_EN, requiresFreshConsent } from '../shared/key-consent.js';
 
 const elements = {
-  controls: document.querySelector('#controls'),
   apiKey: document.querySelector('#apiKey'),
   keyError: document.querySelector('#keyError'),
-  geminiConsent: document.querySelector('#geminiConsent'),
   toggleKey: document.querySelector('#toggleKey'),
   saveKey: document.querySelector('#saveKey'),
   clearKey: document.querySelector('#clearKey'),
@@ -15,39 +12,42 @@ const elements = {
   dubbedOutput: document.querySelector('#dubbedOutput'),
   autoDucking: document.querySelector('#autoDucking'),
   startStop: document.querySelector('#startStop'),
+  sessionStatus: document.querySelector('#sessionStatus'),
   quickBookmark: document.querySelector('#quickBookmark'),
   actionError: document.querySelector('#actionError'),
-  openPanel: document.querySelector('#openPanel'),
-  openDiagnostics: document.querySelector('#openDiagnostics'),
   openAudio: document.querySelector('#openAudio'),
   openKey: document.querySelector('#openKey'),
   openStats: document.querySelector('#openStats'),
   openLibrary: document.querySelector('#openLibrary'),
-  openFeedback: document.querySelector('#openFeedback'),
-  analyticsNotice: document.querySelector('#analyticsNotice'),
-  acceptAnalytics: document.querySelector('#acceptAnalytics'),
-  declineAnalytics: document.querySelector('#declineAnalytics'),
-  changeAnalytics: document.querySelector('#changeAnalytics'),
   audioOverlay: document.querySelector('#audioOverlay'),
-  keyOverlay: document.querySelector('#keyOverlay')
+  keyOverlay: document.querySelector('#keyOverlay'),
+  upgradeModal: document.querySelector('#upgradeModal'),
+  upgradeCheckoutBtn: document.querySelector('#upgradeCheckoutBtn'),
+  dismissUpgradeBtn: document.querySelector('#dismissUpgradeBtn'),
+  modalCloseX: document.querySelector('#modalCloseX'),
+  topUpgradeBadge: document.querySelector('#topUpgradeBadge'),
+  topUpgradeBadgeText: document.querySelector('#topUpgradeBadgeText'),
+  alreadyPurchasedLink: document.querySelector('#alreadyPurchasedLink')
 };
 
 const translations = {
   ar: {
-    title: 'دبلجة', setupEyebrow: 'الإعداد الأول', addKey: 'أضف مفتاح Gemini', keyHint: 'ألصق مفتاح API الخاص بك للوصول إلى ميزات دبلجة أكثر.',
-    apiKey: 'مفتاح API', pasteKey: 'ألصق المفتاح هنا', show: 'إظهار', hide: 'إخفاء', consent: GEMINI_CONSENT_TEXT_AR,
-    saveKey: 'حفظ', geminiKey: 'مفتاح API', savedLocal: '•••••••• محفوظ محلياً', testKey: 'اختبار', change: 'تغيير', delete: 'حذف', clearKey: 'مسح', deleteKey: 'حذف المفتاح', or: 'أو',
-    originalAudio: 'الصوت الأصلي', originalHelp: 'اخفضه كي يبقى الكلام الإنجليزي مرجعاً هادئاً.', dubbedAudio: 'الصوت العربي', audioBalance: 'الصوت', audioBalanceHelp: 'اجعل الدبلجة واضحة مع إبقاء المصدر مرجعاً هادئاً.', autoDucking: 'خفض الصوت الأصلي تلقائياً',
-    autoDuckingHelp: 'يخفضه بسلاسة أثناء كلام الدبلجة ثم يعيده.', usageStats: 'الإحصائيات', totalDubbed: 'إجمالي الدبلجة', sessions: 'جلسات', activeDays: 'أيام نشطة', averageDelay: 'متوسط التأخير', details: 'عرض التفاصيل', openCaptions: 'فتح الترجمة الثنائية', clearPrivacy: 'خصوصية واضحة',
-    privacySummary: 'يُرسل صوت التبويب مباشرةً إلى Google فقط أثناء الجلسة.', privacyPolicy: 'سياسة الخصوصية', start: 'ابدأ الدبلجة', stop: 'إيقاف الدبلجة'
+    title: 'دبلجة', keyHint: 'ألصق مفتاح Gemini الخاص بك لبدء الدبلجة. لا يُرسل الصوت إلا بعد ضغط «ابدأ الدبلجة».',
+    apiKey: 'مفتاح API', pasteKey: 'ألصق المفتاح هنا', show: 'إظهار', hide: 'إخفاء',
+    saveKey: 'حفظ', geminiKey: 'مفتاح API', deleteKey: 'حذف المفتاح', or: 'أو',
+    originalAudio: 'الصوت الأصلي', dubbedAudio: 'الصوت العربي', audioBalance: 'الصوت', autoDucking: 'خفض الصوت الأصلي تلقائياً',
+    usageStats: 'الإحصائيات', start: 'ابدأ الدبلجة', stop: 'إيقاف الدبلجة',
+    geminiDisclosure: 'عند بدء الدبلجة يُرسل صوت التبويب ونصوصه مباشرةً إلى Google Gemini أثناء الجلسة. يُحفظ المفتاح على هذا الجهاز فقط، ولا يصل الصوت أو النص إلى AudioFetcher.',
+    privacyPolicy: 'سياسة الخصوصية'
   },
   en: {
-    title: 'دبلجة', setupEyebrow: 'First setup', addKey: 'Add your Gemini key', keyHint: 'Paste your API key to unlock more dubbing features.',
-    apiKey: 'API key', pasteKey: 'Paste the key here', show: 'Show', hide: 'Hide', consent: GEMINI_CONSENT_TEXT_EN,
-    saveKey: 'Save', geminiKey: 'API key', savedLocal: '•••••••• stored locally', testKey: 'Test', change: 'Change', delete: 'Delete', clearKey: 'Clear', deleteKey: 'Delete key', or: 'or',
-    originalAudio: 'Original audio', originalHelp: 'Keep the English speech audible as a quiet reference.', dubbedAudio: 'Arabic dubbed audio', audioBalance: 'Audio', audioBalanceHelp: 'Keep the Arabic dub clear with a quiet source reference.', autoDucking: 'Automatically duck original audio',
-    autoDuckingHelp: 'Smoothly lowers it while Arabic speech plays, then restores it.', usageStats: 'Usage stats', totalDubbed: 'Total dubbed', sessions: 'Sessions', activeDays: 'Active days', averageDelay: 'Average delay', details: 'View details', openCaptions: 'Open bilingual captions', clearPrivacy: 'Clear privacy',
-    privacySummary: 'Tab audio goes directly to Google only during a session.', privacyPolicy: 'Privacy policy', start: 'Start dubbing', stop: 'Stop dubbing'
+    title: 'Dablaja', keyHint: 'Paste your Gemini API key to start dubbing. Audio is sent only after you press Start dubbing.',
+    apiKey: 'API key', pasteKey: 'Paste the key here', show: 'Show', hide: 'Hide',
+    saveKey: 'Save', geminiKey: 'API key', deleteKey: 'Delete key', or: 'or',
+    originalAudio: 'Original audio', dubbedAudio: 'Arabic dubbed audio', audioBalance: 'Audio', autoDucking: 'Automatically duck original audio',
+    usageStats: 'Usage stats', start: 'Start dubbing', stop: 'Stop dubbing',
+    geminiDisclosure: 'When dubbing starts, tab audio and transcripts go directly to Google Gemini for that session. The key stays on this device; AudioFetcher receives neither audio nor transcripts.',
+    privacyPolicy: 'Privacy policy'
   }
 };
 
@@ -66,9 +66,10 @@ const KEY_MASK = '••••••••••••••••••••';
 
 let currentState = null;
 let settings = null;
+let plus = null;
+let activeTabOrigin = null;
 let busy = false;
 let keyEdited = false;
-let analyticsNoticeForced = false;
 
 function language() {
   return settings?.uiLanguage === 'en' ? 'en' : 'ar';
@@ -89,21 +90,6 @@ function applyLanguage() {
   elements.clearKey.title = tr('deleteKey');
 }
 
-function englishStatusMessage() {
-  const messages = {
-    [STATUS.NO_KEY]: 'Enter and consent to use a Gemini API key first.',
-    [STATUS.READY]: 'Open an audible English-speaking tab, then start dubbing.',
-    [STATUS.CONNECTING]: 'Capturing the tab and connecting to Gemini…',
-    [STATUS.LISTENING]: currentState.sourcePaused ? 'Connected—the source is silent or paused.' : 'Listening to the current tab…',
-    [STATUS.TRANSLATING]: 'Arabic dubbing is playing now.',
-    [STATUS.RECONNECTING]: 'The connection dropped temporarily. Retrying…',
-    [STATUS.RATE_LIMITED]: 'Google temporarily rate limited the session. Retrying safely…',
-    [STATUS.STOPPED]: 'Dubbing is stopped and tab audio is restored.',
-    [STATUS.ERROR]: currentState.diagnosticCode ? `Gemini session error (${currentState.diagnosticCode}). Open diagnostics for details.` : 'The session stopped with an error. Open diagnostics for details.'
-  };
-  return messages[currentState.status] || 'Unknown session state.';
-}
-
 function showError(message = '') {
   elements.keyError.textContent = message;
   elements.keyError.classList.toggle('hidden', !message);
@@ -112,6 +98,17 @@ function showError(message = '') {
 function showActionError(message = '') {
   elements.actionError.textContent = message;
   elements.actionError.classList.toggle('hidden', !message);
+}
+
+async function resolveActiveTabOrigin() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.url && /^https?:/.test(tab.url)) {
+      const url = new URL(tab.url);
+      activeTabOrigin = url.hostname;
+    }
+  } catch {}
+  return activeTabOrigin;
 }
 
 async function getActiveWebTab() {
@@ -156,12 +153,20 @@ function renderVolumes() {
   // While a session runs with an entitlement-gated site profile applied, the
   // sliders reflect the EFFECTIVE volumes, not the global defaults.
   const active = currentState && ACTIVE_STATUSES.has(currentState.status);
-  const effectiveOriginal = active && currentState?.sessionVolumes?.original != null
-    ? currentState.sessionVolumes.original
-    : (settings?.originalVolume ?? 0.25);
-  const effectiveDubbed = active && currentState?.sessionVolumes?.dubbed != null
-    ? currentState.sessionVolumes.dubbed
-    : (settings?.dubbedVolume ?? 1);
+  let effectiveOriginal = settings?.originalVolume ?? 0.25;
+  let effectiveDubbed = settings?.dubbedVolume ?? 1;
+
+  if (active && currentState?.sessionVolumes) {
+    if (currentState.sessionVolumes.original != null) effectiveOriginal = currentState.sessionVolumes.original;
+    if (currentState.sessionVolumes.dubbed != null) effectiveDubbed = currentState.sessionVolumes.dubbed;
+  } else if (activeTabOrigin && Array.isArray(plus?.siteProfiles)) {
+    const profile = plus.siteProfiles.find((p) => p.origin === activeTabOrigin);
+    if (profile) {
+      if (Number.isFinite(profile.originalVolume)) effectiveOriginal = profile.originalVolume;
+      if (Number.isFinite(profile.dubbedVolume)) effectiveDubbed = profile.dubbedVolume;
+    }
+  }
+
   const originalPercent = Math.round(effectiveOriginal * 100);
   const dubbedPercent = Math.round(effectiveDubbed * 100);
   elements.originalVolume.value = String(originalPercent);
@@ -175,16 +180,38 @@ function render() {
   if (!currentState || !settings) return;
   const active = ACTIVE_STATUSES.has(currentState.status);
   applyLanguage();
+  renderVolumes();
   const label = elements.startStop.querySelector('.cta-label');
   if (label) label.textContent = active ? tr('stop') : tr('start');
   else elements.startStop.textContent = active ? tr('stop') : tr('start');
   elements.startStop.classList.toggle('stop', active);
   elements.startStop.disabled = busy;
+  if (elements.sessionStatus) {
+    const paused = currentState.status === STATUS.LISTENING && currentState.sourcePaused;
+    elements.sessionStatus.textContent = paused
+      ? (language() === 'en' ? 'Connected · source paused or silent' : 'متصل · المصدر متوقف أو صامت')
+      : (statusLabels[language()][currentState.status] || statusLabels.ar[currentState.status] || '—');
+  }
   if (elements.quickBookmark) {
     elements.quickBookmark.classList.toggle('hidden', !active);
+    // If local saving disabled, show hint on bookmark
+    if (active && plus && plus.localSavingEnabled === false) {
+      elements.quickBookmark.title = 'حفظ الجلسات المحلي معطّل — فعّله من الإعدادات';
+    } else {
+      elements.quickBookmark.title = '';
+    }
   }
   fillSavedKeyField();
-  elements.analyticsNotice.classList.toggle('hidden', settings.analyticsDecisionRecorded && !analyticsNoticeForced);
+
+  const isPlus = plus?.entitlement?.plusEnabled === true;
+  if (elements.topUpgradeBadge) {
+    elements.topUpgradeBadge.classList.toggle('is-plus', isPlus);
+    if (elements.topUpgradeBadgeText) {
+      elements.topUpgradeBadgeText.innerHTML = isPlus
+        ? (language() === 'en' ? 'Plus Active' : 'Plus مفعل')
+        : (language() === 'en' ? 'Plus ($10)' : '<bdi>Plus (10$)</bdi>');
+    }
+  }
 }
 
 async function request(message) {
@@ -192,13 +219,16 @@ async function request(message) {
   if (!response?.ok) throw new Error(response?.error || 'تعذر تنفيذ الطلب.');
   if (response.state) currentState = response.state;
   if (response.settings) settings = response.settings;
+  if (response.plus) plus = response.plus;
   return response;
 }
 
 async function refresh() {
+  await resolveActiveTabOrigin();
   const response = await request({ type: 'GET_STATE' });
   currentState = response.state;
   settings = response.settings;
+  plus = response.plus;
   renderVolumes();
   render();
 }
@@ -259,15 +289,6 @@ async function saveEnteredKey() {
     showError(language() === 'en' ? 'Paste a Gemini API key first.' : 'ألصق مفتاح Gemini أولاً.');
     return false;
   }
-  // A brand-new key needs the explicit Gemini consent checkbox ticked; merely
-  // viewing an already-saved masked key does not re-require it.
-  if (requiresFreshConsent({ keyEdited, hasSavedKey: Boolean(settings?.hasKey) })
-    && elements.geminiConsent.checked !== true) {
-    showError(language() === 'en'
-      ? 'Please confirm the Gemini processing disclosure before saving.'
-      : 'أكّد الموافقة على إرسال الصوت إلى Gemini قبل الحفظ.');
-    return false;
-  }
   if (savePromise) return savePromise;
   showError();
   savePromise = (async () => {
@@ -275,12 +296,10 @@ async function saveEnteredKey() {
     try {
       const response = await request({
         type: 'SAVE_KEY',
-        apiKey,
-        consent: elements.geminiConsent.checked === true
+        apiKey
       });
       settings = response.settings;
       keyEdited = false;
-      elements.geminiConsent.checked = false;
       renderVolumes();
       render();
       closeKeyOverlay();
@@ -330,34 +349,62 @@ elements.clearKey.addEventListener('click', async () => {
   }
 });
 
-async function chooseAnalyticsConsent(value) {
-  elements.acceptAnalytics.disabled = true;
-  elements.declineAnalytics.disabled = true;
-  analyticsNoticeForced = false;
-  settings = { ...settings, analyticsConsent: value === true, analyticsDecisionRecorded: true };
-  render();
-  try {
-    const response = await request({ type: 'SET_ANALYTICS_CONSENT', value });
-    settings = response.settings;
-    render();
-  } catch {
-    settings = { ...settings, analyticsDecisionRecorded: false };
-    render();
-    elements.acceptAnalytics.disabled = false;
-    elements.declineAnalytics.disabled = false;
-  }
+function triggerPlusSavedAnimation() {
+  if (!elements.openLibrary) return;
+  elements.openLibrary.classList.remove('plus-saved-animate');
+  void elements.openLibrary.offsetWidth;
+  elements.openLibrary.classList.add('plus-saved-animate');
+  setTimeout(() => {
+    elements.openLibrary.classList.remove('plus-saved-animate');
+  }, 4000);
 }
 
-elements.acceptAnalytics.addEventListener('click', () => chooseAnalyticsConsent(true));
-elements.declineAnalytics.addEventListener('click', () => chooseAnalyticsConsent(false));
-elements.changeAnalytics.addEventListener('click', () => {
-  analyticsNoticeForced = true;
-  toggleOverlay(elements.keyOverlay);
-  render();
-});
+function showUpgradeModal() {
+  if (elements.upgradeModal) elements.upgradeModal.classList.remove('hidden');
+}
+
+function hideUpgradeModal() {
+  if (elements.upgradeModal) elements.upgradeModal.classList.add('hidden');
+}
+
+if (elements.modalCloseX) {
+  elements.modalCloseX.addEventListener('click', hideUpgradeModal);
+}
+if (elements.topUpgradeBadge) {
+  elements.topUpgradeBadge.addEventListener('click', async () => {
+    if (plus?.entitlement?.plusEnabled === true) {
+      await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+    } else {
+      showUpgradeModal();
+    }
+  });
+}
+if (elements.dismissUpgradeBtn) {
+  elements.dismissUpgradeBtn.addEventListener('click', hideUpgradeModal);
+}
+if (elements.upgradeCheckoutBtn) {
+  elements.upgradeCheckoutBtn.addEventListener('click', async () => {
+    elements.upgradeCheckoutBtn.disabled = true;
+    try {
+      await request({ type: 'PLUS_START_CHECKOUT' });
+      hideUpgradeModal();
+    } catch (error) {
+      showActionError(error?.message || 'تعذر إنشاء جلسة الدفع. حاول لاحقاً.');
+    } finally {
+      elements.upgradeCheckoutBtn.disabled = false;
+    }
+  });
+}
+if (elements.alreadyPurchasedLink) {
+  elements.alreadyPurchasedLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    hideUpgradeModal();
+    await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html#activate') });
+  });
+}
 
 elements.startStop.addEventListener('click', async () => {
-  if (!settings?.hasKey || !settings?.hasConsent) {
+  if (!settings?.hasKey) {
     toggleOverlay(elements.keyOverlay);
     return;
   }
@@ -365,10 +412,17 @@ elements.startStop.addEventListener('click', async () => {
   showActionError();
   try {
     if (ACTIVE_STATUSES.has(currentState.status)) {
-      await request({ type: 'STOP_SESSION' });
+      const response = await request({ type: 'STOP_SESSION' });
+      if (response?.state) currentState = response.state;
+      else currentState = { status: STATUS.STOPPED };
+      // Saved animation only after confirmed persistence
+      if (response?.saved === true) {
+        triggerPlusSavedAnimation();
+      }
     } else {
       const response = await request({ type: 'START_SESSION', ...(await captureActiveTab()) });
-      if (response.state && !ACTIVE_STATUSES.has(response.state.status) && response.state.message) {
+      if (response?.state) currentState = response.state;
+      if (response?.state && !ACTIVE_STATUSES.has(response.state.status) && response.state.message) {
         showActionError(response.state.message);
       }
     }
@@ -391,8 +445,13 @@ if (elements.quickBookmark) {
         elements.quickBookmark.innerHTML = origHtml;
         elements.quickBookmark.disabled = false;
       }, 1600);
-    } catch {
+    } catch (err) {
       elements.quickBookmark.disabled = false;
+      if (err.message && (err.message.includes('النسخة المجانية') || err.message.includes('Plus') || err.message.includes('ترقية'))) {
+        showUpgradeModal();
+      } else {
+        showActionError(err.message);
+      }
     }
   });
 }
@@ -403,6 +462,11 @@ elements.autoDucking.addEventListener('change', async () => {
   settings = { ...settings, autoDucking: enabled };
 });
 
+async function getActiveOrigin() {
+  await resolveActiveTabOrigin();
+  return activeTabOrigin;
+}
+
 for (const [kind, slider, output] of [
   ['original', elements.originalVolume, elements.originalOutput],
   ['dubbed', elements.dubbedVolume, elements.dubbedOutput]
@@ -411,9 +475,20 @@ for (const [kind, slider, output] of [
     output.textContent = formatPercent(slider.value);
   });
   slider.addEventListener('change', async () => {
+    const origin = await getActiveOrigin();
     const value = Number(slider.value) / 100;
-    await request({ type: 'SET_VOLUME', kind, value }).catch(() => undefined);
-    settings = { ...settings, [kind === 'original' ? 'originalVolume' : 'dubbedVolume']: value };
+    try {
+      const response = await request({ type: 'SET_VOLUME', kind, value, origin });
+      if (response?.plus) plus = response.plus;
+      if (response?.upgradeRequired || response?.limitReached) {
+        showUpgradeModal();
+      }
+      settings = { ...settings, [kind === 'original' ? 'originalVolume' : 'dubbedVolume']: value };
+    } catch (error) {
+      // Storage failure must roll UI back or show error
+      renderVolumes();
+      showActionError(error?.message || 'تعذر حفظ مستوى الصوت. حاول مجدداً.');
+    }
   });
 }
 
@@ -442,22 +517,6 @@ elements.openStats.addEventListener('click', async () => {
 elements.openLibrary.addEventListener('click', async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
 });
-elements.openFeedback?.addEventListener('click', async () => {
-  try {
-    const response = await request({ type: 'GET_FEEDBACK_URL', source: 'popup' });
-    if (response.url) await chrome.tabs.create({ url: response.url });
-  } catch {}
-});
-
-elements.openPanel.addEventListener('click', async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id) await chrome.sidePanel.open({ tabId: tab.id });
-});
-
-elements.openDiagnostics.addEventListener('click', async () => {
-  await chrome.tabs.create({ url: chrome.runtime.getURL('src/diagnostics/diagnostics.html') });
-});
-
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'STATE_CHANGED' && message.state) {
     currentState = message.state;
@@ -472,10 +531,14 @@ chrome.runtime.onMessage.addListener((message) => {
     settings = { ...settings, uiLanguage: message.language };
     render();
   }
+  if (message?.type === 'PLUS_LICENSE_ACTIVATED') {
+    plus = message.plus;
+    render();
+  }
 });
 
 refresh().catch((error) => {
   currentState = { status: STATUS.ERROR, message: error.message };
-  settings = { hasKey: false, hasConsent: false, originalVolume: 0.25, dubbedVolume: 1, autoDucking: true, uiLanguage: 'ar' };
+  settings = { hasKey: false, originalVolume: 0.25, dubbedVolume: 1, autoDucking: true, uiLanguage: 'ar' };
   render();
 });

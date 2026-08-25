@@ -46,6 +46,10 @@ const elements = {
   clearStats: document.querySelector('#clearStats'),
   openFeedback: document.querySelector('#openFeedback'),
   reviewCta: document.querySelector('#reviewCta'),
+  statsPlusCard: document.querySelector('#statsPlusCard'),
+  statsUpgradeBtn: document.querySelector('#statsUpgradeBtn'),
+  statsPlusTitle: document.querySelector('#statsPlusTitle'),
+  statsPlusDesc: document.querySelector('#statsPlusDesc'),
   clearMessage: document.querySelector('#clearMessage'),
   tip: document.querySelector('#tip'),
   range: document.querySelector('.range')
@@ -435,6 +439,41 @@ elements.reviewCta?.addEventListener('click', openFeedbackPage);
 document.querySelector('#openLibrary')?.addEventListener('click', async () => {
   await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
 });
+
+elements.statsUpgradeBtn?.addEventListener('click', async () => {
+  if (elements.statsUpgradeBtn.disabled) return;
+  elements.statsUpgradeBtn.disabled = true;
+  try {
+    await request({ type: 'PLUS_START_CHECKOUT' });
+  } catch (e) {
+    const msg = e?.message || 'تعذر إنشاء جلسة الدفع. حاول لاحقاً.';
+    if (elements.tip) {
+      elements.tip.textContent = msg;
+      elements.tip.classList.remove('hidden');
+      setTimeout(() => elements.tip.classList.add('hidden'), 3000);
+    }
+  } finally {
+    elements.statsUpgradeBtn.disabled = false;
+  }
+});
+
+async function checkPlusStatus() {
+  try {
+    const res = await request({ type: 'GET_STATE' });
+    if (res?.plus?.entitlement?.plusEnabled === true) {
+      if (elements.statsPlusTitle) elements.statsPlusTitle.textContent = 'أنت مشترك في dablaja Plus';
+      if (elements.statsPlusDesc) elements.statsPlusDesc.textContent = 'ترخيص مدى الحياة مفعّل على هذا الجهاز. شكراً لدعمك!';
+      if (elements.statsUpgradeBtn) {
+        elements.statsUpgradeBtn.innerHTML = '<span>فتح مكتبة Plus 💎</span>';
+        elements.statsUpgradeBtn.onclick = async () => {
+          await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+        };
+      }
+    }
+  } catch {}
+}
+
+checkPlusStatus();
 
 elements.clearStats.addEventListener('click', async () => {
   const response = await request({ type: 'CLEAR_STATS' });

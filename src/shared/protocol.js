@@ -7,6 +7,28 @@ export function buildWebSocketUrl(apiKey) {
 }
 
 export function buildSetupMessage(resumptionHandle = null) {
+  // Primary: official nested shape per current docs (inside generationConfig)
+  const setup = {
+    model: `models/${MODEL}`,
+    generationConfig: {
+      responseModalities: ['AUDIO'],
+      translationConfig: {
+        targetLanguageCode: TARGET_LANGUAGE,
+        echoTargetLanguage: false
+      },
+      inputAudioTranscription: {},
+      outputAudioTranscription: {}
+    },
+    contextWindowCompression: {
+      slidingWindow: {}
+    },
+    sessionResumption: resumptionHandle ? { handle: resumptionHandle } : {}
+  };
+  return { setup };
+}
+
+export function buildLegacySetupMessage(resumptionHandle = null) {
+  // Legacy fallback: transcription fields at setup root (observed to work with WSS 1007)
   const setup = {
     model: `models/${MODEL}`,
     generationConfig: {
