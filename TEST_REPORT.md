@@ -19,7 +19,7 @@
 | `git diff --check` | PASS; line-ending notices only |
 | Official Gemini documentation recheck | PASS on 25 August 2026 — model `gemini-3.5-live-translate-preview`, 16kHz PCM input, 24kHz PCM output, 100ms chunks, Arabic `ar`, input/output transcription, and current pricing/data-use copy match Google documentation |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
-| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), privacy (`4db1fdc0…3998d`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
+| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), updated privacy (`a4dbedcf…ab11e`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
 | VPS database audit | PASS — exact allowlisted diagnostic/form schemas (obsolete empty `error_message`/`user_agent` columns removed), hashed credentials, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
 | VPS response headers | PASS — feedback, uninstall, admin, success, licensing, usage, diagnostics, checkout, and webhook routes are `no-store`/`no-referrer`; form/success pages have route-scoped no-script CSP; public aggregate stats retain their intended 60-second cache policy |
 | VPS runtime | PASS — service and Caddy active, health/statistics/privacy probes successful, Stripe SDK 15.5.0, and a dedicated rate-limit secret is configured |
