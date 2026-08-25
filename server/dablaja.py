@@ -80,6 +80,7 @@ CHECKOUT_DAILY_LIMIT = 100
 CHECKOUT_PER_INSTALL = 10
 ADMIN_LOGIN_DAILY_LIMIT = 30
 USAGE_EVENT_RETENTION_DAYS = 8
+ABANDONED_CHECKOUT_RETENTION_DAYS = 30
 USAGE_PLATFORMS = {"youtube", "x", "twitch", "other"}
 ERROR_CODES = {
     "network_error", "api_key_invalid", "model_unavailable", "rate_limited",
@@ -615,16 +616,30 @@ class DablajaStore:
     def prune(self) -> None:
         with self._db() as conn:
             conn.execute(
-                "DELETE FROM error_reports WHERE created_at < datetime('now', ?)",
+                "DELETE FROM error_reports WHERE datetime(created_at) < datetime('now', ?)",
                 (f"-{ERROR_RETENTION_DAYS} days",),
             )
             conn.execute(
-                "DELETE FROM feedback_reports WHERE created_at < datetime('now', ?)",
+                "DELETE FROM feedback_reports WHERE datetime(created_at) < datetime('now', ?)",
                 (f"-{FEEDBACK_RETENTION_DAYS} days",),
             )
             conn.execute(
-                "DELETE FROM usage_event_ids WHERE created_at < datetime('now', ?)",
+                "DELETE FROM usage_event_ids WHERE datetime(created_at) < datetime('now', ?)",
                 (f"-{USAGE_EVENT_RETENTION_DAYS} days",),
+            )
+            # Checkout attempts that never produced a purchase are short-lived
+            # operational records, not lifetime licensing records. Completed
+            # attempts stay because they are linked to the purchase and are
+            # needed for idempotent Stripe webhook reconciliation.
+            conn.execute(
+                """DELETE FROM checkout_attempts
+                   WHERE status IN ('pending', 'failed')
+                     AND datetime(created_at) < datetime('now', ?)
+                     AND NOT EXISTS (
+                       SELECT 1 FROM purchases p
+                       WHERE p.stripe_session_id = checkout_attempts.stripe_session_id
+                     )""",
+                (f"-{ABANDONED_CHECKOUT_RETENTION_DAYS} days",),
             )
             conn.execute("DELETE FROM daily_budget WHERE day < date('now', '-8 days')")
 

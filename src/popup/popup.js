@@ -458,8 +458,16 @@ if (elements.quickBookmark) {
 
 elements.autoDucking.addEventListener('change', async () => {
   const enabled = elements.autoDucking.checked;
-  await request({ type: 'SET_AUTO_DUCKING', enabled }).catch(() => undefined);
-  settings = { ...settings, autoDucking: enabled };
+  elements.autoDucking.disabled = true;
+  try {
+    await request({ type: 'SET_AUTO_DUCKING', enabled });
+    settings = { ...settings, autoDucking: enabled };
+  } catch (error) {
+    elements.autoDucking.checked = !enabled;
+    showActionError(error?.message || 'تعذر حفظ إعداد خفض الصوت. حاول مجدداً.');
+  } finally {
+    elements.autoDucking.disabled = false;
+  }
 });
 
 async function getActiveOrigin() {

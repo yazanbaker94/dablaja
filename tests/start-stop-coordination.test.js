@@ -46,3 +46,14 @@ test('a duplicate start cannot tear down an already healthy session', () => {
     /\['START_SESSION', 'START_SESSION_FOR_LAST_TAB'\]\.includes\(message\?\.type\)\s*&& error\?\.code !== 'session_already_active'/
   );
 });
+
+test('a delayed capture stop event rechecks the current tab capture before cleanup', () => {
+  const listener = source.slice(
+    source.indexOf('chrome.tabCapture.onStatusChanged.addListener'),
+    source.indexOf('chrome.runtime.onInstalled.addListener')
+  );
+  assert.match(listener, /await chrome\.tabCapture\.getCapturedTabs\(\)/);
+  assert.match(listener, /captures\.find\(\(capture\) => capture\.tabId === info\.tabId\)/);
+  assert.match(listener, /current && !\['stopped', 'error'\]\.includes\(current\.status\)/);
+  assert.match(listener, /catch \{[\s\S]*?return;[\s\S]*?\}/);
+});

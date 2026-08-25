@@ -69,7 +69,7 @@ Translate the user-selected current tab's live spoken audio into Arabic audio an
 - **Data sale/ads/credit:** None.
 - **Licensing & Payment Data:** Payment cards are processed directly by Stripe; Dablaja never receives or stores card numbers. AudioFetcher retains only random installation identifier (`install_id`), hashed installation credential (`credential_hash`), stable internal license identifier (`license_id`), Stripe reference identifiers, product/price IDs, amount/currency/status, bindings, timestamps, revocation state, and hashed recovery code (`code_hash`).
 - **Human access:** Authorized support may view opt-in technical diagnostics and forms to fix failures or respond to feedback; no audio, transcripts, key, URL, or title is available.
-- **Retention:** No extension retention of audio. Key/settings/saved sessions remain locally until deletion/uninstall. One-time usage event IDs are removed within 8 days; diagnostics within 45 days; submitted forms within 180 days; daily anonymous aggregates may be retained for historical totals.
+- **Retention:** No extension retention of audio. Key/settings/saved sessions remain locally until deletion/uninstall. One-time usage event IDs are removed within 8 days; diagnostics within 45 days; submitted forms within 180 days; unpaid/failed Checkout attempts within 30 days; daily anonymous aggregates may be retained for historical totals. Completed purchase/license records remain while the license exists and as needed for accounting, fraud prevention, refunds/disputes, support, and legal obligations.
 - **Transport:** Encrypted HTTPS/WSS.
 
 ## Store assets still required before submission

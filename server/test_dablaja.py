@@ -1787,6 +1787,65 @@ class CrossLicenseRecoveryTests(PaymentTestBase):
         self.assertEqual(resp.status_code, 403)
 
 
+class RetentionPruningTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = dablaja.DablajaStore(Path(self.tmp.name) / "dablaja.db")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_prune_removes_only_expired_abandoned_checkout_attempts(self):
+        old = "2000-01-01T00:00:00+00:00"
+        recent = dablaja.utc_now()
+        with self.store._db() as conn:
+            conn.executemany(
+                """INSERT INTO checkout_attempts
+                   (stripe_session_id, install_id, credential_hash, status, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                [
+                    ("cs_old_pending", "p" * 24, "a" * 64, "pending", old),
+                    ("cs_old_failed", "f" * 24, "b" * 64, "failed", old),
+                    ("cs_recent_pending", "r" * 24, "c" * 64, "pending", recent),
+                    ("cs_completed", "c" * 24, "d" * 64, "completed", old),
+                ],
+            )
+            conn.execute(
+                """INSERT INTO purchases
+                   (id, stripe_session_id, status, created_at, activated_at)
+                   VALUES (?, ?, 'active', ?, ?)""",
+                (str(uuid.uuid4()), "cs_completed", old, old),
+            )
+
+        self.store.prune()
+
+        self.assertIsNone(self.store.get_checkout_attempt("cs_old_pending"))
+        self.assertIsNone(self.store.get_checkout_attempt("cs_old_failed"))
+        self.assertIsNotNone(self.store.get_checkout_attempt("cs_recent_pending"))
+        self.assertIsNotNone(self.store.get_checkout_attempt("cs_completed"))
+
+    def test_prune_parses_iso_timestamps_at_retention_boundary(self):
+        # ISO timestamps use a T/+00:00 form while SQLite datetime('now') uses
+        # a space. datetime(created_at) must parse them instead of relying on
+        # a lexical comparison that can retain boundary-day rows too long.
+        with self.store._db() as conn:
+            conn.execute(
+                """INSERT INTO error_reports
+                   (id, event_id, error_code, error_message, status, site_host,
+                    extension_version, reconnect_count, user_agent, created_at, dedupe_key)
+                   VALUES (?, ?, 'unknown', '', 'error', 'other', '1.0.0', 0, '',
+                           datetime('now', '-45 days', '-1 minute'), ?)""",
+                (str(uuid.uuid4()), "retention-boundary-event", uuid.uuid4().hex),
+            )
+        self.store.prune()
+        with self.store._db() as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) AS n FROM error_reports WHERE event_id = ?",
+                ("retention-boundary-event",),
+            ).fetchone()["n"]
+        self.assertEqual(count, 0)
+
+
 class AdminSessionTests(unittest.TestCase):
     def setUp(self):
         os.environ["DABLAJA_ALLOW_INSECURE_COOKIE"] = "1"

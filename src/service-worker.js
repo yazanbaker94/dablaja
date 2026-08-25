@@ -1171,14 +1171,30 @@ chrome.tabCapture.onStatusChanged.addListener((info) => {
   if (Date.now() < ignoreCaptureStopUntil) return;
   if (info.tabId !== state.tabId || !['stopped', 'error'].includes(info.status)) return;
   clearTimeout(captureStatusTimer);
-  captureStatusTimer = setTimeout(() => {
+  captureStatusTimer = setTimeout(async () => {
     captureStatusTimer = null;
-    if (info.tabId === state.tabId && ACTIVE_STATUSES.has(state.status)) {
-      stopSession(info.status === 'error'
-        ? 'فشل التقاط صوت التبويب.'
-        : 'انتهى مسار صوت التبويب بشكل غير متوقع.')
-        .catch(() => undefined);
+    if (info.tabId !== state.tabId || !ACTIVE_STATUSES.has(state.status)) return;
+
+    // Chrome can deliver a delayed `stopped` notification for a capture that
+    // was just replaced on the same tab. Re-check the tab's current capture
+    // state before allowing that stale event to tear down the new session.
+    let captures;
+    try {
+      captures = await chrome.tabCapture.getCapturedTabs();
+    } catch {
+      // The offscreen track/socket lifecycle still performs authoritative
+      // cleanup. Failing open here avoids killing healthy audio solely because
+      // this diagnostic query was unavailable during worker wake-up.
+      return;
     }
+    const current = captures.find((capture) => capture.tabId === info.tabId);
+    if (current && !['stopped', 'error'].includes(current.status)) return;
+    if (info.tabId !== state.tabId || !ACTIVE_STATUSES.has(state.status)) return;
+
+    stopSession(info.status === 'error'
+      ? 'فشل التقاط صوت التبويب.'
+      : 'انتهى مسار صوت التبويب بشكل غير متوقع.')
+      .catch(() => undefined);
   }, 750);
 });
 

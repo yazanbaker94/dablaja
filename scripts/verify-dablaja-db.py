@@ -86,13 +86,21 @@ def main() -> int:
             "SELECT COUNT(*) AS n FROM feedback_reports WHERE kind NOT IN ('feedback','uninstall')"
         ).fetchone()["n"]
         expired_errors = connection.execute(
-            "SELECT COUNT(*) AS n FROM error_reports WHERE created_at < datetime('now', '-45 days')"
+            "SELECT COUNT(*) AS n FROM error_reports WHERE datetime(created_at) < datetime('now', '-45 days')"
         ).fetchone()["n"]
         expired_feedback = connection.execute(
-            "SELECT COUNT(*) AS n FROM feedback_reports WHERE created_at < datetime('now', '-180 days')"
+            "SELECT COUNT(*) AS n FROM feedback_reports WHERE datetime(created_at) < datetime('now', '-180 days')"
         ).fetchone()["n"]
         expired_usage_ids = connection.execute(
-            "SELECT COUNT(*) AS n FROM usage_event_ids WHERE created_at < datetime('now', '-8 days')"
+            "SELECT COUNT(*) AS n FROM usage_event_ids WHERE datetime(created_at) < datetime('now', '-8 days')"
+        ).fetchone()["n"]
+        expired_abandoned_checkouts = connection.execute(
+            """SELECT COUNT(*) AS n FROM checkout_attempts a
+               WHERE a.status IN ('pending', 'failed')
+                 AND datetime(a.created_at) < datetime('now', '-30 days')
+                 AND NOT EXISTS (
+                   SELECT 1 FROM purchases p WHERE p.stripe_session_id = a.stripe_session_id
+                 )"""
         ).fetchone()["n"]
         synthetic_usage_ids = connection.execute(
             "SELECT COUNT(*) AS n FROM usage_event_ids WHERE id LIKE 'e2eusage%'"
@@ -123,6 +131,7 @@ def main() -> int:
             "diagnostic_retention_enforced": expired_errors == 0,
             "feedback_retention_enforced": expired_feedback == 0,
             "usage_dedupe_retention_enforced": expired_usage_ids == 0,
+            "abandoned_checkout_retention_enforced": expired_abandoned_checkouts == 0,
             "no_synthetic_e2e_telemetry": synthetic_usage_ids == 0 and synthetic_error_ids == 0,
             "no_synthetic_e2e_checkout_attempts": synthetic_checkout_attempts == 0,
         }

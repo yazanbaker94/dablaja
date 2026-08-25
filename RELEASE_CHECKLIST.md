@@ -15,6 +15,7 @@ not equivalent to a passed release requirement.
 - [x] Free and Plus storage limits are enforced and existing local records are not held hostage.
 - [x] Licensing tokens are Ed25519-signed and installation-bound.
 - [x] Privileged licensing requests require a high-entropy installation credential.
+- [x] Unpaid/failed Checkout attempts are deleted after 30 days; completed licensing records are preserved.
 - [x] Authenticated refund/dispute revocation reaches the client as `status: revoked`.
 - [x] Legacy credential bootstrap rejects tokens beyond the seven-day expiry horizon.
 - [x] Recovery-code plaintext is shown once and stored server-side only as a hash.
@@ -51,7 +52,7 @@ not equivalent to a passed release requirement.
 - [x] Admin authentication uses the HttpOnly/Secure/SameSite cookie flow and no token appears in URLs or markup.
 - [x] Live privacy policy and terms match the reviewed local documents by SHA-256.
 - [x] Sensitive Dablaja forms and private API routes return `no-store` and `no-referrer`; form and success pages use route-scoped no-script CSP.
-- [x] The live read-only data audit confirms allowlisted aggregate rows, no forbidden identity/content fields, and the documented 8/45/180-day retention boundaries.
+- [x] The live read-only data audit confirms allowlisted aggregate rows, no forbidden identity/content fields, and the documented 8/30/45/180-day retention boundaries.
 - [x] Controlled live usage/error ingestion accepts each reserved event once, rejects its duplicate, and leaves no synthetic rows after backup-backed cleanup.
 - [x] Controlled live Checkout creates and opens the correct Stripe-hosted URL without payment; the reserved open session is expired and removed after backup-backed cleanup.
 

@@ -16,14 +16,16 @@
 12. Server deduplication/aggregation with no URL, title, audio, transcript, key, or install-ID columns.
 13. Manifest V3, exact minimal permission set, host scope, CSP, and referenced file validation.
 14. Clean package generation and ZIP-root manifest check.
-15. Plus entitlement states: locked, active, offline grace, expired, and revoked; malformed or mismatched licenses ignored.
-16. Plus draft lifecycle: interim/cumulative merge, punctuation and final-flag finalization, source/target separation, reconnect duplicate suppression, snapshot-vs-live independence, stop finalization.
-17. Plus bounds: segment text, per-channel segment counts, bookmarks, notes/title sanitization, session and draft caps, total-character ceiling.
-18. Plus search normalization: Arabic diacritics/tatweel/letter-form folding, case folding, AND semantics, title/notes/bookmark/transcript matching.
-19. Plus exports: TXT/SRT/JSON content and timestamps, bilingual SRT pairing, zero-length cue handling, forbidden-field absence.
-20. Plus backup: envelope validation, malformed rejection, per-record validation, merge dedupe by newest, session cap, import never deletes existing data.
-21. Per-site volume profiles: origin normalization, partial updates, clamping, exact-origin lookup, insertion-order eviction, deletion.
-22. Gemini disclosure/key flow (static disclosure remains visible; saving the key alone sends no audio; no obsolete consent checkbox or timestamp remains).
+15. Server retention pruning, including ISO timestamps and 30-day deletion of
+    unpaid/failed Checkout attempts while completed purchase records remain.
+16. Plus entitlement states: locked, active, offline grace, expired, and revoked; malformed or mismatched licenses ignored.
+17. Plus draft lifecycle: interim/cumulative merge, punctuation and final-flag finalization, source/target separation, reconnect duplicate suppression, snapshot-vs-live independence, stop finalization.
+18. Plus bounds: segment text, per-channel segment counts, bookmarks, notes/title sanitization, session and draft caps, total-character ceiling.
+19. Plus search normalization: Arabic diacritics/tatweel/letter-form folding, case folding, AND semantics, title/notes/bookmark/transcript matching.
+20. Plus exports: TXT/SRT/JSON content and timestamps, bilingual SRT pairing, zero-length cue handling, forbidden-field absence.
+21. Plus backup: envelope validation, malformed rejection, per-record validation, merge dedupe by newest, session cap, import never deletes existing data.
+22. Per-site volume profiles: origin normalization, partial updates, clamping, exact-origin lookup, insertion-order eviction, deletion.
+23. Gemini disclosure/key flow (static disclosure remains visible; saving the key alone sends no audio; no obsolete consent checkbox or timestamp remains).
 
 Commands:
 

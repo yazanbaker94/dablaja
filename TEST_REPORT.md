@@ -7,8 +7,8 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 286/286 Node tests on the current worktree |
-| `python -m unittest server/test_dablaja.py` | PASS — 112/112 backend tests on the current worktree |
+| `npm test` | PASS — 287/287 Node tests on the current worktree |
+| `python -m unittest server/test_dablaja.py` | PASS — 114/114 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
 | Element-binding checker | PASS — library, popup, and stats bindings |
 | ESLint | PASS |
@@ -18,8 +18,8 @@
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
 | `git diff --check` | PASS; line-ending notices only |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
-| VPS deployment hashes | PASS — reviewed server, privacy, and terms files match their live SHA-256 hashes |
-| VPS database audit | PASS — expected schema, hashed credentials, no identity/content columns in diagnostics, no install identity or user agent in forms, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/45/180-day retention windows |
+| VPS deployment hashes | PASS — reviewed server (`746c39af…e279b`), privacy (`18817211…5f6ad`), and terms files match their live SHA-256 hashes |
+| VPS database audit | PASS — expected schema, hashed credentials, no identity/content columns in diagnostics, no install identity or user agent in forms, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
 | VPS response headers | PASS — feedback, uninstall, admin, success, licensing, usage, diagnostics, checkout, and webhook routes are `no-store`/`no-referrer`; form/success pages have route-scoped no-script CSP; public aggregate stats retain their intended 60-second cache policy |
 | VPS runtime | PASS — service and Caddy active, health/statistics/privacy probes successful, Stripe SDK 15.5.0, and a dedicated rate-limit secret is configured |
 | Stripe product/price | PASS — live Dablaja account, active lifetime product, active $10 USD price, and exact server IDs all match |
@@ -32,6 +32,8 @@
   generated identifier/credential pair; failure is retryable.
 - Paid endpoints authenticate the installation credential and store only its
   SHA-256 hash on the server.
+- Retention pruning parses ISO timestamps correctly, removes unpaid/failed
+  Checkout attempts after 30 days, and preserves completed purchase records.
 - Token verification binds license and installation IDs, enforces Ed25519
   signature length, payload bounds, `iat < exp`, future-clock bounds, and the
   seven-day expiry horizon.
@@ -46,6 +48,8 @@
   tokens, and locks on authenticated revocation.
 - Start is single-flight, Stop waits for an in-flight startup before disposing
   resources, and a duplicate Start cannot tear down a healthy active session.
+  A delayed Chrome capture-stop event also rechecks the current tab capture
+  before it may stop a replacement session on the same tab.
 - Offscreen reconnect/setup timers plus socket, worklet, and track callbacks are
   bound to the session that created them; stale events cannot mutate a
   replacement session or clear its network watchdog.
