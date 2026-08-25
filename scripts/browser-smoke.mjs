@@ -9,8 +9,9 @@ import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const keepVisuals = process.env.DABLAJA_KEEP_SMOKE_ARTIFACTS === '1';
 const visualDir = mkdtempSync(path.join(os.tmpdir(), 'dablaja-extension-visual-'));
-console.log(`visual screenshots: ${visualDir}`);
+console.log(`${keepVisuals ? 'visual screenshots' : 'temporary visual screenshots'}: ${visualDir}`);
 
 // Chrome's --load-extension mishandles paths containing spaces; stage the
 // extension to a space-free directory before loading it.
@@ -265,6 +266,8 @@ try {
   }
 } finally {
   await browser.close().catch(() => undefined);
+  rmSync(stage, { recursive: true, force: true });
+  if (!keepVisuals) rmSync(visualDir, { recursive: true, force: true });
 }
 
 if (failures.length) {

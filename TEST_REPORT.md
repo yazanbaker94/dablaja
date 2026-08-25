@@ -97,6 +97,11 @@
   verifies the static Gemini disclosure, persists a fake test key locally,
   keeps analytics off until explicitly enabled, persists local/profile settings,
   and reports no page or console errors on the tested surfaces.
+- Repeated legacy-license backend tests now use scoped temporary directories;
+  two consecutive runs left the Dablaja SQLite artifact count unchanged. The
+  browser smoke, UI preview smoke, and E2E harness also remove their staged
+  extensions, download folders, screenshots, and Chrome profiles after each
+  run, preventing release verification from filling the host temp drive.
 - The larger isolated E2E run passed 51 default checks. A separate controlled
   run with live AudioFetcher enabled passed 54/54, including invalid recovery
   rejection and exact usage/diagnostic duplicate suppression. The two synthetic

@@ -1581,6 +1581,15 @@ class LegacyRemovalStaticTests(unittest.TestCase):
 
 
 class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _store(self, filename):
+        return dablaja.DablajaStore(Path(self.tmp.name) / filename)
+
     def _make_token(self, lid, iid, iat, exp, seed=None):
         # Sign a dpl1 token directly via the server key so tests exercise the
         # real Ed25519 path (no mocking of verify helper).
@@ -1611,18 +1620,8 @@ class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
         dablaja.LICENSE_SIGNING_KEY_B64 = _b64.b64encode(seed).decode()
         install = "m" * 24
         try:
-            store = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-legacy-{uuid.uuid4().hex}.db")
-            s = fake_session(session="cs_legacy_ancient", install_id=install)
             cred = "a" * 64
-            store.create_checkout_attempt(install, s["id"], hashlib.sha256(cred.encode()).hexdigest())
-            with patch.object(dablaja, "_stripe_retrieve_session", return_value=s):
-                out = dablaja.strict_verify_and_activate(s["id"])
-                with patch.object(dablaja, "store", store):
-                    # store is module global for strict_verify; re-wire
-                    pass
-            # Direct store path: provision via real store to avoid global coupling
-            # Use a fresh store-backed provision instead.
-            store2 = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-legacy2-{uuid.uuid4().hex}.db")
+            store2 = self._store("legacy-ancient.db")
             # Provision via store.fulfill directly: create a purchase + legacy NULL row
             pid = str(uuid.uuid4())
             with store2._db() as conn:
@@ -1657,7 +1656,7 @@ class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
         dablaja.LICENSE_SIGNING_KEY_B64 = _b64.b64encode(seed).decode()
         install = "w" * 24
         try:
-            store = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-legacy-recent-{uuid.uuid4().hex}.db")
+            store = self._store("legacy-recent.db")
             pid = str(uuid.uuid4())
             with store._db() as conn:
                 conn.execute(
@@ -1687,7 +1686,7 @@ class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
         dablaja.LICENSE_SIGNING_KEY_B64 = _b64.b64encode(seed).decode()
         try:
             # Revoked row
-            store = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-legacy-rev-{uuid.uuid4().hex}.db")
+            store = self._store("legacy-revoked.db")
             pid = str(uuid.uuid4())
             install = "n" * 24
             with store._db() as conn:
@@ -1706,7 +1705,7 @@ class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
             ok, _ = store.verify_installation_credential(install, "a" * 64, token=tok)
             self.assertFalse(ok, "revoked row must not bootstrap")
             # Wrong iid
-            store2 = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-legacy-iid-{uuid.uuid4().hex}.db")
+            store2 = self._store("legacy-wrong-iid.db")
             pid2 = str(uuid.uuid4())
             with store2._db() as conn:
                 conn.execute(
@@ -1739,7 +1738,7 @@ class LegacyBootstrapAndCrossLicenseTests(unittest.TestCase):
         old_key = dablaja.LICENSE_SIGNING_KEY_B64
         dablaja.LICENSE_SIGNING_KEY_B64 = _b64.b64encode(seed).decode()
         try:
-            store = dablaja.DablajaStore(Path(tempfile.gettempdir()) / f"dablaja-concur-ancient-{uuid.uuid4().hex}.db")
+            store = self._store("legacy-concurrent.db")
             pid = str(uuid.uuid4())
             install = "o" * 24
             with store._db() as conn:

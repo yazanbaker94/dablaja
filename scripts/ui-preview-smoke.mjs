@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const keepArtifacts = process.env.DABLAJA_KEEP_SMOKE_ARTIFACTS === '1';
 
 // Use temporary directories outside repo
 const tmpOut = await mkdtemp(path.join(tmpdir(), 'dablaja-smoke-'));
@@ -140,8 +141,16 @@ try {
   console.log('UI preview smoke test completed successfully');
 } finally {
   try { if (server) server.close(); } catch {}
-  try { if (chromeProc) chromeProc.kill(); } catch {}
+  try {
+    if (chromeProc) {
+      const exited = new Promise((resolve) => chromeProc.once('exit', resolve));
+      chromeProc.kill();
+      await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, 3000))]);
+    }
+  } catch {}
   try { await rm(tmpPreviewDir, { recursive: true, force: true }); } catch {}
-  // Keep tmpOut for artifact inspection but it's outside repo and ignored
   try { await rm(chromeProfileDir, { recursive: true, force: true }); } catch {}
+  if (!keepArtifacts) {
+    try { await rm(tmpOut, { recursive: true, force: true }); } catch {}
+  }
 }

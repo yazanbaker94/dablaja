@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const stage = path.join(os.tmpdir(), 'dablaja-e2e-ext');
+const dlDir = path.join(os.tmpdir(), 'dablaja-e2e-dl');
 rmSync(stage, { recursive: true, force: true });
 cpSync(root, stage, {
   recursive: true,
@@ -320,7 +321,6 @@ try {
   // SUITE 6 — Export / import gate + delete-all
   // ================================================================
   console.log('--- SUITE 6: backup export/import ---');
-  const dlDir = path.join(os.tmpdir(), 'dablaja-e2e-dl');
   mkdirSync(dlDir, { recursive: true });
   try { readdirSync(dlDir).forEach((f) => unlinkSync(path.join(dlDir, f))); } catch {}
   const cdp = await browser.target().createCDPSession();
@@ -509,6 +509,7 @@ try {
   await Promise.race([browser.close().catch(() => undefined), sleep(5000)]);
   clearTimeout(overallTimeout);
   rmSync(stage, { recursive: true, force: true });
+  rmSync(dlDir, { recursive: true, force: true });
 }
 
 console.log(`\nE2E TOTALS: ${pass} passed, ${fail} failed`);
