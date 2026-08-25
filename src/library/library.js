@@ -294,6 +294,16 @@ function showToast(message, tone = '') {
   }, 3200);
 }
 
+async function openPageUrl(url, failureMessage = 'تعذر فتح الصفحة. حاول مجدداً.') {
+  try {
+    await chrome.tabs.create({ url });
+    return true;
+  } catch (error) {
+    showToast(error?.message || failureMessage, 'error');
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Modal & Menu layer
 // ---------------------------------------------------------------------------
@@ -354,9 +364,13 @@ function openMenu(anchor, items) {
     button.className = item.danger ? 'menu-item is-danger' : 'menu-item';
     button.setAttribute('role', 'menuitem');
     button.append(iconNode(item.icon), document.createTextNode(item.label));
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       closeMenu();
-      item.action();
+      try {
+        await item.action();
+      } catch (error) {
+        showToast(error?.message || 'تعذر تنفيذ الطلب. حاول مجدداً.', 'error');
+      }
     });
     menu.append(button);
   }
@@ -877,7 +891,7 @@ function sessionCard(summary, session) {
       if (atSeconds > 5 && targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
         targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
       }
-      chrome.tabs.create({ url: targetUrl });
+      void openPageUrl(targetUrl, 'تعذر فتح الفيديو الأصلي. حاول مجدداً.');
     } else {
       open();
     }
@@ -906,7 +920,7 @@ function openSessionMenu(anchor, summary, session) {
     { icon: 'play', label: 'فتح الجلسة', action: () => openDetail(summary.id) }
   ];
   if (session.pageUrl) {
-    items.push({ icon: 'external', label: 'فتح الصفحة الأصلية', action: () => chrome.tabs.create({ url: session.pageUrl }) });
+    items.push({ icon: 'external', label: 'فتح الصفحة الأصلية', action: () => openPageUrl(session.pageUrl, 'تعذر فتح الصفحة الأصلية.') });
   }
   items.push(
     { icon: 'file', label: 'تصدير نص', action: () => download(`${safeFilePrefix(session)}.txt`, toPlainText(session)) },
@@ -1067,7 +1081,7 @@ async function renderMoments() {
           if (targetUrl.includes('youtube.com') && !targetUrl.includes('&t=') && !targetUrl.includes('?t=')) {
             targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${atSeconds}s`;
           }
-          chrome.tabs.create({ url: targetUrl });
+          void openPageUrl(targetUrl, 'تعذر فتح الفيديو عند العلامة المحددة.');
         } else {
           openDetail(session.id, bookmark.atMs);
         }
@@ -1284,7 +1298,7 @@ elements.backToList.addEventListener('click', async () => {
 });
 
 elements.openOriginal.addEventListener('click', () => {
-  if (activeDetail?.pageUrl) chrome.tabs.create({ url: activeDetail.pageUrl });
+  if (activeDetail?.pageUrl) void openPageUrl(activeDetail.pageUrl, 'تعذر فتح الصفحة الأصلية.');
 });
 
 elements.exportTxt.addEventListener('click', () => {
@@ -1517,9 +1531,16 @@ async function renderSettings() {
     del.style.color = '#C53030';
     del.textContent = 'حذف';
     del.addEventListener('click', async () => {
-      await send({ type: 'PLUS_DELETE_SITE_PROFILE', origin });
-      showToast(`تم حذف إعدادات ${origin}`);
-      await reloadAll();
+      del.disabled = true;
+      try {
+        await send({ type: 'PLUS_DELETE_SITE_PROFILE', origin });
+        showToast(`تم حذف إعدادات ${origin}`);
+        await reloadAll();
+      } catch (error) {
+        showToast(error?.message || `تعذر حذف إعدادات ${origin}.`, 'error');
+      } finally {
+        del.disabled = false;
+      }
     });
 
     head.append(label, del);

@@ -17,6 +17,7 @@ const languageToggle = document.querySelector('#languageToggle');
 let uiLanguage = 'ar';
 let sessionStartedAt = null;
 let captionCount = 0;
+let currentPanelState = { status: STATUS.STOPPED, latencyMs: null };
 const streams = {
   source: { feed: sourceFeed, lastText: '', lastAt: 0, currentLine: null },
   target: { feed: targetFeed, lastText: '', lastAt: 0, currentLine: null }
@@ -40,6 +41,8 @@ function renderStats(state = {}) {
 }
 
 function renderState(state) {
+  currentPanelState = { ...currentPanelState, ...state };
+  state = currentPanelState;
   const active = ACTIVE_STATUSES.has(state.status);
   if (active && !sessionStartedAt) {
     sessionStartedAt = Number(state.startedAt) > 0 ? Number(state.startedAt) : Date.now();
@@ -81,7 +84,7 @@ function applyLanguage(language) {
   latencyLabel.textContent = english ? 'Delay' : 'التأخير';
   languageToggle.textContent = english ? 'العربية' : 'English';
   applyPlusLanguage();
-  renderStats();
+  renderStats(currentPanelState);
 }
 
 function clearCaptions() {
@@ -93,7 +96,7 @@ function clearCaptions() {
   }
   captionCount = 0;
   sessionStartedAt = null;
-  renderStats();
+  renderStats(currentPanelState);
   captions.classList.add('hidden');
   emptyState.classList.remove('hidden');
 }
@@ -169,7 +172,8 @@ const plusStrings = {
     bookmarkAdded: 'أُضيفت العلامة.',
     saveFailed: 'تعذر حفظ الجلسة.',
     bookmarkFailed: 'تعذر إضافة العلامة.',
-    storageWarning: 'تحذير: تعذر حفظ مسودة الجلسة مؤقتاً على الجهاز.'
+    storageWarning: 'تحذير: تعذر حفظ مسودة الجلسة مؤقتاً على الجهاز.',
+    actionFailed: 'تعذر تنفيذ الطلب. حاول مجدداً.'
   },
   en: {
     save: 'Save session',
@@ -180,7 +184,8 @@ const plusStrings = {
     bookmarkAdded: 'Bookmark added.',
     saveFailed: 'Could not save the session.',
     bookmarkFailed: 'Could not add the bookmark.',
-    storageWarning: 'Warning: could not persist the session draft locally.'
+    storageWarning: 'Warning: could not persist the session draft locally.',
+    actionFailed: 'Could not complete the action. Try again.'
   }
 };
 
@@ -249,6 +254,7 @@ plusSave.addEventListener('click', async () => {
 });
 
 plusAddBookmark.addEventListener('click', async () => {
+  plusAddBookmark.disabled = true;
   try {
     await plusRequest({
       type: 'PLUS_ADD_BOOKMARK',
@@ -258,6 +264,8 @@ plusAddBookmark.addEventListener('click', async () => {
     flashPlusStatus(plusTr('bookmarkAdded'));
   } catch (error) {
     flashPlusStatus(error?.message || plusTr('bookmarkFailed'));
+  } finally {
+    await updatePlusToolbar();
   }
 });
 
@@ -269,7 +277,11 @@ plusBookmarkNote.addEventListener('keydown', (event) => {
 });
 
 plusLibrary.addEventListener('click', async () => {
-  await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+  } catch {
+    flashPlusStatus(plusTr('actionFailed'));
+  }
 });
 
 applyPlusLanguage();
@@ -278,13 +290,24 @@ updatePlusToolbar().catch(() => undefined);
 
 languageToggle.addEventListener('click', async () => {
   const next = uiLanguage === 'en' ? 'ar' : 'en';
-  await chrome.runtime.sendMessage({ type: 'SET_UI_LANGUAGE', language: next });
-  applyLanguage(next);
+  languageToggle.disabled = true;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'SET_UI_LANGUAGE', language: next });
+    if (!response?.ok) throw new Error(response?.error || plusTr('actionFailed'));
+    applyLanguage(next);
+  } catch (error) {
+    flashPlusStatus(error?.message || plusTr('actionFailed'));
+  } finally {
+    languageToggle.disabled = false;
+  }
 });
 
 chrome.storage.local.get(STORAGE_KEYS.UI_LANGUAGE).then((stored) => {
   applyLanguage(stored[STORAGE_KEYS.UI_LANGUAGE]);
-});
+}).catch(() => applyLanguage('ar'));
 chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((response) => {
   if (response?.state) renderState(response.state);
 }).catch(() => renderState({ status: STATUS.ERROR, latencyMs: null }));
+
+const durationTimer = setInterval(() => renderStats(currentPanelState), 1000);
+window.addEventListener('unload', () => clearInterval(durationTimer), { once: true });

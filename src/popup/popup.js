@@ -70,6 +70,7 @@ let plus = null;
 let activeTabOrigin = null;
 let busy = false;
 let keyEdited = false;
+let upgradeModalReturnFocus = null;
 
 function language() {
   return settings?.uiLanguage === 'en' ? 'en' : 'ar';
@@ -360,11 +361,27 @@ function triggerPlusSavedAnimation() {
 }
 
 function showUpgradeModal() {
-  if (elements.upgradeModal) elements.upgradeModal.classList.remove('hidden');
+  if (!elements.upgradeModal) return;
+  upgradeModalReturnFocus = document.activeElement;
+  elements.upgradeModal.classList.remove('hidden');
+  elements.upgradeCheckoutBtn?.focus();
 }
 
 function hideUpgradeModal() {
-  if (elements.upgradeModal) elements.upgradeModal.classList.add('hidden');
+  if (!elements.upgradeModal) return;
+  elements.upgradeModal.classList.add('hidden');
+  if (upgradeModalReturnFocus instanceof HTMLElement) upgradeModalReturnFocus.focus();
+  upgradeModalReturnFocus = null;
+}
+
+async function openExtensionPage(relativePath) {
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL(relativePath) });
+    return true;
+  } catch (error) {
+    showActionError(error?.message || 'تعذر فتح الصفحة. حاول مجدداً.');
+    return false;
+  }
 }
 
 if (elements.modalCloseX) {
@@ -373,7 +390,7 @@ if (elements.modalCloseX) {
 if (elements.topUpgradeBadge) {
   elements.topUpgradeBadge.addEventListener('click', async () => {
     if (plus?.entitlement?.plusEnabled === true) {
-      await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+      await openExtensionPage('src/library/library.html');
     } else {
       showUpgradeModal();
     }
@@ -399,7 +416,17 @@ if (elements.alreadyPurchasedLink) {
   elements.alreadyPurchasedLink.addEventListener('click', async (e) => {
     e.preventDefault();
     hideUpgradeModal();
-    await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html#activate') });
+    await openExtensionPage('src/library/library.html#activate');
+  });
+}
+if (elements.upgradeModal) {
+  elements.upgradeModal.addEventListener('click', (event) => {
+    if (event.target === elements.upgradeModal) hideUpgradeModal();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !elements.upgradeModal.classList.contains('hidden')) {
+      hideUpgradeModal();
+    }
   });
 }
 
@@ -520,10 +547,10 @@ elements.openKey.addEventListener('click', () => {
   toggleOverlay(elements.keyOverlay);
 });
 elements.openStats.addEventListener('click', async () => {
-  await chrome.tabs.create({ url: chrome.runtime.getURL('src/stats/stats.html') });
+  await openExtensionPage('src/stats/stats.html');
 });
 elements.openLibrary.addEventListener('click', async () => {
-  await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+  await openExtensionPage('src/library/library.html');
 });
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === 'STATE_CHANGED' && message.state) {

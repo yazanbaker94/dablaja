@@ -7,8 +7,8 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 287/287 Node tests on the current worktree |
-| `python -m unittest server/test_dablaja.py` | PASS — 114/114 backend tests on the current worktree |
+| `npm test` | PASS — 289/289 Node tests on the current worktree |
+| `python -m unittest server/test_dablaja.py` | PASS — 115/115 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
 | Element-binding checker | PASS — library, popup, and stats bindings |
 | ESLint | PASS |
@@ -18,8 +18,8 @@
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
 | `git diff --check` | PASS; line-ending notices only |
 | VPS signing-key fingerprint | PASS — derived and expected public fingerprints both `sha256:4de76361c8f9b09f`; no private key output |
-| VPS deployment hashes | PASS — reviewed server (`746c39af…e279b`), privacy (`18817211…5f6ad`), and terms files match their live SHA-256 hashes |
-| VPS database audit | PASS — expected schema, hashed credentials, no identity/content columns in diagnostics, no install identity or user agent in forms, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
+| VPS deployment hashes | PASS — reviewed server (`94c72207…6c445`), landing (`0fe7eaa8…3106e`), privacy (`18817211…5f6ad`), and terms (`d4b1a83e…26ce2`) files match their live SHA-256 hashes |
+| VPS database audit | PASS — exact allowlisted diagnostic/form schemas (obsolete empty `error_message`/`user_agent` columns removed), hashed credentials, unique event/submission IDs, allowlisted/nonnegative aggregate usage, and enforced 8/30/45/180-day retention windows |
 | VPS response headers | PASS — feedback, uninstall, admin, success, licensing, usage, diagnostics, checkout, and webhook routes are `no-store`/`no-referrer`; form/success pages have route-scoped no-script CSP; public aggregate stats retain their intended 60-second cache policy |
 | VPS runtime | PASS — service and Caddy active, health/statistics/privacy probes successful, Stripe SDK 15.5.0, and a dedicated rate-limit secret is configured |
 | Stripe product/price | PASS — live Dablaja account, active lifetime product, active $10 USD price, and exact server IDs all match |
@@ -65,7 +65,7 @@
   URLs, titles, audio, or transcripts.
 - Feedback and uninstall links include only their source, not a stable install
   ID. The form uses a one-time submission ID for duplicate prevention and the
-  server does not retain its user-agent field. Live records satisfy the stated
+  production database has no user-agent column. Live records satisfy the stated
   180-day retention boundary; diagnostic and usage-deduplication records satisfy
   their respective 45-day and eight-day boundaries.
 - Free storage is one saved session, one bookmark, and one site profile; Plus is
@@ -80,6 +80,10 @@
 - Saved sessions use one honest bundled fallback illustration. The previous
   title-matched decorative thumbnails were removed from runtime and packaging
   so the library never implies that guessed artwork came from the source page.
+- The stats page uses one tier-aware Plus action. An entitled user opens the
+  library without also invoking Checkout; navigation failures on stats,
+  library, popup, and side-panel surfaces are surfaced instead of becoming
+  unhandled or silent promise failures.
 - The isolated browser smoke loads the real service worker and extension pages,
   verifies the static Gemini disclosure, persists a fake test key locally,
   keeps analytics off until explicitly enabled, persists local/profile settings,
@@ -96,6 +100,15 @@
   purchase, was expired through Stripe, and its reserved database attempt was
   removed after an exact backup. This verifies Checkout creation/navigation,
   not payment completion, activation, refund, or dispute behavior.
+- The reviewed backend and landing copy were deployed after an online SQLite
+  backup and a successful migration rehearsal against a copy of the live
+  database. Both active API replicas (`ytmp3-api@8080` and `@8081`) were
+  restarted one at a time. An accidentally started disabled legacy unit was
+  stopped; both intended replicas are active with zero restarts and no warning
+  log entries. The post-deploy live-ingestion run again passed 54/54 and the
+  live-Checkout run 52/52; their reserved rows/session were backup-cleaned and
+  the read-only verifier returned every check PASS with original aggregate
+  counts restored.
 
 ## Evidence not yet obtained
 

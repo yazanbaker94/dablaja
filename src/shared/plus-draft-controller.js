@@ -32,9 +32,10 @@ import {
   trimUnsavedDraftsToByteBudget,
   validateSessionRecord
 } from './plus-session.js';
+import { SESSION_STORAGE_KEYS } from './constants.js';
 
-const ACTIVE_KEY = 'plusActiveDraft';
-const UNSAVED_KEY = 'plusUnsavedDrafts';
+const ACTIVE_KEY = SESSION_STORAGE_KEYS.PLUS_ACTIVE_DRAFT;
+const UNSAVED_KEY = SESSION_STORAGE_KEYS.PLUS_UNSAVED_DRAFTS;
 
 export function createPlusDraftController({
   storage,                                  // { get(key), set(obj), remove(keyOrArray) } — async

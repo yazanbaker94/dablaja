@@ -23,6 +23,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("database", type=Path)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--env-file", type=Path, help="Optional environment file containing STRIPE_SECRET_KEY")
     args = parser.parse_args()
     database = args.database.resolve()
     if not database.is_file():
@@ -55,6 +56,17 @@ def main() -> int:
             raise RuntimeError("refusing to remove a Checkout attempt that produced a purchase")
 
         secret = os.environ.get("STRIPE_SECRET_KEY", "").strip()
+        if not secret and args.env_file and args.env_file.is_file():
+            for raw_line in args.env_file.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if line.startswith("export "):
+                    line = line[7:].strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                name, value = line.split("=", 1)
+                if name.strip() == "STRIPE_SECRET_KEY":
+                    secret = value.strip().strip('"').strip("'")
+                    break
         if not secret:
             raise RuntimeError("STRIPE_SECRET_KEY is required for --apply")
         stripe.api_key = secret

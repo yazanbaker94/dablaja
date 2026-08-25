@@ -22,3 +22,14 @@ test('stats page includes the creator review card and bundled avatar', async () 
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.ok(avatar.size > 1000, 'creator avatar should be a real bundled image');
 });
+
+test('the Plus card has one tier-aware click path and cannot open checkout for an entitled user', async () => {
+  const js = await readFile(path.join(root, 'src', 'stats', 'stats.js'), 'utf8');
+  assert.equal(
+    [...js.matchAll(/statsUpgradeBtn\?\.addEventListener\('click'/g)].length,
+    1,
+    'the Plus card should bind exactly one click listener'
+  );
+  assert.doesNotMatch(js, /statsUpgradeBtn\.onclick\s*=/, 'do not layer an onclick handler over the checkout listener');
+  assert.match(js, /if \(statsPlusEnabled\) \{\s*await openLibraryPage\(\);\s*return;/);
+});

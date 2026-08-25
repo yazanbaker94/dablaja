@@ -52,6 +52,14 @@ test('local-saving and opt-in analytics toggles exist in settings without being 
   assert.ok(html.includes('id="localSavingToggle"'), 'local saving toggle present in settings');
 });
 
+test('statistics copy accurately distinguishes local detail from opt-in aggregates', async () => {
+  const statsHtml = await readFile(path.join(root, 'src/stats/stats.html'), 'utf8');
+  const landingHtml = await readFile(path.join(root, 'landing/index.html'), 'utf8');
+  assert.match(statsHtml, /تفاصيل هذه الصفحة محلية/);
+  assert.match(statsHtml, /عند تفعيل المشاركة/);
+  assert.match(landingHtml, /المستخدمين الذين اختاروا المشاركة/);
+});
+
 test('error telemetry omits the stable licensing installation identity', async () => {
   const telemetry = await readFile(path.join(root, 'src/shared/telemetry.js'), 'utf8');
   assert.equal(/install_id:\s*await ensureInstallId\(\)/.test(telemetry), false, 'error payload must not carry install_id');

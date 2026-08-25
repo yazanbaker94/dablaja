@@ -20,6 +20,14 @@ EXPECTED_TABLES = {
     "usage_daily",
     "usage_event_ids",
 }
+EXPECTED_ERROR_COLUMNS = {
+    "id", "dedupe_key", "event_id", "error_code", "status", "site_host",
+    "extension_version", "reconnect_count", "created_at",
+}
+EXPECTED_FEEDBACK_COLUMNS = {
+    "id", "dedupe_key", "kind", "submission_id", "source", "reason",
+    "message", "email", "created_at",
+}
 
 
 def main() -> int:
@@ -62,15 +70,6 @@ def main() -> int:
                 pass
         legacy_error = sum(str(value).startswith("errors:") for value in categories)
 
-        forbidden_remote_columns = {
-            "install_id", "api_key", "url", "title", "transcript", "audio", "page_url"
-        }
-        error_sensitive_rows = connection.execute(
-            "SELECT COUNT(*) AS n FROM error_reports WHERE error_message != '' OR user_agent != ''"
-        ).fetchone()["n"]
-        feedback_agent_rows = connection.execute(
-            "SELECT COUNT(*) AS n FROM feedback_reports WHERE user_agent != ''"
-        ).fetchone()["n"]
         duplicate_error_events = connection.execute(
             "SELECT COUNT(*) - COUNT(DISTINCT event_id) AS n FROM error_reports"
         ).fetchone()["n"]
@@ -120,10 +119,8 @@ def main() -> int:
             "attempt_credential_hash": "credential_hash" in attempt_columns,
             "legacy_error_ip_budgets": legacy_error == 0,
             "raw_ip_budget_keys": raw_ip == 0,
-            "diagnostic_schema_has_no_identity_or_content": not (error_columns & forbidden_remote_columns),
-            "feedback_schema_has_no_install_identity": "install_id" not in feedback_columns,
-            "diagnostic_sensitive_fields_empty": error_sensitive_rows == 0,
-            "feedback_user_agents_empty": feedback_agent_rows == 0,
+            "diagnostic_schema_exact_allowlist": error_columns == EXPECTED_ERROR_COLUMNS,
+            "feedback_schema_exact_allowlist": feedback_columns == EXPECTED_FEEDBACK_COLUMNS,
             "diagnostic_event_ids_unique": duplicate_error_events == 0,
             "feedback_submission_ids_unique": duplicate_submissions == 0,
             "usage_rows_allowlisted_and_nonnegative": invalid_usage == 0,

@@ -186,15 +186,29 @@ class DablajaStore:
             }
             migrate_errors = False
             migrate_feedback = False
+            error_cols: list[str] = []
+            feedback_cols: list[str] = []
+            desired_error_cols = {
+                "id", "dedupe_key", "event_id", "error_code", "status",
+                "site_host", "extension_version", "reconnect_count", "created_at",
+            }
+            desired_feedback_cols = {
+                "id", "dedupe_key", "kind", "submission_id", "source",
+                "reason", "message", "email", "created_at",
+            }
             if "error_reports" in tables:
                 error_cols = [row[1] for row in conn.execute("PRAGMA table_info(error_reports)")]
-                migrate_errors = "event_id" not in error_cols
+                # Rebuild both legacy schemas and the earlier transitional
+                # schema that retained always-empty error_message/user_agent
+                # columns. The production table should contain only fields we
+                # actually use and disclose.
+                migrate_errors = set(error_cols) != desired_error_cols
                 if migrate_errors:
                     conn.execute("DROP INDEX IF EXISTS idx_dablaja_errors_created")
                     conn.execute("ALTER TABLE error_reports RENAME TO error_reports_legacy")
             if "feedback_reports" in tables:
                 feedback_cols = [row[1] for row in conn.execute("PRAGMA table_info(feedback_reports)")]
-                migrate_feedback = "submission_id" not in feedback_cols
+                migrate_feedback = set(feedback_cols) != desired_feedback_cols
                 if migrate_feedback:
                     conn.execute("DROP INDEX IF EXISTS idx_dablaja_feedback_kind")
                     conn.execute("ALTER TABLE feedback_reports RENAME TO feedback_reports_legacy")
@@ -205,12 +219,10 @@ class DablajaStore:
                   dedupe_key TEXT NOT NULL UNIQUE,
                   event_id TEXT NOT NULL,
                   error_code TEXT NOT NULL,
-                  error_message TEXT NOT NULL,
                   status TEXT NOT NULL,
                   site_host TEXT NOT NULL,
                   extension_version TEXT NOT NULL,
                   reconnect_count INTEGER NOT NULL DEFAULT 0,
-                  user_agent TEXT NOT NULL,
                   created_at TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_dablaja_errors_created
@@ -224,7 +236,6 @@ class DablajaStore:
                   reason TEXT NOT NULL,
                   message TEXT NOT NULL,
                   email TEXT NOT NULL,
-                  user_agent TEXT NOT NULL,
                   created_at TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_dablaja_feedback_kind
@@ -295,38 +306,33 @@ class DablajaStore:
             )
             if migrate_errors:
                 # Discard legacy stable installation identifiers. Historical
-                # rows retain their safe error fields and receive their own
-                # one-time row id as event id.
+                # rows retain only allowlisted technical fields. Pre-event-id
+                # rows receive their own one-time row id as event id.
+                event_column = "event_id" if "event_id" in error_cols else "id"
                 conn.execute(
-                    """INSERT INTO error_reports (
-                         id, dedupe_key, event_id, error_code, error_message,
-                         status, site_host, extension_version, reconnect_count,
-                         user_agent, created_at
-                       )
-                       SELECT id, dedupe_key, id, error_code, error_message,
-                         status, site_host, extension_version, reconnect_count,
-                         user_agent, created_at
-                       FROM error_reports_legacy"""
+                    f"""INSERT INTO error_reports (
+                          id, dedupe_key, event_id, error_code, status,
+                          site_host, extension_version, reconnect_count, created_at
+                        )
+                        SELECT id, dedupe_key, {event_column}, error_code, status,
+                          site_host, extension_version, reconnect_count, created_at
+                        FROM error_reports_legacy"""
                 )
                 conn.execute("DROP TABLE error_reports_legacy")
             if migrate_feedback:
                 # Feedback/uninstall submissions use one-time form ids, never
                 # a persistent extension installation identity.
+                submission_column = "submission_id" if "submission_id" in feedback_cols else "id"
                 conn.execute(
-                    """INSERT INTO feedback_reports (
-                         id, dedupe_key, kind, submission_id, source, reason,
-                         message, email, user_agent, created_at
-                       )
-                       SELECT id, dedupe_key, kind, id, source, reason,
-                         message, email, user_agent, created_at
-                       FROM feedback_reports_legacy"""
+                    f"""INSERT INTO feedback_reports (
+                          id, dedupe_key, kind, submission_id, source, reason,
+                          message, email, created_at
+                        )
+                        SELECT id, dedupe_key, kind, {submission_column}, source,
+                          reason, message, email, created_at
+                        FROM feedback_reports_legacy"""
                 )
                 conn.execute("DROP TABLE feedback_reports_legacy")
-            # Older builds accepted free-form diagnostic text and form user
-            # agents. They are unnecessary for the product and are erased so
-            # the live database matches the current allowlisted disclosures.
-            conn.execute("UPDATE error_reports SET error_message = '', user_agent = ''")
-            conn.execute("UPDATE feedback_reports SET user_agent = ''")
             # Older builds placed the raw client IP in diagnostic and
             # licensing rate-limit keys. Remove those legacy keys immediately;
             # current licensing buckets are day-scoped HMAC values and current
@@ -460,21 +466,19 @@ class DablajaStore:
             conn.execute(
                 """
                 INSERT INTO error_reports (
-                  id, dedupe_key, event_id, error_code, error_message, status,
-                  site_host, extension_version, reconnect_count, user_agent, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  id, dedupe_key, event_id, error_code, status, site_host,
+                  extension_version, reconnect_count, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["id"],
                     record["dedupe_key"],
                     record["event_id"],
                     record["error_code"],
-                    record["error_message"],
                     record["status"],
                     record["site_host"],
                     record["extension_version"],
                     record["reconnect_count"],
-                    record["user_agent"],
                     record["created_at"],
                 ),
             )
@@ -492,8 +496,8 @@ class DablajaStore:
                 """
                 INSERT INTO feedback_reports (
                   id, dedupe_key, kind, submission_id, source, reason, message,
-                  email, user_agent, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  email, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["id"],
@@ -504,7 +508,6 @@ class DablajaStore:
                     record["reason"],
                     record["message"],
                     record["email"],
-                    record["user_agent"],
                     record["created_at"],
                 ),
             )
@@ -1063,12 +1066,10 @@ async def report_error(request: Request) -> Response:
         "id": str(uuid.uuid4()),
         "event_id": event_id,
         "error_code": raw_error_code if raw_error_code in ERROR_CODES else "unknown",
-        "error_message": "",
         "status": raw_status if raw_status in ERROR_STATUSES else "",
         "site_host": raw_site if raw_site in USAGE_PLATFORMS else "other",
         "extension_version": clean_text(body.get("extension_version"), 20),
         "reconnect_count": max(0, min(10, reconnect_count)),
-        "user_agent": "",
         "created_at": utc_now(),
     }
     # A retry of the same one-time event id is stored once. There is no stable
@@ -1831,7 +1832,6 @@ async def submit_form(request: Request, kind: str) -> Response:
         "reason": reason,
         "message": message,
         "email": email,
-        "user_agent": "",
         "created_at": utc_now(),
     }
     record["dedupe_key"] = hashlib.sha256(

@@ -1300,8 +1300,8 @@ class TelemetryTests(PaymentTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json().get("ok"))
         row = self.store.list_errors()[0]
-        self.assertEqual(row["error_message"], "")
-        self.assertEqual(row["user_agent"], "")
+        self.assertNotIn("error_message", row)
+        self.assertNotIn("user_agent", row)
         self.assertEqual(row["error_code"], "unknown")
         self.assertEqual(row["status"], "")
         self.assertEqual(row["site_host"], "other")
@@ -1411,11 +1411,55 @@ class TelemetryTests(PaymentTestBase):
         self.assertEqual(feedback["submission_id"], "form-row")
         self.assertNotIn("install_id", error)
         self.assertNotIn("install_id", feedback)
+        self.assertNotIn("error_message", error)
+        self.assertNotIn("user_agent", error)
+        self.assertNotIn("user_agent", feedback)
         with migrated._db() as db:
             categories = {
                 row["category"] for row in db.execute("SELECT category FROM daily_budget")
             }
             self.assertEqual(categories, {"token:" + "a" * 32, "token:valid-install-id-123456"})
+
+    def test_transitional_telemetry_schema_removes_unused_empty_columns(self):
+        transitional_path = Path(self.tmp.name) / "transitional-telemetry.db"
+        conn = dablaja.sqlite3.connect(str(transitional_path))
+        conn.executescript(
+            """
+            CREATE TABLE error_reports (
+              id TEXT PRIMARY KEY, dedupe_key TEXT NOT NULL UNIQUE,
+              event_id TEXT NOT NULL, error_code TEXT NOT NULL,
+              error_message TEXT NOT NULL, status TEXT NOT NULL,
+              site_host TEXT NOT NULL, extension_version TEXT NOT NULL,
+              reconnect_count INTEGER NOT NULL, user_agent TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            );
+            CREATE TABLE feedback_reports (
+              id TEXT PRIMARY KEY, dedupe_key TEXT NOT NULL UNIQUE,
+              kind TEXT NOT NULL, submission_id TEXT NOT NULL, source TEXT NOT NULL,
+              reason TEXT NOT NULL, message TEXT NOT NULL, email TEXT NOT NULL,
+              user_agent TEXT NOT NULL, created_at TEXT NOT NULL
+            );
+            """
+        )
+        conn.execute(
+            "INSERT INTO error_reports VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            ("err-row", "dedupe-err", "one-time-event", "network_error", "", "error", "youtube", "1.0.0", 1, "", dablaja.utc_now()),
+        )
+        conn.execute(
+            "INSERT INTO feedback_reports VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("form-row", "dedupe-form", "feedback", "one-time-form", "stats", "أخرى", "message", "", "", dablaja.utc_now()),
+        )
+        conn.commit()
+        conn.close()
+
+        migrated = dablaja.DablajaStore(transitional_path)
+        error = migrated.list_errors()[0]
+        feedback = migrated.list_feedback("feedback")[0]
+        self.assertEqual(error["event_id"], "one-time-event")
+        self.assertEqual(feedback["submission_id"], "one-time-form")
+        self.assertNotIn("error_message", error)
+        self.assertNotIn("user_agent", error)
+        self.assertNotIn("user_agent", feedback)
 
     def test_legacy_payment_references_migrate_to_distinct_purchases(self):
         legacy_path = Path(self.tmp.name) / "legacy-licenses.db"
@@ -1831,9 +1875,9 @@ class RetentionPruningTests(unittest.TestCase):
         with self.store._db() as conn:
             conn.execute(
                 """INSERT INTO error_reports
-                   (id, event_id, error_code, error_message, status, site_host,
-                    extension_version, reconnect_count, user_agent, created_at, dedupe_key)
-                   VALUES (?, ?, 'unknown', '', 'error', 'other', '1.0.0', 0, '',
+                   (id, event_id, error_code, status, site_host,
+                    extension_version, reconnect_count, created_at, dedupe_key)
+                   VALUES (?, ?, 'unknown', 'error', 'other', '1.0.0', 0,
                            datetime('now', '-45 days', '-1 minute'), ?)""",
                 (str(uuid.uuid4()), "retention-boundary-event", uuid.uuid4().hex),
             )

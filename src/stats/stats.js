@@ -59,6 +59,7 @@ const RANGE_KEY = 'dablajaStatsRange';
 let currentRange = 'week';
 try { currentRange = sessionStorage.getItem(RANGE_KEY) || 'week'; } catch {}
 let currentStats = null;
+let statsPlusEnabled = false;
 
 const WEEKDAY = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -426,32 +427,59 @@ elements.range.addEventListener('click', (event) => {
   if (currentStats) render(currentStats);
 });
 
+let transientMessageTimer = null;
+
+function showTransientMessage(message) {
+  clearTimeout(transientMessageTimer);
+  elements.tip.textContent = String(message || 'تعذر تنفيذ الطلب. حاول مجدداً.');
+  elements.tip.style.left = '50%';
+  elements.tip.style.top = '16px';
+  elements.tip.style.transform = 'translateX(-50%)';
+  elements.tip.classList.remove('hidden');
+  transientMessageTimer = setTimeout(() => {
+    elements.tip.classList.add('hidden');
+    elements.tip.style.transform = '';
+  }, 3500);
+}
+
+async function openLibraryPage() {
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+    return true;
+  } catch (error) {
+    showTransientMessage(error?.message || 'تعذر فتح مكتبة Plus. حاول مجدداً.');
+    return false;
+  }
+}
+
 async function openFeedbackPage() {
   try {
     const response = await request({ type: 'GET_FEEDBACK_URL', source: 'stats' });
-    if (response.url) await chrome.tabs.create({ url: response.url });
-  } catch {}
+    if (!response.url) throw new Error('تعذر إنشاء رابط الملاحظات.');
+    await chrome.tabs.create({ url: response.url });
+  } catch (error) {
+    showTransientMessage(error?.message || 'تعذر فتح صفحة الملاحظات. حاول مجدداً.');
+  }
 }
 
 elements.openFeedback?.addEventListener('click', openFeedbackPage);
 elements.reviewCta?.addEventListener('click', openFeedbackPage);
 
 document.querySelector('#openLibrary')?.addEventListener('click', async () => {
-  await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
+  await openLibraryPage();
 });
 
 elements.statsUpgradeBtn?.addEventListener('click', async () => {
   if (elements.statsUpgradeBtn.disabled) return;
+  if (statsPlusEnabled) {
+    await openLibraryPage();
+    return;
+  }
   elements.statsUpgradeBtn.disabled = true;
   try {
     await request({ type: 'PLUS_START_CHECKOUT' });
   } catch (e) {
-    const msg = e?.message || 'تعذر إنشاء جلسة الدفع. حاول لاحقاً.';
-    if (elements.tip) {
-      elements.tip.textContent = msg;
-      elements.tip.classList.remove('hidden');
-      setTimeout(() => elements.tip.classList.add('hidden'), 3000);
-    }
+    showTransientMessage(e?.message || 'تعذر إنشاء جلسة الدفع. حاول لاحقاً.');
   } finally {
     elements.statsUpgradeBtn.disabled = false;
   }
@@ -461,22 +489,30 @@ async function checkPlusStatus() {
   try {
     const res = await request({ type: 'GET_STATE' });
     if (res?.plus?.entitlement?.plusEnabled === true) {
+      statsPlusEnabled = true;
       if (elements.statsPlusTitle) elements.statsPlusTitle.textContent = 'أنت مشترك في dablaja Plus';
       if (elements.statsPlusDesc) elements.statsPlusDesc.textContent = 'ترخيص مدى الحياة مفعّل على هذا الجهاز. شكراً لدعمك!';
       if (elements.statsUpgradeBtn) {
         elements.statsUpgradeBtn.innerHTML = '<span>فتح مكتبة Plus 💎</span>';
-        elements.statsUpgradeBtn.onclick = async () => {
-          await chrome.tabs.create({ url: chrome.runtime.getURL('src/library/library.html') });
-        };
       }
     }
-  } catch {}
+  } catch {
+    statsPlusEnabled = false;
+  }
 }
 
 checkPlusStatus();
 
 elements.clearStats.addEventListener('click', async () => {
-  const response = await request({ type: 'CLEAR_STATS' });
-  render(response.stats);
-  elements.clearMessage.classList.remove('hidden');
+  elements.clearStats.disabled = true;
+  try {
+    const response = await request({ type: 'CLEAR_STATS' });
+    render(response.stats);
+    elements.clearMessage.textContent = 'تم المسح من هذا الجهاز.';
+    elements.clearMessage.classList.remove('hidden');
+  } catch (error) {
+    showTransientMessage(error?.message || 'تعذر مسح الإحصائيات. حاول مجدداً.');
+  } finally {
+    elements.clearStats.disabled = false;
+  }
 });
