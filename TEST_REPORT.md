@@ -7,12 +7,12 @@
 
 | Check | Current result |
 |---|---|
-| `npm test` | PASS — 299/299 Node tests on the current worktree |
+| `npm test` | PASS — 303/303 Node tests on the current worktree |
 | `python -m unittest server/test_dablaja.py` | PASS — 115/115 backend tests on the current worktree |
 | `node scripts/check.mjs` | PASS — 34 JavaScript files |
 | Element-binding checker | PASS — library, popup, stats, side-panel, and diagnostics bindings; duplicate IDs and unwired static controls are rejected |
 | ESLint | PASS |
-| Manifest validation (development) | PASS |
+| Manifest and Store-asset validation (development) | PASS — manifest plus exact 16/32/48/128 icons, 128px Store-icon safe-area padding, 440x280 small promo, and 1400x560 marquee; emits an intentional warning because a real-operation screenshot is still pending |
 | `npm run smoke` | PASS — isolated unpacked Edge/Chromium profile; popup, static Gemini disclosure/key flow, analytics default-off/opt-in, local-saving default-on, volumes/site profile, library, stats, side panel, diagnostics, and console checks |
 | `npm run e2e` | PASS — 51/51 default checks; live-server mode 54/54; live-Checkout mode 52/52 and opened an independently validated production `checkout.stripe.com` URL without entering payment details or purchasing |
 | Release validation | PASS as a guard: it refuses because acceptance evidence is pending |
@@ -73,6 +73,12 @@
   locally owned records stay readable.
 - Runtime package dependencies and local HTML/CSS resources are checked against
   the explicit ZIP allowlist.
+- Chrome Web Store assets now have a separate validated submission directory.
+  The generated brand art is limited to the 440x280 small promo and optional
+  1400x560 marquee; the eight historical AI mockups are explicitly excluded as
+  screenshots. Release validation requires at least one real 1280x800 (or
+  640x400) current-product screenshot and refuses to treat promo art as proof of
+  the extension experience.
 - Checkout navigation accepts only credential-free HTTPS URLs on
   `checkout.stripe.com`; both the server response and extension navigation are
   independently validated. Failure to open the Stripe tab is reported in
@@ -146,6 +152,9 @@
   CSP, no cookie before login, and no `?token=` in markup. Caddy was validated
   and reloaded with the path-scoped headers; its previous file was backed up.
 - The exact release ZIP has not been loaded in a separate clean Chrome profile.
+- No verified real-operation 1280x800 Store screenshot has been captured from
+  the exact current build yet. The required promotional dimensions are ready,
+  but the Store screenshot gate remains intentionally open.
 
 Because these are required acceptance criteria, `npm run package:release` must
 continue to refuse until `RELEASE_ACCEPTANCE.md` and `RELEASE_CHECKLIST.md` are

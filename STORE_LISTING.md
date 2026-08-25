@@ -34,7 +34,7 @@ Understand English videos live in Arabic with dubbed audio and bilingual caption
 **طريقة الاستخدام**
 
 1. افتح تبويباً آمناً (HTTPS) يحتوي على كلام إنجليزي.
-2. افتح الإضافة وأدخل مفتاح Gemini ووافق على الإفصاح.
+2. افتح الإضافة، أدخل مفتاح Gemini، واقرأ الإفصاح الواضح بجانب حقل المفتاح.
 3. اضغط «ابدأ الدبلجة»؛ وستفتح لوحة الترجمة الثنائية تلقائياً بجانب الفيديو. إذا منع Chrome الفتح التلقائي، اختر Dablaja من قائمة اللوحة الجانبية.
 4. اضبط الصوتين، واضغط إيقاف عند الانتهاء.
 
@@ -72,11 +72,13 @@ Translate the user-selected current tab's live spoken audio into Arabic audio an
 - **Retention:** No extension retention of audio. Key/settings/saved sessions remain locally until deletion/uninstall. One-time usage event IDs are removed within 8 days; diagnostics within 45 days; submitted forms within 180 days; unpaid/failed Checkout attempts within 30 days; daily anonymous aggregates may be retained for historical totals. Completed purchase/license records remain while the license exists and as needed for accounting, fraud prevention, refunds/disputes, support, and legal obligations.
 - **Transport:** Encrypted HTTPS/WSS.
 
-## Store assets still required before submission
+## Store submission assets and URLs
 
-- Screenshots from verified real operation (do not include keys or sensitive captions).
-- Final support email/site and a publicly hosted URL for `privacy.html`.
-- Final product name/publisher identity if different from the temporary values.
+- Ready: exact 16/32/48/128 extension icons, 440x280 small promo, and 1400x560 marquee in `store-assets/`.
+- Required: 1–5 screenshots from verified real operation at 1280x800 (preferred); do not include keys, private captions, or sensitive tab content.
+- Privacy policy: `https://audiofetcher.com/dablaja/privacy.html`
+- Support form: `https://audiofetcher.com/dablaja/feedback?source=store`
+- Owner action still required in the dashboard: final support email and publisher identity.
 
 **Dablaja Plus — ترخيص مدى الحياة بدفعة واحدة 10$**
 

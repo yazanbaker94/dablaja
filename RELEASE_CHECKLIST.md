@@ -61,7 +61,8 @@ not equivalent to a passed release requirement.
 - [ ] Official Gemini model/protocol/pricing/quota/preview status rechecked on submission day.
 - [ ] Store data-use questionnaire copied exactly from `STORE_LISTING.md`.
 - [ ] Final screenshots contain no key, private captions, or sensitive tab content.
-- [ ] Icons and promotional assets verified at required dimensions.
+- [x] Extension icons and promotional tiles verified at required dimensions.
+- [ ] At least one real-operation Store screenshot verified at 1280x800 with no sensitive content.
 - [ ] Exact release ZIP loads in a separate clean Chrome profile.
 - [ ] ZIP contains no tests, previews, mocks, maps, secrets, logs, caches, or dev scripts.
 - [ ] `RELEASE_ACCEPTANCE.md` contains all six `PASS` markers and `Decision: APPROVED`.

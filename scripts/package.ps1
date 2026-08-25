@@ -23,6 +23,10 @@ if ($Mode -eq 'release') {
 if ($LASTEXITCODE -ne 0) {
   throw "Manifest validation failed (mode: $Mode); no package was created."
 }
+& node (Join-Path $projectRoot 'scripts/validate-store-assets.mjs')
+if ($LASTEXITCODE -ne 0) {
+  throw "Chrome Web Store asset validation failed (mode: $Mode); no package was created."
+}
 & node (Join-Path $projectRoot 'scripts/check.mjs')
 if ($LASTEXITCODE -ne 0) {
   throw "Static checks failed (mode: $Mode); no package was created."
