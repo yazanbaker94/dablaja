@@ -8,6 +8,20 @@ There is no backend. Audio and text go straight from your browser to Google and 
 
 > **Status:** dablaja was previously published on the Chrome Web Store and has since been withdrawn. It is now published as open source as-is. It works unpacked, but it depends on a **preview** Gemini model whose availability, pricing and behavior Google may change at any time.
 
+## Screenshots
+
+### Toolbar popup
+
+Start live dubbing from the current audible tab, then open the audio, API-key, statistics or library views from the same compact popup.
+
+![Dablaja toolbar popup](docs/images/popup.png)
+
+### Local session library
+
+Saved transcripts, bookmarks, notes, search, site-specific sound profiles, usage summaries and exports remain on the device.
+
+![Dablaja local session library](docs/images/library.png)
+
 ## Features
 
 - One-click live dubbing of any ordinary HTTPS tab (YouTube, courses, webinars, podcasts…).
