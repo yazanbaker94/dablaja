@@ -1,0 +1,30 @@
+{
+  "name": "dablaja",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension for live Arabic dubbing of any tab using the Gemini Live Translate API",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yazanbaker94/dablaja.git"
+  },
+  "homepage": "https://github.com/yazanbaker94/dablaja#readme",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check.mjs && node scripts/check-element-bindings.mjs && npx eslint src",
+    "validate": "node scripts/validate-manifest.mjs",
+    "smoke": "node scripts/browser-smoke.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "verify": "npm run test && npm run check && npm run validate"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "puppeteer-core": "^25.8.0"
+  }
+}

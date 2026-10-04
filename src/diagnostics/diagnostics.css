@@ -1,0 +1,30 @@
+:root { font-family: "Segoe UI", Tahoma, Arial, sans-serif; color: #17221f; background: #f4f8f6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(circle at 90% 0, #dff4eb, transparent 32%), #f4f8f6; }
+main { width: min(680px, calc(100% - 32px)); margin: 40px auto; }
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.mark { width: 48px; height: 48px; flex: none; object-fit: contain; }
+header p { margin: 0; color: #087f5b; font-size: 11px; direction: ltr; text-align: right; }
+h1 { margin: 2px 0 0; font-size: 26px; }
+h1 small { display: block; margin-top: 3px; color: #68766f; font-size: 11px; font-weight: 500; direction: ltr; text-align: right; }
+.notice span { display: block; margin-top: 3px; }
+.notice { margin-bottom: 12px; padding: 12px 14px; border: 1px solid #cde6dc; border-radius: 12px; color: #315248; background: #ecf8f3; font-size: 12px; line-height: 1.7; }
+.card { padding: 20px; border: 1px solid #dce7e2; border-radius: 17px; background: white; box-shadow: 0 14px 40px #21433610; }
+.status-row { display: flex; align-items: center; gap: 9px; }
+#statusDot { width: 10px; height: 10px; border-radius: 50%; background: #89958f; }
+#statusDot.active { background: #087f5b; box-shadow: 0 0 0 5px #087f5b1c; }
+#statusDot.error { background: #b42318; box-shadow: 0 0 0 5px #b423181c; }
+#message { min-height: 22px; color: #637069; font-size: 13px; }
+dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 18px 0 0; }
+dl div { padding: 11px; border-radius: 10px; background: #f2f6f4; }
+dt { color: #68766f; font-size: 10px; }
+dd { margin: 4px 0 0; direction: ltr; text-align: right; font: 650 12px ui-monospace, Consolas, monospace; }
+.actions { display: flex; gap: 9px; margin-top: 13px; }
+button { flex: 1; padding: 11px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+.primary { color: white; border: 0; background: #087f5b; }
+.secondary { color: #075e44; border: 1px solid #cde2da; background: #edf7f3; }
+.error { min-height: 20px; color: #b42318; font-size: 12px; }
+footer { margin-top: 20px; color: #68766f; text-align: center; font-size: 10px; }
+code { direction: ltr; }
+@media (max-width: 520px) { dl { grid-template-columns: 1fr; } .actions { flex-direction: column; } }

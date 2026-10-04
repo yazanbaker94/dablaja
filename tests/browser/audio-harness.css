@@ -1,0 +1,9 @@
+:root { font-family: system-ui, sans-serif; color: #17221f; background: #f4f8f6; }
+body { margin: 0; }
+main { width: min(720px, calc(100% - 32px)); margin: 40px auto; padding: 28px; border: 1px solid #dce7e2; border-radius: 18px; background: #fff; }
+button { padding: 11px 16px; border: 0; border-radius: 9px; color: #fff; background: #087f5b; font: inherit; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .6; }
+li { margin: 9px 0; padding: 9px 11px; border-radius: 8px; background: #eef4f1; }
+li.pass { color: #075f44; background: #e6f6ef; }
+li.fail { color: #9b241c; background: #fdebea; }
+#summary { font-weight: 700; }

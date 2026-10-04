@@ -1,0 +1,27 @@
+node_modules/
+dist/
+coverage/
+*.zip
+*.pem
+*.log
+*.tmp
+.tmp/
+.env
+.env.*
+secrets.*
+.DS_Store
+Thumbs.db
+
+# Local tooling
+.aider*
+.commandcode/
+.venv*/
+__pycache__/
+*.pyc
+
+# Generated previews and browser test output
+preview-*/
+browser-test-output/
+generated-preview/
+screenshots/
+*.chrome-profile/

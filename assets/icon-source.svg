@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="dablaja icon">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="12" x2="110" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B936A"/>
+      <stop offset="1" stop-color="#064B38"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bg)"/>
+  <circle cx="47" cy="62" r="27" fill="#FFFFFF"/>
+  <path d="M28 91 34 75l14 10Z" fill="#FFFFFF"/>
+  <path d="M36 57v11M47 48v29M58 54v17" fill="none" stroke="#087052" stroke-width="7" stroke-linecap="round"/>
+  <path d="M89 42c8 7 12 14 12 22s-4 16-12 23" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M101 31c12 10 19 21 19 33 0 13-7 25-19 34" fill="none" stroke="#8FDCC3" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+</svg>
